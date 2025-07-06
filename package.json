@@ -1,0 +1,22 @@
+{
+  "name": "acil-servis-hasta-yonetim-sistemi",
+  "version": "1.0.0",
+  "description": "Acil Servis Hasta Yönetim Sistemi - Kapsamlı web tabanlı hasta takibi ve yatak yönetimi uygulaması",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "seed": "node database/seed.js",
+    "setup": "npm run install-all && npm run seed"
+  },
+  "keywords": ["acil-servis", "hasta-yönetimi", "sağlık", "web-app"],
+  "author": "Acil Servis Hasta Yönetim Ekibi",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
