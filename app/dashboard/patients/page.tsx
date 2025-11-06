@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { AddPatientButton } from '@/components/patients/AddPatientButton'
+import { PatientListWithBulk } from '@/components/patients/PatientListWithBulk'
 
 export default async function PatientsPage() {
   const supabase = await createClient()
@@ -27,28 +28,6 @@ export default async function PatientsPage() {
   const activePatients = patients?.filter((p) => p.status === 'active') || []
   const canAddPatient =
     activePatients.length < (profile?.patient_limit || 3)
-
-  const getStatusBadge = (status: string) => {
-    const badges = {
-      active: 'bg-green-100 text-green-800',
-      discharged: 'bg-gray-100 text-gray-800',
-      consultation: 'bg-yellow-100 text-yellow-800',
-    }
-    const labels = {
-      active: 'Aktif',
-      discharged: 'Taburcu',
-      consultation: 'Konsültasyon',
-    }
-    return (
-      <span
-        className={`px-3 py-1 rounded-full text-xs font-medium ${
-          badges[status as keyof typeof badges]
-        }`}
-      >
-        {labels[status as keyof typeof labels]}
-      </span>
-    )
-  }
 
   return (
     <div>
@@ -86,32 +65,7 @@ export default async function PatientsPage() {
           />
         </div>
       ) : (
-        <div className="grid gap-4">
-          {patients.map((patient) => (
-            <Link
-              key={patient.id}
-              href={`/dashboard/patients/${patient.id}`}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {patient.name}
-                  </h3>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    {patient.age && <span>{patient.age} yaş</span>}
-                    {patient.gender && <span>• {patient.gender}</span>}
-                    <span>
-                      •{' '}
-                      {new Date(patient.created_at).toLocaleDateString('tr-TR')}
-                    </span>
-                  </div>
-                </div>
-                <div>{getStatusBadge(patient.status)}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <PatientListWithBulk patients={patients} />
       )}
 
       {/* Upgrade Banner */}
