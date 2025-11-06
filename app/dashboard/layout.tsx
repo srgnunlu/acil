@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { logout } from '@/app/(auth)/actions'
+import { NotificationBell } from '@/components/ui/NotificationBell'
 
 export default async function DashboardLayout({
   children,
@@ -49,6 +50,12 @@ export default async function DashboardLayout({
                   Hastalar
                 </Link>
                 <Link
+                  href="/dashboard/statistics"
+                  className="text-gray-700 hover:text-blue-600 font-medium transition"
+                >
+                  İstatistikler
+                </Link>
+                <Link
                   href="/dashboard/guidelines"
                   className="text-gray-700 hover:text-blue-600 font-medium transition"
                 >
@@ -64,6 +71,8 @@ export default async function DashboardLayout({
             </div>
 
             <div className="flex items-center space-x-4">
+              <NotificationBell />
+
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">
                   {profile?.full_name || user.email}

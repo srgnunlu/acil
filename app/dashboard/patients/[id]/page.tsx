@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { PatientTabs } from '@/components/patients/PatientTabs'
+import { ExportButton } from '@/components/patients/ExportButton'
+import { PatientActions } from '@/components/patients/PatientActions'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -96,7 +98,11 @@ export default async function PatientDetailPage({ params }: PageProps) {
               </span>
             </div>
           </div>
-          <div>{getStatusBadge(patient.status)}</div>
+          <div className="flex items-center space-x-3">
+            {getStatusBadge(patient.status)}
+            <ExportButton patientId={patient.id} patientName={patient.name} />
+            <PatientActions patientId={patient.id} patientName={patient.name} />
+          </div>
         </div>
       </div>
 
