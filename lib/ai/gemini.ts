@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { env } from '@/lib/config/env'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY)
 
 export async function analyzeImage(
   imageBase64: string,

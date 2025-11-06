@@ -1,5 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  getClientIdentifier,
+} from '@/lib/middleware/rate-limit'
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +17,14 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Rate limiting kontrolü
+    const identifier = getClientIdentifier(request, user.id)
+    const rateLimit = await checkRateLimit(identifier, 'upload')
+
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.remaining, rateLimit.reset)
     }
 
     const formData = await request.formData()

@@ -1,17 +1,35 @@
 import OpenAI from 'openai'
+import { env } from '@/lib/config/env'
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: env.OPENAI_API_KEY,
 })
 
+import type {
+  Demographics,
+  Anamnesis,
+  Medication,
+  VitalSigns,
+  MedicalHistory,
+  AIAnalysisResponse,
+} from '@/types'
+
 export interface PatientContext {
-  demographics?: any
-  anamnesis?: any
-  medications?: any
-  vitalSigns?: any
-  history?: any
-  tests?: any[]
-  previousAnalyses?: any[]
+  demographics?: Demographics
+  anamnesis?: Anamnesis
+  medications?: Medication[]
+  vitalSigns?: VitalSigns
+  history?: MedicalHistory
+  tests?: Array<{
+    type: string
+    results: Record<string, unknown>
+    date: string
+  }>
+  previousAnalyses?: Array<{
+    type: string
+    response: AIAnalysisResponse
+    date: string
+  }>
 }
 
 export async function analyzePatient(
