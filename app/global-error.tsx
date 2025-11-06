@@ -1,5 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
+
 /**
  * Global Error Handler for critical errors
  * This catches errors in the root layout
@@ -11,6 +14,16 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    // Send critical error to Sentry
+    Sentry.captureException(error, {
+      level: 'fatal',
+      tags: {
+        errorDigest: error.digest,
+        errorType: 'global',
+      },
+    })
+  }, [error])
   return (
     <html>
       <body>

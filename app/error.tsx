@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 
 /**
  * Global Error Handler for Next.js App Router
@@ -17,8 +18,12 @@ export default function Error({
     // Log the error to console in development
     console.error('Global error:', error)
 
-    // You can also log to an error reporting service here
-    // e.g., Sentry.captureException(error)
+    // Send error to Sentry
+    Sentry.captureException(error, {
+      tags: {
+        errorDigest: error.digest,
+      },
+    })
   }, [error])
 
   return (
