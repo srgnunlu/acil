@@ -18,7 +18,7 @@ export const updatePatientSchema = createPatientSchema.partial()
 export const patientDataSchema = z.object({
   patientId: z.string().uuid('Geçersiz hasta ID'),
   data_type: z.enum(['demographics', 'anamnesis', 'medications', 'vital_signs', 'history']),
-  content: z.record(z.unknown()), // Dynamic object
+  content: z.object({}).passthrough(), // Dynamic object - allows any properties
 })
 
 /**
@@ -27,7 +27,7 @@ export const patientDataSchema = z.object({
 export const patientTestSchema = z.object({
   patientId: z.string().uuid('Geçersiz hasta ID'),
   test_type: z.string().min(1, 'Test tipi gerekli').max(100),
-  results: z.record(z.unknown()), // Dynamic object for test results
+  results: z.object({}).passthrough(), // Dynamic object for test results
   images: z.array(z.string().url()).optional(),
 })
 
@@ -138,10 +138,12 @@ export function validateRequest<T>(
     return { success: true, data: validated }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0]
+      // Zod v4 uses 'issues' instead of 'errors'
+      const errors = (error as any).issues || (error as any).errors || []
+      const firstError = errors[0]
       return {
         success: false,
-        error: firstError.message || 'Validation error',
+        error: firstError?.message || 'Validation error',
       }
     }
     return { success: false, error: 'Unknown validation error' }
