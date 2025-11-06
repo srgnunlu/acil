@@ -6,18 +6,21 @@ import { OverviewTab } from './tabs/OverviewTab'
 import { DataTab } from './tabs/DataTab'
 import { TestsTab } from './tabs/TestsTab'
 import { AIAnalysisTab } from './tabs/AIAnalysisTab'
+import { ChatTab } from './tabs/ChatTab'
 
 interface PatientTabsProps {
   patientId: string
+  patientName: string
   patientData: PatientData[]
   tests: PatientTest[]
   analyses: AIAnalysis[]
 }
 
-type TabType = 'overview' | 'data' | 'tests' | 'ai'
+type TabType = 'overview' | 'data' | 'tests' | 'ai' | 'chat'
 
 export function PatientTabs({
   patientId,
+  patientName,
   patientData,
   tests,
   analyses,
@@ -29,6 +32,7 @@ export function PatientTabs({
     { id: 'data' as TabType, label: 'Hasta Bilgileri', icon: '📋' },
     { id: 'tests' as TabType, label: 'Tetkikler', icon: '🔬' },
     { id: 'ai' as TabType, label: 'AI Analizi', icon: '🤖' },
+    { id: 'chat' as TabType, label: 'AI Chat', icon: '💬' },
   ]
 
   return (
@@ -79,6 +83,10 @@ export function PatientTabs({
             tests={tests}
             analyses={analyses}
           />
+        )}
+
+        {activeTab === 'chat' && (
+          <ChatTab patientId={patientId} patientName={patientName} />
         )}
       </div>
     </div>

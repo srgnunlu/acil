@@ -103,6 +103,7 @@ export default async function PatientDetailPage({ params }: PageProps) {
       {/* Tabs */}
       <PatientTabs
         patientId={patient.id}
+        patientName={patient.name}
         patientData={patientData || []}
         tests={tests || []}
         analyses={analyses || []}
