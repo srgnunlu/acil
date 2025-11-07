@@ -1,18 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { chatWithAI, PatientContext } from '@/lib/ai/openai'
 import { NextResponse } from 'next/server'
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  getClientIdentifier,
+} from '@/lib/middleware/rate-limit'
+import { chatMessageSchema } from '@/lib/validation/schemas'
 
 export async function POST(request: Request) {
   try {
-    const { patientId, message } = await request.json()
-
-    if (!patientId || !message) {
-      return NextResponse.json(
-        { error: 'Patient ID ve mesaj gerekli' },
-        { status: 400 }
-      )
-    }
-
     const supabase = await createClient()
 
     // Kullanıcı kontrolü
@@ -23,6 +20,27 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Rate limiting kontrolü
+    const identifier = getClientIdentifier(request, user.id)
+    const rateLimit = await checkRateLimit(identifier, 'chat')
+
+    if (!rateLimit.success) {
+      return rateLimitResponse(rateLimit.remaining, rateLimit.reset)
+    }
+
+    // Input validation
+    const body = await request.json()
+    const validation = chatMessageSchema.safeParse(body)
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0]?.message || 'Geçersiz veri' },
+        { status: 400 }
+      )
+    }
+
+    const { patientId, message } = validation.data
 
     // Hastanın kullanıcıya ait olduğunu kontrol et
     const { data: patient, error: patientError } = await supabase
