@@ -1,0 +1,29 @@
+import type { Preview } from '@storybook/nextjs'
+import '../app/globals.css'
+
+const preview: Preview = {
+  parameters: {
+    controls: {
+      matchers: {
+        color: /(background|color)$/i,
+        date: /Date$/i,
+      },
+    },
+    backgrounds: {
+      default: 'light',
+      values: [
+        {
+          name: 'light',
+          value: '#ffffff',
+        },
+        {
+          name: 'dark',
+          value: '#1f2937',
+        },
+      ],
+    },
+    actions: { argTypesRegex: '^on[A-Z].*' },
+  },
+}
+
+export default preview
