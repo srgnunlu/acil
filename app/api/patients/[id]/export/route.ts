@@ -5,10 +5,7 @@ interface Params {
   id: string
 }
 
-export async function GET(
-  request: Request,
-  context: { params: Promise<Params> }
-) {
+export async function GET(request: Request, context: { params: Promise<Params> }) {
   try {
     const { id } = await context.params
     const supabase = await createClient()
@@ -110,11 +107,9 @@ export async function GET(
         },
       }
     )
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Export error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Export yapılırken hata oluştu' },
-      { status: 500 }
-    )
+    const errorMessage = error instanceof Error ? error.message : 'Export yapılırken hata oluştu'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

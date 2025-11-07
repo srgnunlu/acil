@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS ai_analyses (
   analysis_type TEXT NOT NULL CHECK (analysis_type IN ('initial', 'updated')),
   input_data JSONB NOT NULL,
   ai_response JSONB NOT NULL,
-  references JSONB,
+  "references" JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -73,8 +73,9 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
       setTimeout(() => {
         window.location.reload()
       }, 1500)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'İşlem başarısız'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -145,17 +146,11 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
             </div>
           </div>
 
-          {loading && (
-            <div className="mt-2 text-sm text-blue-700">İşlem yapılıyor...</div>
-          )}
+          {loading && <div className="mt-2 text-sm text-blue-700">İşlem yapılıyor...</div>}
 
-          {error && (
-            <div className="mt-2 text-sm text-red-600">{error}</div>
-          )}
+          {error && <div className="mt-2 text-sm text-red-600">{error}</div>}
 
-          {success && (
-            <div className="mt-2 text-sm text-green-600">{success}</div>
-          )}
+          {success && <div className="mt-2 text-sm text-green-600">{success}</div>}
         </div>
       )}
 
@@ -194,15 +189,11 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
                 className="flex-1 flex justify-between items-start"
               >
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {patient.name}
-                  </h3>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{patient.name}</h3>
                   <div className="flex items-center space-x-4 text-sm text-gray-600">
                     {patient.age && <span>{patient.age} yaş</span>}
                     {patient.gender && <span>• {patient.gender}</span>}
-                    <span>
-                      • {new Date(patient.created_at).toLocaleDateString('tr-TR')}
-                    </span>
+                    <span>• {new Date(patient.created_at).toLocaleDateString('tr-TR')}</span>
                   </div>
                 </div>
                 <div>{getStatusBadge(patient.status)}</div>

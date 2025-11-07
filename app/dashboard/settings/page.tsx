@@ -31,26 +31,18 @@ export default async function SettingsPage() {
 
       {/* Profile Info */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Profil Bilgileri
-        </h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Profil Bilgileri</h2>
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-700">
-              E-posta
-            </label>
+            <label className="text-sm font-medium text-gray-700">E-posta</label>
             <p className="text-gray-900">{user.email}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">
-              Ad Soyad
-            </label>
+            <label className="text-sm font-medium text-gray-700">Ad Soyad</label>
             <p className="text-gray-900">{profile?.full_name || '-'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">
-              Uzmanlık
-            </label>
+            <label className="text-sm font-medium text-gray-700">Uzmanlık</label>
             <p className="text-gray-900">{profile?.specialty || '-'}</p>
           </div>
           <div>
@@ -62,17 +54,13 @@ export default async function SettingsPage() {
 
       {/* Subscription Info */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Abonelik Bilgileri
-        </h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Abonelik Bilgileri</h2>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <div>
               <p className="font-medium text-gray-900">Mevcut Plan</p>
               <p className="text-sm text-gray-600">
-                {profile?.subscription_tier === 'free'
-                  ? 'Ücretsiz'
-                  : 'Pro Üyelik'}
+                {profile?.subscription_tier === 'free' ? 'Ücretsiz' : 'Pro Üyelik'}
               </p>
             </div>
             <span
@@ -90,17 +78,14 @@ export default async function SettingsPage() {
             <div>
               <p className="font-medium text-gray-900">Hasta Limiti</p>
               <p className="text-sm text-gray-600">
-                {patientCount || 0} / {profile?.patient_limit || 3} hasta
-                kullanılıyor
+                {patientCount || 0} / {profile?.patient_limit || 3} hasta kullanılıyor
               </p>
             </div>
             <div className="w-32 bg-gray-200 rounded-full h-2">
               <div
                 className="bg-blue-600 h-2 rounded-full"
                 style={{
-                  width: `${
-                    ((patientCount || 0) / (profile?.patient_limit || 3)) * 100
-                  }%`,
+                  width: `${((patientCount || 0) / (profile?.patient_limit || 3)) * 100}%`,
                 }}
               />
             </div>
@@ -109,9 +94,7 @@ export default async function SettingsPage() {
           {profile?.subscription_tier === 'free' && (
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  Pro'ya Yükselt
-                </h3>
+                <h3 className="font-semibold text-gray-900 mb-2">Pro&apos;ya Yükselt</h3>
                 <ul className="space-y-2 mb-4 text-sm text-gray-700">
                   <li className="flex items-center">
                     <span className="text-green-600 mr-2">✓</span>
@@ -131,7 +114,7 @@ export default async function SettingsPage() {
                   </li>
                 </ul>
                 <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
-                  Pro'ya Geç - ₺199/ay
+                  Pro&apos;ya Geç - ₺199/ay
                 </button>
               </div>
             </div>
@@ -141,18 +124,12 @@ export default async function SettingsPage() {
 
       {/* Notifications */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Bildirim Ayarları
-        </h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Bildirim Ayarları</h2>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-gray-900">
-                Tetkik Sonucu Hatırlatıcıları
-              </p>
-              <p className="text-sm text-gray-600">
-                Tetkik sonuçları için otomatik hatırlatma
-              </p>
+              <p className="font-medium text-gray-900">Tetkik Sonucu Hatırlatıcıları</p>
+              <p className="text-sm text-gray-600">Tetkik sonuçları için otomatik hatırlatma</p>
             </div>
             <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-blue-600">
               <span className="translate-x-5 inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" />
@@ -162,9 +139,7 @@ export default async function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-gray-900">E-posta Bildirimleri</p>
-              <p className="text-sm text-gray-600">
-                Önemli güncellemeler için e-posta al
-              </p>
+              <p className="text-sm text-gray-600">Önemli güncellemeler için e-posta al</p>
             </div>
             <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-gray-200">
               <span className="translate-x-0 inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" />
@@ -175,14 +150,11 @@ export default async function SettingsPage() {
 
       {/* Danger Zone */}
       <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
-        <h2 className="text-xl font-semibold text-red-900 mb-4">
-          Tehlikeli Bölge
-        </h2>
+        <h2 className="text-xl font-semibold text-red-900 mb-4">Tehlikeli Bölge</h2>
         <div className="space-y-4">
           <div>
             <p className="text-sm text-gray-700 mb-3">
-              Hesabınızı silmek tüm verilerinizi kalıcı olarak siler. Bu işlem
-              geri alınamaz.
+              Hesabınızı silmek tüm verilerinizi kalıcı olarak siler. Bu işlem geri alınamaz.
             </p>
             <button className="px-4 py-2 border-2 border-red-600 text-red-600 rounded-lg font-medium hover:bg-red-50 transition">
               Hesabı Sil

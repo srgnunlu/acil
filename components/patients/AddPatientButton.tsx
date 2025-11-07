@@ -59,8 +59,9 @@ export function AddPatientButton({
       // Hasta detay sayfasına yönlendir
       router.push(`/dashboard/patients/${data.id}`)
       router.refresh()
-    } catch (err: any) {
-      setError(err.message || 'Hasta eklenirken bir hata oluştu')
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Hasta eklenirken bir hata oluştu'
+      setError(errorMessage)
       setLoading(false)
     }
   }
@@ -71,9 +72,7 @@ export function AddPatientButton({
         onClick={() => {
           alert(
             `Hasta limitinize ulaştınız (${currentCount}/${limit}). ${
-              tier === 'free'
-                ? 'Pro versiyona geçerek sınırsız hasta ekleyebilirsiniz.'
-                : ''
+              tier === 'free' ? 'Pro versiyona geçerek sınırsız hasta ekleyebilirsiniz.' : ''
             }`
           )
         }}
@@ -96,16 +95,11 @@ export function AddPatientButton({
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Yeni Hasta Ekle
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Yeni Hasta Ekle</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   Hasta Adı Soyadı *
                 </label>
                 <input
@@ -119,10 +113,7 @@ export function AddPatientButton({
               </div>
 
               <div>
-                <label
-                  htmlFor="age"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
+                <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
                   Yaş
                 </label>
                 <input
@@ -137,10 +128,7 @@ export function AddPatientButton({
               </div>
 
               <div>
-                <label
-                  htmlFor="gender"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
+                <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
                   Cinsiyet
                 </label>
                 <select

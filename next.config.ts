@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 import { withSentryConfig } from '@sentry/nextjs'
 
 const nextConfig: NextConfig = {
@@ -19,7 +19,11 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['lucide-react', 'date-fns'],
-    instrumentationHook: true, // Required for Sentry
+  },
+
+  // Turbopack configuration
+  turbopack: {
+    root: '/Users/sergenunlu/Desktop/kodlar/acil/acil',
   },
 
   // Logging
@@ -28,7 +32,7 @@ const nextConfig: NextConfig = {
       fullUrl: true,
     },
   },
-};
+}
 
 // Sentry configuration options
 const sentryWebpackPluginOptions = {
@@ -57,4 +61,4 @@ const sentryWebpackPluginOptions = {
 }
 
 // Export config with Sentry
-export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions)

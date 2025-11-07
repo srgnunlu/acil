@@ -18,10 +18,7 @@ export async function PATCH(request: NextRequest) {
     const { patientIds, action, value } = await request.json()
 
     if (!patientIds || !Array.isArray(patientIds) || patientIds.length === 0) {
-      return NextResponse.json(
-        { error: 'Patient IDs are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Patient IDs are required' }, { status: 400 })
     }
 
     if (!action) {
@@ -42,16 +39,13 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    let updateData: any = {}
+    let updateData: { status: string } = { status: '' }
     let successMessage = ''
 
     switch (action) {
       case 'update_status':
         if (!value || !['active', 'discharged', 'consultation'].includes(value)) {
-          return NextResponse.json(
-            { error: 'Invalid status value' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'Invalid status value' }, { status: 400 })
         }
         updateData = { status: value }
         successMessage = `${patientIds.length} hasta durumu güncellendi`
@@ -85,10 +79,7 @@ export async function PATCH(request: NextRequest) {
 
     if (updateError) {
       console.error('Bulk update error:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to update patients' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Failed to update patients' }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -98,9 +89,6 @@ export async function PATCH(request: NextRequest) {
     })
   } catch (error) {
     console.error('Bulk action error:', error)
-    return NextResponse.json(
-      { error: 'Failed to perform bulk action' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to perform bulk action' }, { status: 500 })
   }
 }

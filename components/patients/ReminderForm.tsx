@@ -9,12 +9,7 @@ interface ReminderFormProps {
   onSuccess?: () => void
 }
 
-export function ReminderForm({
-  patientId,
-  patientName,
-  onClose,
-  onSuccess,
-}: ReminderFormProps) {
+export function ReminderForm({ patientId, patientName, onClose, onSuccess }: ReminderFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,8 +55,9 @@ export function ReminderForm({
 
       onSuccess?.()
       onClose()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Hatırlatıcı eklenirken hata oluştu'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -70,23 +66,17 @@ export function ReminderForm({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full p-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          Hatırlatma Oluştur
-        </h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Hatırlatma Oluştur</h2>
 
         <div className="mb-4 p-4 bg-blue-50 rounded-lg">
           <p className="text-sm text-gray-700">
-            <span className="font-medium">{patientName}</span> için hatırlatma
-            oluşturuyorsunuz
+            <span className="font-medium">{patientName}</span> için hatırlatma oluşturuyorsunuz
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label
-              htmlFor="reminderType"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label htmlFor="reminderType" className="block text-sm font-medium text-gray-700 mb-2">
               Hatırlatma Tipi
             </label>
             <select
@@ -97,9 +87,7 @@ export function ReminderForm({
               onChange={(e) => {
                 const type = reminderTypes.find((t) => t.value === e.target.value)
                 if (type) {
-                  const minutesInput = document.getElementById(
-                    'minutes'
-                  ) as HTMLInputElement
+                  const minutesInput = document.getElementById('minutes') as HTMLInputElement
                   if (minutesInput) {
                     minutesInput.value = type.suggestedMinutes.toString()
                   }
@@ -116,10 +104,7 @@ export function ReminderForm({
           </div>
 
           <div>
-            <label
-              htmlFor="minutes"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label htmlFor="minutes" className="block text-sm font-medium text-gray-700 mb-2">
               Kaç dakika sonra hatırlat?
             </label>
             <input
@@ -131,9 +116,7 @@ export function ReminderForm({
               defaultValue="60"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Örnek: Lab sonucu için 120 dakika (2 saat)
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Örnek: Lab sonucu için 120 dakika (2 saat)</p>
           </div>
 
           {error && (

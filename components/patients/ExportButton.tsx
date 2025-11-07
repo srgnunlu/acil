@@ -60,8 +60,9 @@ export function ExportButton({ patientId, patientName }: ExportButtonProps) {
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
       }
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Export hatası'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -96,12 +97,7 @@ export function ExportButton({ patientId, patientName }: ExportButtonProps) {
           </>
         ) : (
           <>
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -170,9 +166,7 @@ export function ExportButton({ patientId, patientName }: ExportButtonProps) {
         </div>
       )}
 
-      {error && (
-        <p className="text-red-600 text-sm mt-2">{error}</p>
-      )}
+      {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
     </div>
   )
 }
