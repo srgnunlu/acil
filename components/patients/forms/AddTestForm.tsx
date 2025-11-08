@@ -172,7 +172,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
           const unmatchedValues: Record<string, string> = {}
 
           // Form field'larının isimlerini al
-          const formFieldNames = config.fields.map(f => f.name)
+          const formFieldNames = config.fields.map((f) => f.name)
 
           // AI'dan gelen değerleri eşleştir
           Object.entries(data.analysis.values).forEach(([key, value]) => {
@@ -185,9 +185,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
               } else {
                 // Eşleşmeyen değerleri "other" için sakla
                 // Test adını daha okunabilir yap
-                const readableKey = key
-                  .replace(/_/g, ' ')
-                  .replace(/\b\w/g, (l) => l.toUpperCase())
+                const readableKey = key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
                 unmatchedValues[readableKey] = stringValue
               }
             }
@@ -201,21 +199,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
             newFormData['other'] = otherText
           }
 
-          // Tarih bilgisi varsa onu da ekle
-          if (data.analysis.test_date) {
-            const dateNote = `Tetkik Tarihi: ${data.analysis.test_date}`
-            newFormData['other'] = newFormData['other']
-              ? `${dateNote}\n\n${newFormData['other']}`
-              : dateNote
-          }
-
-          // Detected tests bilgisini de ekle
-          if (data.analysis.detected_tests && data.analysis.detected_tests.length > 0) {
-            const testsNote = `\nTespit Edilen Testler: ${data.analysis.detected_tests.join(', ')}`
-            newFormData['other'] = newFormData['other']
-              ? `${newFormData['other']}${testsNote}`
-              : testsNote.trim()
-          }
+          // Not: Tarih ve detected_tests bilgileri artık AI tarafından gönderilmiyor
 
           setFormData(newFormData)
         }

@@ -31,14 +31,14 @@ export async function analyzeImage(
 3. Değerleri sayısal olarak çıkar, birimleri atla (sadece sayı)
 4. Eğer bir değer aralık olarak verilmişse (örn: "4.5-5.2"), ortalamasını al
 5. Referans aralıklarını göz ardı et, sadece hasta değerlerini al
-6. Tarih bilgisi varsa "test_date" alanına ekle
+6. ALINAN GÖRSELDE AÇIKÇA GÖRÜLEN TARİH DEĞERLERİNİ ÇIKAR - ECHİ eklemE
 7. Yukarıdaki standart testlere uymayan diğer tüm testleri orijinal adlarıyla "values" objesine ekle
    (örn: "TSH": 2.5, "T4": 1.2, "Vitamin D": 25.3, "HbA1c": 5.8)
 8. Her test için sayısal değer varsa sayı olarak, yoksa metin olarak kaydet
+9. ÖNEMLI: "detected_tests" alanında sadece görselde AÇIKÇA GÖRÜNEN test adlarını listele - şüphelik/tahmin edilen testler ekleme
 
 YANIT FORMATI (JSON) - SADECE JSON DÖNDÜR, AÇIKLAMA YAZMA:
 {
-  "test_date": "DD.MM.YYYY formatında tarih (varsa)",
   "values": {
     "hemoglobin": sayısal_değer,
     "wbc": sayısal_değer,
@@ -56,15 +56,15 @@ YANIT FORMATI (JSON) - SADECE JSON DÖNDÜR, AÇIKLAMA YAZMA:
     "test_adı_2": değer,
     "test_adı_n": değer
   },
-  "detected_tests": ["Görselde tespit edilen tüm test adları (Türkçe orijinal isimler)"],
-  "confidence": "high/medium/low",
-  "notes": "Özel notlar veya uyarılar (varsa)"
+  "detected_tests": ["Görselde AÇIKÇA görünen tüm test adları (Türkçe orijinal isimler)"],
+  "confidence": "high/medium/low"
 }
 
 NOT:
 - Görselde olmayan STANDART testler için alan ekleme (null kullanma)
 - Sadece görselde/PDF'te AÇIKÇA görünen değerleri çıkar
-- Standart olmayan testleri mutlaka ekle (TSH, T3, T4, Vitamin D, HbA1c, LDH, Üre, BUN, vb.)`,
+- Standart olmayan testleri mutlaka ekle (TSH, T3, T4, Vitamin D, HbA1c, LDH, Üre, BUN, vb.)
+- test_date, notes veya yorum ekleme YOK - YASAKLANMIŞ`,
 
     ekg: `Sen deneyimli bir kardiyolog yapay zeka asistanısın. Bu EKG görselini detaylı analiz et.
 
@@ -191,7 +191,10 @@ YANIT FORMATI (JSON):
     // JSON formatında dönen yanıtı parse et
     try {
       // Markdown code blocks'u temizle (```json ... ``` veya ``` ... ```)
-      text = text.replace(/```json?\s*/g, '').replace(/```\s*$/g, '').trim()
+      text = text
+        .replace(/```json?\s*/g, '')
+        .replace(/```\s*$/g, '')
+        .trim()
 
       const parsed = JSON.parse(text)
       return parsed
