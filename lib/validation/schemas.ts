@@ -44,23 +44,21 @@ export const aiAnalysisRequestSchema = z.object({
  */
 export const chatMessageSchema = z.object({
   patientId: z.string().uuid('Geçersiz hasta ID'),
-  message: z
-    .string()
-    .min(1, 'Mesaj boş olamaz')
-    .max(2000, 'Mesaj çok uzun (max 2000 karakter)'),
+  message: z.string().min(1, 'Mesaj boş olamaz').max(2000, 'Mesaj çok uzun (max 2000 karakter)'),
+  sessionId: z.string().uuid('Geçersiz session ID').nullish(),
 })
 
 /**
  * Image upload validation
  */
 export const imageUploadSchema = z.object({
-  file: z.instanceof(File).refine(
-    (file) => file.size <= 10 * 1024 * 1024,
-    'Dosya boyutu 10MB\'dan küçük olmalı'
-  ).refine(
-    (file) => ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type),
-    'Sadece JPEG, PNG ve WebP formatları destekleniyor'
-  ),
+  file: z
+    .instanceof(File)
+    .refine((file) => file.size <= 10 * 1024 * 1024, "Dosya boyutu 10MB'dan küçük olmalı")
+    .refine(
+      (file) => ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type),
+      'Sadece JPEG, PNG ve WebP formatları destekleniyor'
+    ),
   patientId: z.string().uuid('Geçersiz hasta ID'),
 })
 
@@ -98,7 +96,10 @@ export const reminderSchema = z.object({
  * Bulk patient operations
  */
 export const bulkPatientOperationSchema = z.object({
-  patientIds: z.array(z.string().uuid()).min(1, 'En az bir hasta seçilmeli').max(50, 'Aynı anda en fazla 50 hasta işlenebilir'),
+  patientIds: z
+    .array(z.string().uuid())
+    .min(1, 'En az bir hasta seçilmeli')
+    .max(50, 'Aynı anda en fazla 50 hasta işlenebilir'),
   action: z.enum(['delete', 'discharge', 'activate']),
 })
 
@@ -139,7 +140,8 @@ export function validateRequest<T>(
   } catch (error) {
     if (error instanceof z.ZodError) {
       // Zod v4 uses 'issues' instead of 'errors'
-      const errors = (error as any).issues || (error as any).errors || []
+      const zodError = error as z.ZodError
+      const errors = zodError.issues || []
       const firstError = errors[0]
       return {
         success: false,
@@ -153,9 +155,6 @@ export function validateRequest<T>(
 /**
  * Safe parse helper for Next.js API routes
  */
-export function safeParseRequest<T>(
-  schema: z.ZodSchema<T>,
-  data: unknown
-) {
+export function safeParseRequest<T>(schema: z.ZodSchema<T>, data: unknown) {
   return schema.safeParse(data)
 }

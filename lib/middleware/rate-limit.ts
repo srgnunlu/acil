@@ -10,8 +10,8 @@ const rateLimitConfig = {
     window: '1 m' as const, // 1 dakikada 10 istek
   },
   chat: {
-    requests: 20,
-    window: '1 m' as const, // 1 dakikada 20 istek
+    requests: 100,
+    window: '1 m' as const, // 1 dakikada 100 istek
   },
   upload: {
     requests: 5,
@@ -45,13 +45,18 @@ function createRateLimiter(type: keyof typeof rateLimitConfig = 'default') {
     })
   }
 
-  // Development için basit in-memory rate limiter
-  console.warn('⚠️  UPSTASH_REDIS not configured, using in-memory rate limiter (not production-safe)')
+  // Development için rate limiting'i devre dışı bırak
+  console.warn('⚠️  UPSTASH_REDIS not configured, rate limiting disabled in development')
 
-  return new Ratelimit({
-    redis: Redis.fromEnv(), // Bu hata verecek ama catch edilerek fallback kullanılacak
-    limiter: Ratelimit.slidingWindow(config.requests, config.window),
-  })
+  // Development modunda sınırsız izin ver
+  return {
+    limit: async () => ({
+      success: true,
+      limit: config.requests,
+      remaining: config.requests,
+      reset: Date.now() + 60000,
+    }),
+  } as ReturnType<typeof Ratelimit>
 }
 
 /**

@@ -1,249 +1,546 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, User, Bot } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import type { ChatMessage } from '@/types'
+import { formatDistanceToNow } from 'date-fns'
+import { tr } from 'date-fns/locale'
+import { ChatHistorySidebar } from '@/components/chat/ChatHistorySidebar'
 
 interface PatientChatProps {
   patientId: string
   patientName: string
 }
 
-/**
- * Patient Chat Component
- */
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
+
 export function PatientChat({ patientId, patientName }: PatientChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
-  // Load initial messages
-  useEffect(() => {
-    loadMessages()
-  }, [patientId])
-
-  // Auto scroll to bottom
-  useEffect(() => {
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
   }, [messages])
 
-  const loadMessages = async () => {
+  const loadSessionMessages = async (sessionId: string) => {
     try {
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
-        .eq('patient_id', patientId)
+        .eq('session_id', sessionId)
         .order('created_at', { ascending: true })
 
       if (error) throw error
+
       setMessages(data || [])
+      setCurrentSessionId(sessionId)
     } catch (error) {
-      console.error('Failed to load messages:', error)
+      console.error('Error loading messages:', error)
     }
   }
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return
+  const handleSessionSelect = (sessionId: string) => {
+    loadSessionMessages(sessionId)
+  }
 
-    const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
-      patient_id: patientId,
-      user_id: (await supabase.auth.getUser()).data.user?.id || '',
+  const handleNewChat = () => {
+    setMessages([])
+    setCurrentSessionId(null)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!input.trim() || loading) return
+
+    const userMessage = input.trim()
+    setInput('')
+    setLoading(true)
+
+    // Optimistic UI update
+    const tempUserMessage: Message = {
+      id: `temp-${Date.now()}`,
       role: 'user',
-      content: input.trim(),
+      content: userMessage,
+      created_at: new Date().toISOString(),
     }
 
-    setIsLoading(true)
-    setInput('')
+    setMessages((prev) => [...prev, tempUserMessage])
 
     try {
-      // Insert user message
-      const { error: insertError } = await supabase
-        .from('chat_messages')
-        .insert(userMessage)
-        .select()
-        .single()
-
-      if (insertError) throw insertError
-
-      // Get AI response
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           patientId,
-          message: input.trim(),
+          message: userMessage,
+          sessionId: currentSessionId,
         }),
       })
 
       if (!response.ok) {
-        throw new Error('AI response failed')
+        const data = await response.json()
+        throw new Error(data.error || 'Yanıt alınamadı')
       }
 
-      const aiResponse = await response.json()
+      const data = await response.json()
 
-      // Insert AI message
-      const { error: aiInsertError } = await supabase
-        .from('chat_messages')
-        .insert({
-          patient_id: patientId,
-          user_id: (await supabase.auth.getUser()).data.user?.id || '',
-          role: 'assistant',
-          content: aiResponse.message,
-        })
-        .select()
-        .single()
+      // Update session ID if new session was created
+      if (data.sessionId && !currentSessionId) {
+        setCurrentSessionId(data.sessionId)
+      }
 
-      if (aiInsertError) throw aiInsertError
+      // AI yanıtını ekle
+      const aiMessage: Message = {
+        id: `ai-${Date.now()}`,
+        role: 'assistant',
+        content: data.message,
+        created_at: new Date().toISOString(),
+      }
 
-      // Refresh messages
-      await loadMessages()
-    } catch (error) {
-      console.error('Failed to send message:', error)
-      alert('Mesaj gönderilemedi')
+      setMessages((prev) => [...prev, aiMessage])
+    } catch (error: unknown) {
+      // Hata mesajı göster
+      const errorText = error instanceof Error ? error.message : 'Bir hata oluştu'
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: `❌ Hata: ${errorText}`,
+        created_at: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
     } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
+      setLoading(false)
     }
   }
 
   const suggestedQuestions = [
-    'Bu hastanın mevcut risk faktörleri nelerdir?',
-    'Hangi tetkikleri önerirsiniz?',
-    'Tedavi algoritması nasıl olmalı?',
-    'Konsültasyon gerekli mi?',
-    'Hastayı taburcu edebilir miyiz?',
+    {
+      text: 'Bu hastanın mevcut risk faktörleri nelerdir?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+      ),
+    },
+    {
+      text: 'Hangi tetkikler öncelikli olarak istenmeli?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+          />
+        </svg>
+      ),
+    },
+    {
+      text: 'Ayırıcı tanılarda nelere dikkat etmeliyim?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+          />
+        </svg>
+      ),
+    },
+    {
+      text: 'Tedavi planında hangi ilaçları önerirsin?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+          />
+        </svg>
+      ),
+    },
+    {
+      text: 'Konsültasyon gerekli mi?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+          />
+        </svg>
+      ),
+    },
   ]
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-96 flex flex-col">
-      {/* Header */}
-      <div className="bg-blue-600 text-white p-4 rounded-t-lg">
-        <div className="flex items-center gap-3">
-          <Bot className="h-6 w-6" />
-          <div>
-            <h3 className="font-semibold">{patientName} - AI Asistan</h3>
-            <p className="text-sm opacity-90">Hasta verileriyle entegre sohbet</p>
+    <div className="flex h-[calc(100vh-200px)] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      {/* Chat History Sidebar */}
+      <ChatHistorySidebar
+        patientId={patientId}
+        currentSessionId={currentSessionId}
+        onSessionSelect={handleSessionSelect}
+        onNewChat={handleNewChat}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* Main Chat Area */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Chat Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3 min-w-0">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
+                title="Konuşma Geçmişi"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+
+              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                  />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-lg truncate">AI Klinik Asistan</h3>
+                <p className="text-xs text-blue-100 truncate">Hasta: {patientName}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <span className="hidden sm:flex px-3 py-1 bg-green-500 text-white rounded-full text-xs font-medium items-center">
+                <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
+                Aktif
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <Bot className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>Henüz mesaj yok</p>
-            <p className="text-sm">AI asistanına hastayla ilgili sorular sorun</p>
-          </div>
-        ) : (
-          messages.map((message, index) => (
-            <div
-              key={message.id || index}
-              className={`flex gap-3 ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              {/* Avatar */}
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                message.role === 'user' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-600'
-              }`}>
-                {message.role === 'user' ? (
-                  <User className="h-5 w-5" />
-                ) : (
-                  <Bot className="h-5 w-5" />
-                )}
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gradient-to-br from-gray-50 to-blue-50/30">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                <svg
+                  className="w-10 h-10 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
               </div>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
+                {patientName} için AI Asistan
+              </h3>
+              <p className="text-gray-600 mb-8 max-w-md text-sm md:text-base">
+                Bu hasta hakkında soru sorabilir, tanı ve tedavi önerileri alabilirsiniz. AI asistan
+                hasta verilerinizi analiz ederek size yardımcı olur.
+              </p>
 
-              {/* Message */}
-              <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  message.role === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-900'
-                }`}
-              >
-                <p className="text-sm whitespace-pre-wrap break-words">
-                  {message.content}
-                </p>
-                
-                {/* Timestamp */}
-                <div className="text-xs text-gray-500 mt-1">
-                  {new Date(message.created_at).toLocaleTimeString('tr-TR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+              <div className="w-full max-w-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm font-semibold text-gray-700 flex items-center">
+                    <svg
+                      className="w-4 h-4 mr-2 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                    Hızlı Başlangıç Soruları
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  {suggestedQuestions.map((question, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setInput(question.text)}
+                      className="group text-left px-4 py-3 bg-white hover:bg-blue-50 rounded-lg text-sm text-gray-700 transition-all border border-gray-200 hover:border-blue-300 hover:shadow-md flex items-center space-x-3"
+                    >
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                        {question.icon}
+                      </div>
+                      <span className="flex-1 break-words">{question.text}</span>
+                      <svg
+                        className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            <>
+              {messages.map((message, idx) => (
+                <div
+                  key={message.id || idx}
+                  className={`flex ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  } animate-fadeIn`}
+                >
+                  <div
+                    className={`max-w-[85%] md:max-w-[75%] rounded-2xl shadow-md ${
+                      message.role === 'user'
+                        ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white'
+                        : 'bg-white border border-gray-200 text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-start space-x-3 px-4 py-3">
+                      <div
+                        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                          message.role === 'user'
+                            ? 'bg-white/20'
+                            : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                        }`}
+                      >
+                        {message.role === 'user' ? (
+                          <svg
+                            className="w-5 h-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="w-5 h-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
+                          {message.content}
+                        </p>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/20">
+                          <p
+                            className={`text-xs ${
+                              message.role === 'user' ? 'text-white/70' : 'text-gray-500'
+                            }`}
+                          >
+                            {formatDistanceToNow(new Date(message.created_at), {
+                              addSuffix: true,
+                              locale: tr,
+                            })}
+                          </p>
+                          {message.role === 'assistant' && (
+                            <span className="text-xs text-gray-400 flex items-center">
+                              <svg
+                                className="w-3 h-3 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                              AI Yanıtı
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
 
-      {/* Suggested Questions */}
-      {messages.length === 0 && (
-        <div className="border-t border-gray-200 p-4">
-          <p className="text-sm font-medium text-gray-700 mb-3">
-            Örnek Sorular:
-          </p>
-          <div className="space-y-2">
-            {suggestedQuestions.map((question, index) => (
-              <button
-                key={index}
-                onClick={() => setInput(question)}
-                className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700"
-              >
-                {question}
-              </button>
-            ))}
+              {loading && (
+                <div className="flex justify-start animate-fadeIn">
+                  <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-md">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                        <svg
+                          className="w-5 h-5 text-white animate-spin"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex space-x-1">
+                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div
+                          className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-bounce"
+                          style={{ animationDelay: '0.1s' }}
+                        ></div>
+                        <div
+                          className="w-2.5 h-2.5 bg-purple-500 rounded-full animate-bounce"
+                          style={{ animationDelay: '0.2s' }}
+                        ></div>
+                      </div>
+                      <span className="text-sm text-gray-600 font-medium">AI düşünüyor...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
+
+        {/* Enhanced Input Area */}
+        <div className="border-t-2 border-blue-200 bg-white p-3 md:p-4 flex-shrink-0">
+          <form onSubmit={handleSubmit} className="flex space-x-2 md:space-x-3">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Hastanız hakkında bir soru sorun..."
+              disabled={loading}
+              className="flex-1 min-w-0 px-4 py-2.5 md:py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed transition-all text-sm"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+              className="px-4 md:px-6 py-2.5 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-105 flex items-center space-x-2 flex-shrink-0"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span className="hidden md:inline">Gönderiliyor</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                    />
+                  </svg>
+                  <span className="hidden md:inline">Gönder</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-2 md:mt-3 flex items-center justify-center space-x-2 text-xs text-gray-500">
+            <svg
+              className="w-4 h-4 text-yellow-500 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <p className="text-center">
+              AI asistanı hasta verilerinizi kullanarak size yardımcı olur. Nihai kararlar hekim
+              sorumluluğundadır.
+            </p>
           </div>
         </div>
-      )}
-
-      {/* Input */}
-      <div className="border-t border-gray-200 p-4">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Hastayla ilgili sorunuzu yazın..."
-            disabled={isLoading}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <button
-            onClick={sendMessage}
-            disabled={isLoading || !input.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="sr-only">Yükleniyor...</span>
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4" />
-                <span className="sr-only">Gönder</span>
-              </>
-            )}
-          </button>
-        </div>
       </div>
-
-      {/* Scroll to bottom indicator */}
-      <div ref={messagesEndRef} />
     </div>
   )
 }

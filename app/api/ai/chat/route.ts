@@ -1,11 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { chatWithAI, PatientContext } from '@/lib/ai/openai'
 import { NextResponse } from 'next/server'
-import {
-  checkRateLimit,
-  rateLimitResponse,
-  getClientIdentifier,
-} from '@/lib/middleware/rate-limit'
+import { checkRateLimit, rateLimitResponse, getClientIdentifier } from '@/lib/middleware/rate-limit'
 import { chatMessageSchema } from '@/lib/validation/schemas'
 
 export async function POST(request: Request) {
@@ -40,7 +36,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { patientId, message } = validation.data
+    const { patientId, message, sessionId } = validation.data
 
     // Hastanın kullanıcıya ait olduğunu kontrol et
     const { data: patient, error: patientError } = await supabase
@@ -54,11 +50,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Hasta bulunamadı' }, { status: 404 })
     }
 
-    // Önceki mesajları al (son 20 mesaj)
+    // Session yönetimi
+    let currentSessionId = sessionId
+
+    if (!currentSessionId) {
+      // Yeni session oluştur
+      const { data: newSession, error: sessionError } = await supabase
+        .from('chat_sessions')
+        .insert({
+          patient_id: patientId,
+          user_id: user.id,
+          title: 'Yeni Konuşma',
+        })
+        .select()
+        .single()
+
+      if (sessionError || !newSession) {
+        console.error('Session creation error:', sessionError)
+        return NextResponse.json({ error: 'Session oluşturulamadı' }, { status: 500 })
+      }
+
+      currentSessionId = newSession.id
+    }
+
+    // Önceki mesajları al (ilgili session'dan, son 20 mesaj)
     const { data: previousMessages } = await supabase
       .from('chat_messages')
       .select('*')
-      .eq('patient_id', patientId)
+      .eq('session_id', currentSessionId)
       .order('created_at', { ascending: true })
       .limit(20)
 
@@ -145,6 +164,7 @@ export async function POST(request: Request) {
     await supabase.from('chat_messages').insert({
       patient_id: patientId,
       user_id: user.id,
+      session_id: currentSessionId,
       role: 'user',
       content: message,
     })
@@ -153,6 +173,7 @@ export async function POST(request: Request) {
     await supabase.from('chat_messages').insert({
       patient_id: patientId,
       user_id: user.id,
+      session_id: currentSessionId,
       role: 'assistant',
       content: aiResponse,
     })
@@ -160,12 +181,12 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: aiResponse,
+      sessionId: currentSessionId,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Chat API error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Chat yanıtı alınırken hata oluştu' },
-      { status: 500 }
-    )
+    const errorMessage =
+      error instanceof Error ? error.message : 'Chat yanıtı alınırken hata oluştu'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

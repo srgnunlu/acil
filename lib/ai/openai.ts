@@ -142,16 +142,45 @@ KURALLAR:
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages,
-      ],
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
       temperature: 0.5,
     })
 
     return response.choices[0]?.message?.content || ''
   } catch (error) {
     console.error('OpenAI chat error:', error)
+    throw error
+  }
+}
+
+export async function streamChatWithAI(
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+  patientContext: PatientContext
+) {
+  const systemPrompt = `Sen bir acil tıp uzmanı yapay zeka asistanısın. Şu anda belirli bir hasta hakkında konuşuyorsun.
+
+HASTA BAĞLAMI:
+${JSON.stringify(patientContext, null, 2)}
+
+KURALLAR:
+- Sadece bu hastayla ilgili sorulara cevap ver
+- Konu dışı sorulara nazikçe yönlendirme yap
+- Kanıta dayalı bilgi ver
+- Gerekirse akademik kaynaklar referansla
+- Net ve anlaşılır ol
+- Hasta güvenliğini önceliklendir`
+
+  try {
+    const stream = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+      temperature: 0.5,
+      stream: true,
+    })
+
+    return stream
+  } catch (error) {
+    console.error('OpenAI streaming error:', error)
     throw error
   }
 }
