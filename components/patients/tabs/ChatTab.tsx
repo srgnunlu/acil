@@ -183,7 +183,7 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
                     accumulatedResponse += parsed.content
                     setStreamingMessage(accumulatedResponse)
                   }
-                } catch (e) {
+                } catch {
                   // Ignore parse errors
                 }
               }
@@ -236,7 +236,7 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
       const userMessage = messages[messageIndex - 1]
       if (userMessage && userMessage.role === 'user') {
         setMessages((prev) => prev.slice(0, messageIndex))
-        handleSubmit(new Event('submit') as any, userMessage.content)
+        handleSubmit({ preventDefault: () => {} } as React.FormEvent, userMessage.content)
       }
     },
     [messages, handleSubmit]
@@ -382,7 +382,7 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-          {filteredMessages.length === 0 && !streamingMessage ? (
+          {messages.length === 0 && !streamingMessage ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-4">
               <div className="w-24 h-24 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-3xl flex items-center justify-center mb-6 shadow-2xl animate-pulse">
                 <Sparkles className="w-12 h-12 text-white" />
@@ -432,6 +432,25 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
                   ))}
                 </div>
               </div>
+            </div>
+          ) : filteredMessages.length === 0 && searchQuery.trim() ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <div className="w-24 h-24 bg-gradient-to-br from-slate-200 to-slate-300 rounded-3xl flex items-center justify-center mb-6 shadow-lg">
+                <Search className="w-12 h-12 text-slate-500" />
+              </div>
+              <h3 className="text-xl md:text-2xl font-bold text-slate-700 mb-2">
+                Sonuç bulunamadı
+              </h3>
+              <p className="text-slate-600 mb-4 max-w-md text-sm md:text-base">
+                &ldquo;{searchQuery}&rdquo; araması için sonuç bulunamadı. Başka bir arama terimi
+                deneyin.
+              </p>
+              <button
+                onClick={() => setSearchQuery('')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-semibold"
+              >
+                Aramayı Temizle
+              </button>
             </div>
           ) : (
             <>
