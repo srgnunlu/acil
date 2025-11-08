@@ -169,11 +169,54 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
         // Auto-fill form with extracted values
         if (data.analysis?.values) {
           const newFormData: Record<string, string> = {}
+          const unmatchedValues: Record<string, string> = {}
+
+          // Form field'larının isimlerini al
+          const formFieldNames = config.fields.map(f => f.name)
+
+          // AI'dan gelen değerleri eşleştir
           Object.entries(data.analysis.values).forEach(([key, value]) => {
-            if (value !== null && value !== undefined) {
-              newFormData[key] = String(value)
+            if (value !== null && value !== undefined && String(value).trim() !== '') {
+              const stringValue = String(value)
+
+              // Eğer bu alan formda varsa, direkt ekle
+              if (formFieldNames.includes(key)) {
+                newFormData[key] = stringValue
+              } else {
+                // Eşleşmeyen değerleri "other" için sakla
+                // Test adını daha okunabilir yap
+                const readableKey = key
+                  .replace(/_/g, ' ')
+                  .replace(/\b\w/g, (l) => l.toUpperCase())
+                unmatchedValues[readableKey] = stringValue
+              }
             }
           })
+
+          // Eşleşmeyen değerleri "other" alanına düzenli şekilde ekle
+          if (Object.keys(unmatchedValues).length > 0) {
+            const otherText = Object.entries(unmatchedValues)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join('\n')
+            newFormData['other'] = otherText
+          }
+
+          // Tarih bilgisi varsa onu da ekle
+          if (data.analysis.test_date) {
+            const dateNote = `Tetkik Tarihi: ${data.analysis.test_date}`
+            newFormData['other'] = newFormData['other']
+              ? `${dateNote}\n\n${newFormData['other']}`
+              : dateNote
+          }
+
+          // Detected tests bilgisini de ekle
+          if (data.analysis.detected_tests && data.analysis.detected_tests.length > 0) {
+            const testsNote = `\nTespit Edilen Testler: ${data.analysis.detected_tests.join(', ')}`
+            newFormData['other'] = newFormData['other']
+              ? `${newFormData['other']}${testsNote}`
+              : testsNote.trim()
+          }
+
           setFormData(newFormData)
         }
 
@@ -198,22 +241,13 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
     setLoading(true)
     setError(null)
 
-    const formDataObj = new FormData(e.currentTarget)
     const results: Record<string, string> = {}
 
-    // Merge AI-extracted values with form values
-    const allData = { ...formData }
-    config.fields.forEach((field: { name: string }) => {
-      const value = formDataObj.get(field.name)
-      if (value) {
-        allData[field.name] = String(value)
-      }
-    })
-
+    // Use formData state (which is always up-to-date with controlled components)
     // Filter out empty values
-    Object.entries(allData).forEach(([key, value]) => {
+    Object.entries(formData).forEach(([key, value]) => {
       if (value && value.trim()) {
-        results[key] = value
+        results[key] = value.trim()
       }
     })
 
@@ -338,7 +372,10 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
                       name={field.name}
                       required={field.required}
                       rows={2}
-                      defaultValue={formData[field.name] || ''}
+                      value={formData[field.name] || ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))
+                      }
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                       placeholder={field.placeholder}
                     />
@@ -347,7 +384,10 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
                       id={field.name}
                       name={field.name}
                       required={field.required}
-                      defaultValue={formData[field.name] || ''}
+                      value={formData[field.name] || ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))
+                      }
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     >
                       <option value="">Seçiniz</option>
@@ -364,7 +404,10 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
                       type={field.type || 'text'}
                       required={field.required}
                       step={field.step}
-                      defaultValue={formData[field.name] || ''}
+                      value={formData[field.name] || ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))
+                      }
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                       placeholder={field.placeholder}
                     />
