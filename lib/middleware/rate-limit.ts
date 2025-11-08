@@ -56,7 +56,7 @@ function createRateLimiter(type: keyof typeof rateLimitConfig = 'default') {
       remaining: config.requests,
       reset: Date.now() + 60000,
     }),
-  } as ReturnType<typeof Ratelimit>
+  } as any
 }
 
 /**
