@@ -15,11 +15,26 @@ export async function analyzeImage(
 
 ÖNEMLİ KURALLAR:
 1. Görseldeki/PDF'teki TÜM test değerlerini dikkatle oku ve çıkar
-2. Test adlarını standart medikal isimlere dönüştür (örn: "Hb" -> "hemoglobin", "WBC" -> "wbc")
-3. Değerleri sayısal olarak çıkar, birimleri atla
+2. Test adlarını standart İngilizce field adlarına dönüştür:
+   - Hemoglobin/Hb/HGB → "hemoglobin"
+   - Lökosit/WBC/Beyaz Küre → "wbc"
+   - Trombosit/PLT/Platelet → "platelet"
+   - Glukoz/Glucose/Kan Şekeri → "glucose"
+   - Kreatinin/Creatinine/Kre → "creatinine"
+   - Sodyum/Sodium/Na → "sodium"
+   - Potasyum/Potassium/K → "potassium"
+   - ALT/SGPT → "alt"
+   - AST/SGOT → "ast"
+   - D-Dimer/DDimer → "d_dimer"
+   - CRP/C-Reaktif Protein → "crp"
+   - Troponin → "troponin"
+3. Değerleri sayısal olarak çıkar, birimleri atla (sadece sayı)
 4. Eğer bir değer aralık olarak verilmişse (örn: "4.5-5.2"), ortalamasını al
 5. Referans aralıklarını göz ardı et, sadece hasta değerlerini al
 6. Tarih bilgisi varsa "test_date" alanına ekle
+7. Yukarıdaki standart testlere uymayan diğer tüm testleri orijinal adlarıyla "values" objesine ekle
+   (örn: "TSH": 2.5, "T4": 1.2, "Vitamin D": 25.3, "HbA1c": 5.8)
+8. Her test için sayısal değer varsa sayı olarak, yoksa metin olarak kaydet
 
 YANIT FORMATI (JSON) - SADECE JSON DÖNDÜR, AÇIKLAMA YAZMA:
 {
@@ -36,15 +51,20 @@ YANIT FORMATI (JSON) - SADECE JSON DÖNDÜR, AÇIKLAMA YAZMA:
     "ast": sayısal_değer,
     "d_dimer": sayısal_değer,
     "crp": sayısal_değer,
-    "troponin": "text değer",
-    "other": "Çıkardığın diğer önemli değerler (metin olarak)"
+    "troponin": "text veya sayısal değer",
+    "test_adı_1": değer,
+    "test_adı_2": değer,
+    "test_adı_n": değer
   },
-  "detected_tests": ["Görselde tespit edilen tüm test adları"],
+  "detected_tests": ["Görselde tespit edilen tüm test adları (Türkçe orijinal isimler)"],
   "confidence": "high/medium/low",
   "notes": "Özel notlar veya uyarılar (varsa)"
 }
 
-NOT: Görselde olmayan değerler için null kullan. Sadece görselde/PDF'te AÇIKÇA görünen değerleri çıkar.`,
+NOT:
+- Görselde olmayan STANDART testler için alan ekleme (null kullanma)
+- Sadece görselde/PDF'te AÇIKÇA görünen değerleri çıkar
+- Standart olmayan testleri mutlaka ekle (TSH, T3, T4, Vitamin D, HbA1c, LDH, Üre, BUN, vb.)`,
 
     ekg: `Sen deneyimli bir kardiyolog yapay zeka asistanısın. Bu EKG görselini detaylı analiz et.
 
