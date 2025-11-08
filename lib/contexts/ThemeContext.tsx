@@ -12,29 +12,49 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // İlk render'da localStorage'dan tema oku (sadece client-side)
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme') as Theme | null
-      if (savedTheme) return savedTheme
+  const [mounted, setMounted] = useState(false)
+  const [theme, setTheme] = useState<Theme>('light')
 
+  // İlk mount'ta localStorage'dan tema oku
+  useEffect(() => {
+    setMounted(true)
+
+    const savedTheme = localStorage.getItem('theme') as Theme | null
+    if (savedTheme) {
+      setTheme(savedTheme)
+    } else {
       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
         ? 'dark'
         : 'light'
-      return systemTheme
+      setTheme(systemTheme)
+      localStorage.setItem('theme', systemTheme)
     }
-    return 'light'
-  })
+  }, [])
 
   // Tema değiştiğinde localStorage'a kaydet ve DOM'u güncelle
   useEffect(() => {
+    if (!mounted) return
+
     localStorage.setItem('theme', theme)
-    document.documentElement.classList.remove('light', 'dark')
-    document.documentElement.classList.add(theme)
-  }, [theme])
+
+    // Önce tersi olanı kaldır, sonra mevcut temayı ekle
+    const root = document.documentElement
+    if (theme === 'dark') {
+      root.classList.remove('light')
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+      root.classList.add('light')
+    }
+  }, [theme, mounted])
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
+
+  // Hydration'ı önlemek için mount edilene kadar children'ı render etme
+  if (!mounted) {
+    return <>{children}</>
   }
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>
