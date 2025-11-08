@@ -76,6 +76,9 @@ export function AIAnalysisTab({ patientId, patientData, tests, analyses }: AIAna
   // AI Chat state
   const [chatModalOpen, setChatModalOpen] = useState(false)
 
+  // Compare Modal state
+  const [compareModalOpen, setCompareModalOpen] = useState(false)
+
   const router = useRouter()
   const { showToast } = useToast()
 
@@ -510,8 +513,15 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
               {analyses.length > 1 && (
                 <button
                   onClick={() => {
-                    setCompareMode(!compareMode)
-                    setCompareAnalysis(null)
+                    if (compareMode) {
+                      // Karşılaştırma modunu kapat
+                      setCompareMode(false)
+                      setCompareAnalysis(null)
+                    } else {
+                      // Karşılaştırma modunu aç ve modal'ı göster
+                      setCompareMode(true)
+                      setCompareModalOpen(true)
+                    }
                   }}
                   className={cn(
                     'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
@@ -612,12 +622,18 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
           )}
 
           {/* Analysis Content - Compare or Single View */}
-          <div className={cn(compareAnalysis && compareMode ? 'grid grid-cols-2 gap-4' : '')}>
-            {/* Current Analysis */}
+          <div className={cn(compareAnalysis && compareMode ? 'grid grid-cols-2 gap-6' : '')}>
+            {/* Current Analysis - Left Column */}
             <div className="space-y-4">
               {compareAnalysis && compareMode && (
-                <div className="p-3 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
+                <div className="p-3 bg-blue-50 border-l-4 border-blue-500 rounded-lg sticky top-0 z-10">
                   <p className="font-semibold text-blue-900 text-sm">📌 Güncel Analiz</p>
+                  <p className="text-blue-700 text-xs mt-1">
+                    {formatDistanceToNow(new Date(latestAnalysis.created_at), {
+                      addSuffix: true,
+                      locale: tr,
+                    })}
+                  </p>
                 </div>
               )}
 
@@ -951,7 +967,353 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
                 onDeleteNote={(noteId) => deleteNote(latestAnalysis.id, noteId)}
               />
             </div>
-            {/* End Current Analysis */}
+            {/* End Current Analysis - Left Column */}
+
+            {/* Compare Analysis - Right Column */}
+            {compareAnalysis && compareMode && (
+              <div className="space-y-4">
+                <div className="p-3 bg-purple-50 border-l-4 border-purple-500 rounded-lg sticky top-0 z-10">
+                  <p className="font-semibold text-purple-900 text-sm">📊 Karşılaştırılan Analiz</p>
+                  <p className="text-purple-700 text-xs mt-1">
+                    {formatDistanceToNow(new Date(compareAnalysis.created_at), {
+                      addSuffix: true,
+                      locale: tr,
+                    })}
+                  </p>
+                </div>
+
+                {/* Analysis Header */}
+                <CollapsibleCard
+                  title={
+                    compareAnalysis.analysis_type === 'initial'
+                      ? 'İlk Değerlendirme'
+                      : 'Güncellenmiş Analiz'
+                  }
+                  icon="📝"
+                  badge="AI Analizi"
+                  badgeColor="green"
+                  expanded={expandedSections.summary}
+                  onToggle={() => toggleSection('summary')}
+                >
+                  {compareAnalysis.ai_response.summary && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                      <p className="text-gray-800 leading-relaxed">
+                        {compareAnalysis.ai_response.summary}
+                      </p>
+                    </div>
+                  )}
+                </CollapsibleCard>
+
+                {/* Differential Diagnosis */}
+                {compareAnalysis.ai_response.differential_diagnosis && (
+                  <CollapsibleCard
+                    title="Ayırıcı Tanılar"
+                    icon="🎯"
+                    expanded={expandedSections.diagnosis}
+                    onToggle={() => toggleSection('diagnosis')}
+                    gradient="from-purple-50 to-pink-50"
+                  >
+                    <div className="space-y-3">
+                      {compareAnalysis.ai_response.differential_diagnosis.map(
+                        (diagnosis: string, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-start p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all duration-200 group"
+                          >
+                            <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold rounded-lg mr-3 group-hover:scale-110 transition-transform">
+                              {idx + 1}
+                            </span>
+                            <span className="text-gray-800 flex-1">{diagnosis}</span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </CollapsibleCard>
+                )}
+
+                {/* Red Flags */}
+                {compareAnalysis.ai_response.red_flags &&
+                  compareAnalysis.ai_response.red_flags.length > 0 && (
+                    <CollapsibleCard
+                      title="Kritik Bulgular"
+                      icon="⚠️"
+                      expanded={expandedSections.redFlags}
+                      onToggle={() => toggleSection('redFlags')}
+                      gradient="from-red-50 to-orange-50"
+                      borderColor="border-red-200"
+                    >
+                      <div className="space-y-3">
+                        {compareAnalysis.ai_response.red_flags.map((flag: string, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-start p-4 bg-red-50 border-l-4 border-red-500 rounded-lg animate-pulse-slow"
+                          >
+                            <svg
+                              className="w-5 h-5 text-red-600 mr-3 flex-shrink-0 mt-0.5"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <span className="text-red-900 font-medium flex-1">{flag}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleCard>
+                  )}
+
+                {/* Recommended Tests */}
+                {compareAnalysis.ai_response.recommended_tests && (
+                  <CollapsibleCard
+                    title="Önerilen Tetkikler"
+                    icon="🔬"
+                    expanded={expandedSections.tests}
+                    onToggle={() => toggleSection('tests')}
+                    gradient="from-teal-50 to-cyan-50"
+                  >
+                    <div className="space-y-6">
+                      {/* Priority Distribution Chart */}
+                      <TestPriorityChart tests={compareAnalysis.ai_response.recommended_tests} />
+
+                      {/* Tests List */}
+                      <div className="space-y-3">
+                        {compareAnalysis.ai_response.recommended_tests.map(
+                          (
+                            test: { test: string; priority: string; rationale: string },
+                            idx: number
+                          ) => (
+                            <div
+                              key={idx}
+                              className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-lg transition-all duration-200 hover:border-teal-300"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                  <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
+                                  {test.test}
+                                </h4>
+                                {test.priority && <PriorityBadge priority={test.priority} />}
+                              </div>
+                              {test.rationale && (
+                                <p className="text-sm text-gray-600 mt-2 pl-4 border-l-2 border-gray-200">
+                                  {test.rationale}
+                                </p>
+                              )}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleCard>
+                )}
+
+                {/* Treatment Algorithm */}
+                {compareAnalysis.ai_response.treatment_algorithm && (
+                  <CollapsibleCard
+                    title="Tedavi Algoritması"
+                    icon="💊"
+                    expanded={expandedSections.treatment}
+                    onToggle={() => toggleSection('treatment')}
+                    gradient="from-green-50 to-emerald-50"
+                  >
+                    <div className="space-y-6">
+                      {compareAnalysis.ai_response.treatment_algorithm.immediate && (
+                        <TreatmentSection
+                          title="Acil Müdahale"
+                          icon="🚨"
+                          items={compareAnalysis.ai_response.treatment_algorithm.immediate}
+                          color="red"
+                        />
+                      )}
+
+                      {compareAnalysis.ai_response.treatment_algorithm.monitoring && (
+                        <TreatmentSection
+                          title="İzlem Parametreleri"
+                          icon="📊"
+                          items={compareAnalysis.ai_response.treatment_algorithm.monitoring}
+                          color="blue"
+                        />
+                      )}
+
+                      {compareAnalysis.ai_response.treatment_algorithm.medications && (
+                        <div>
+                          <h4 className="font-semibold text-green-700 mb-3 flex items-center gap-2">
+                            <span className="text-xl">💉</span>
+                            İlaç Önerileri
+                          </h4>
+                          <div className="space-y-2">
+                            {compareAnalysis.ai_response.treatment_algorithm.medications.map(
+                              (
+                                item: string | { name: string; dose: string; frequency: string },
+                                idx: number
+                              ) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-start p-3 bg-green-50 rounded-lg border border-green-200"
+                                >
+                                  <span className="text-green-600 mr-3 font-bold">→</span>
+                                  <span className="text-gray-800">
+                                    {typeof item === 'string'
+                                      ? item
+                                      : `${item.name || ''} ${item.dose || ''} - ${item.frequency || ''}`}
+                                  </span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleCard>
+                )}
+
+                {/* Consultation */}
+                {compareAnalysis.ai_response.consultation && (
+                  <CollapsibleCard
+                    title="Konsültasyon Önerisi"
+                    icon="👨‍⚕️"
+                    expanded={expandedSections.consultation}
+                    onToggle={() => toggleSection('consultation')}
+                    gradient="from-yellow-50 to-amber-50"
+                  >
+                    {compareAnalysis.ai_response.consultation.required && (
+                      <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-2xl">
+                            {compareAnalysis.ai_response.consultation.urgency === 'urgent'
+                              ? '⚡'
+                              : '📋'}
+                          </span>
+                          <p className="font-semibold text-yellow-900 text-lg">
+                            Konsültasyon{' '}
+                            {compareAnalysis.ai_response.consultation.urgency === 'urgent'
+                              ? 'ACİL gerekli'
+                              : 'önerilmektedir'}
+                          </p>
+                        </div>
+                        {compareAnalysis.ai_response.consultation.departments && (
+                          <div className="mb-3">
+                            <p className="text-yellow-800 font-medium mb-2">Bölümler:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {compareAnalysis.ai_response.consultation.departments.map(
+                                (dept: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="px-3 py-1 bg-yellow-100 text-yellow-900 rounded-full text-sm font-medium"
+                                  >
+                                    {dept}
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {compareAnalysis.ai_response.consultation.reason && (
+                          <div className="bg-white/50 rounded p-3">
+                            <p className="text-yellow-900">
+                              <span className="font-medium">Neden:</span>{' '}
+                              {compareAnalysis.ai_response.consultation.reason}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CollapsibleCard>
+                )}
+
+                {/* Disposition */}
+                {compareAnalysis.ai_response.disposition && (
+                  <CollapsibleCard
+                    title="Hasta Yönlendirme"
+                    icon="🏥"
+                    expanded={expandedSections.disposition}
+                    onToggle={() => toggleSection('disposition')}
+                    gradient="from-indigo-50 to-blue-50"
+                  >
+                    <div className="bg-indigo-50 border-l-4 border-indigo-500 rounded-lg p-5">
+                      <p className="font-semibold text-indigo-900 mb-3 text-lg flex items-center gap-2">
+                        <span className="text-2xl">
+                          {compareAnalysis.ai_response.disposition.recommendation === 'hospitalize'
+                            ? '🏥'
+                            : compareAnalysis.ai_response.disposition.recommendation === 'observe'
+                              ? '👁️'
+                              : '🏠'}
+                        </span>
+                        Öneri:{' '}
+                        {compareAnalysis.ai_response.disposition.recommendation === 'hospitalize'
+                          ? 'Yatış'
+                          : compareAnalysis.ai_response.disposition.recommendation === 'observe'
+                            ? 'Gözlem'
+                            : 'Taburcu'}
+                      </p>
+                      {compareAnalysis.ai_response.disposition.criteria && (
+                        <div className="bg-white/50 rounded p-3">
+                          <p className="text-indigo-800">
+                            {compareAnalysis.ai_response.disposition.criteria}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleCard>
+                )}
+
+                {/* References */}
+                {compareAnalysis.ai_response.references && (
+                  <CollapsibleCard
+                    title="Akademik Kaynaklar"
+                    icon="📚"
+                    expanded={expandedSections.references}
+                    onToggle={() => toggleSection('references')}
+                    gradient="from-gray-50 to-slate-50"
+                  >
+                    <div className="space-y-4">
+                      {compareAnalysis.ai_response.references.map(
+                        (
+                          ref: { title: string; source: string; year?: string; key_point?: string },
+                          idx: number
+                        ) => (
+                          <div
+                            key={idx}
+                            className="border-l-4 border-gray-400 pl-4 py-3 bg-white rounded-r-lg hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
+                          >
+                            <p className="font-medium text-gray-900 mb-1">{ref.title}</p>
+                            <p className="text-sm text-gray-600 mb-2">
+                              {ref.source}
+                              {ref.year && ` (${ref.year})`}
+                            </p>
+                            {ref.key_point && (
+                              <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded mt-2">
+                                <span className="font-medium">→</span> {ref.key_point}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </CollapsibleCard>
+                )}
+
+                {/* Notes Section */}
+                <NotesSection
+                  analysisId={compareAnalysis.id}
+                  notes={notes[compareAnalysis.id] || []}
+                  newNoteText={newNoteText}
+                  setNewNoteText={setNewNoteText}
+                  editingNoteId={editingNoteId}
+                  setEditingNoteId={setEditingNoteId}
+                  editingNoteText={editingNoteText}
+                  setEditingNoteText={setEditingNoteText}
+                  notesLoading={notesLoading[compareAnalysis.id]}
+                  onAddNote={() => addNote(compareAnalysis.id)}
+                  onUpdateNote={(noteId) => updateNote(compareAnalysis.id, noteId)}
+                  onDeleteNote={(noteId) => deleteNote(compareAnalysis.id, noteId)}
+                />
+              </div>
+            )}
+            {/* End Compare Analysis - Right Column */}
           </div>
           {/* End Compare or Single View */}
         </div>
@@ -1274,6 +1636,132 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
           </div>
         </Modal>
       )}
+
+      {/* Compare Analysis Selection Modal */}
+      <Modal
+        isOpen={compareModalOpen}
+        onClose={() => setCompareModalOpen(false)}
+        title="📊 Karşılaştırmak İstediğiniz Analizi Seçin"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Aşağıdaki analizlerden birini seçerek güncel analiz ile yan yana karşılaştırabilirsiniz.
+          </p>
+
+          {/* Analyses List */}
+          {filteredAnalyses.length > 0 ? (
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+              {filteredAnalyses.map((analysis) => (
+                <div
+                  key={analysis.id}
+                  onClick={() => {
+                    setCompareAnalysis(analysis)
+                    setCompareModalOpen(false)
+                    showToast('Analiz karşılaştırması başlatıldı', 'success')
+                  }}
+                  className={cn(
+                    'p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-lg',
+                    compareAnalysis?.id === analysis.id
+                      ? 'bg-purple-50 border-purple-400 shadow-md'
+                      : 'bg-white border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      {/* Header */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">
+                          {analysis.analysis_type === 'initial' ? '📝' : '🔄'}
+                        </span>
+                        <h4 className="font-semibold text-gray-900">
+                          {analysis.analysis_type === 'initial'
+                            ? 'İlk Değerlendirme'
+                            : 'Güncellenmiş Analiz'}
+                        </h4>
+                        {favorites[analysis.id] && (
+                          <Star className="w-4 h-4 fill-yellow-500 text-yellow-500 flex-shrink-0" />
+                        )}
+                      </div>
+
+                      {/* Time */}
+                      <p className="text-sm text-gray-500">
+                        {formatDistanceToNow(new Date(analysis.created_at), {
+                          addSuffix: true,
+                          locale: tr,
+                        })}
+                      </p>
+
+                      {/* Summary Preview */}
+                      {analysis.ai_response.summary && (
+                        <p className="text-sm text-gray-700 line-clamp-2">
+                          {analysis.ai_response.summary.length > 150
+                            ? `${analysis.ai_response.summary.substring(0, 150)}...`
+                            : analysis.ai_response.summary}
+                        </p>
+                      )}
+
+                      {/* Diagnosis Tags */}
+                      {analysis.ai_response.differential_diagnosis &&
+                        analysis.ai_response.differential_diagnosis.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {analysis.ai_response.differential_diagnosis
+                              .slice(0, 3)
+                              .map((diagnosis, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                                >
+                                  {diagnosis}
+                                </span>
+                              ))}
+                            {analysis.ai_response.differential_diagnosis.length > 3 && (
+                              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                +{analysis.ai_response.differential_diagnosis.length - 3} daha
+                              </span>
+                            )}
+                          </div>
+                        )}
+                    </div>
+
+                    {/* Select Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setCompareAnalysis(analysis)
+                        setCompareModalOpen(false)
+                        showToast('Analiz karşılaştırması başlatıldı', 'success')
+                      }}
+                      className={cn(
+                        'px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap',
+                        compareAnalysis?.id === analysis.id
+                          ? 'bg-purple-600 text-white hover:bg-purple-700'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      )}
+                    >
+                      {compareAnalysis?.id === analysis.id ? 'Seçildi' : 'Seç'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Karşılaştırılacak başka analiz bulunamadı.</p>
+            </div>
+          )}
+
+          {/* Close Button */}
+          <div className="flex justify-end pt-4 border-t">
+            <button
+              onClick={() => setCompareModalOpen(false)}
+              className="px-6 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg font-medium transition-colors"
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* AI Chat Modal */}
       {latestAnalysis && (
