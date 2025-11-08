@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { PatientData, PatientTest, AIAnalysis } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/modal'
 import { cn, copyToClipboard } from '@/lib/utils'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { Star, Trash2, Edit2, Plus, Save, X } from 'lucide-react'
 
 interface AIAnalysisTabProps {
   patientId: string
@@ -20,6 +21,23 @@ interface AIAnalysisTabProps {
 
 interface SectionState {
   [key: string]: boolean
+}
+
+interface Note {
+  id: string
+  analysis_id: string
+  user_id: string
+  note: string
+  created_at: string
+  updated_at: string
+}
+
+interface NotesState {
+  [analysisId: string]: Note[]
+}
+
+interface FavoritesState {
+  [analysisId: string]: boolean
 }
 
 export function AIAnalysisTab({ patientId, patientData, tests, analyses }: AIAnalysisTabProps) {
@@ -40,10 +58,211 @@ export function AIAnalysisTab({ patientId, patientData, tests, analyses }: AIAna
   const [filterType, setFilterType] = useState<'all' | 'initial' | 'updated'>('all')
   const [compareMode, setCompareMode] = useState(false)
   const [compareAnalysis, setCompareAnalysis] = useState<AIAnalysis | null>(null)
+
+  // Notes and Favorites state
+  const [notes, setNotes] = useState<NotesState>({})
+  const [favorites, setFavorites] = useState<FavoritesState>({})
+  const [newNoteText, setNewNoteText] = useState('')
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editingNoteText, setEditingNoteText] = useState('')
+  const [notesLoading, setNotesLoading] = useState<{ [analysisId: string]: boolean }>({})
+
+  // Email export state
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [emailAddress, setEmailAddress] = useState('')
+  const [emailMessage, setEmailMessage] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
+
   const router = useRouter()
   const { showToast } = useToast()
 
   const latestAnalysis = analyses[0]
+
+  // Fetch notes and favorites on mount
+  useEffect(() => {
+    analyses.forEach((analysis) => {
+      fetchNotes(analysis.id)
+      checkFavorite(analysis.id)
+    })
+  }, [analyses])
+
+  // Notes management functions
+  const fetchNotes = async (analysisId: string) => {
+    try {
+      const response = await fetch(`/api/ai/analyses/${analysisId}/notes`)
+      if (response.ok) {
+        const data = await response.json()
+        setNotes((prev) => ({ ...prev, [analysisId]: data.notes || [] }))
+      }
+    } catch (error) {
+      console.error('Error fetching notes:', error)
+    }
+  }
+
+  const addNote = async (analysisId: string) => {
+    if (!newNoteText.trim()) {
+      showToast('Not içeriği boş olamaz', 'warning')
+      return
+    }
+
+    setNotesLoading((prev) => ({ ...prev, [analysisId]: true }))
+    try {
+      const response = await fetch(`/api/ai/analyses/${analysisId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: newNoteText }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setNotes((prev) => ({
+          ...prev,
+          [analysisId]: [data.note, ...(prev[analysisId] || [])],
+        }))
+        setNewNoteText('')
+        showToast('Not eklendi', 'success')
+      } else {
+        const data = await response.json()
+        showToast(data.error || 'Not eklenirken hata oluştu', 'error')
+      }
+    } catch (error) {
+      showToast('Not eklenirken hata oluştu', 'error')
+    } finally {
+      setNotesLoading((prev) => ({ ...prev, [analysisId]: false }))
+    }
+  }
+
+  const updateNote = async (analysisId: string, noteId: string) => {
+    if (!editingNoteText.trim()) {
+      showToast('Not içeriği boş olamaz', 'warning')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/ai/analyses/${analysisId}/notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: editingNoteText }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setNotes((prev) => ({
+          ...prev,
+          [analysisId]: prev[analysisId].map((n) => (n.id === noteId ? data.note : n)),
+        }))
+        setEditingNoteId(null)
+        setEditingNoteText('')
+        showToast('Not güncellendi', 'success')
+      } else {
+        const data = await response.json()
+        showToast(data.error || 'Not güncellenirken hata oluştu', 'error')
+      }
+    } catch (error) {
+      showToast('Not güncellenirken hata oluştu', 'error')
+    }
+  }
+
+  const deleteNote = async (analysisId: string, noteId: string) => {
+    if (!confirm('Bu notu silmek istediğinizden emin misiniz?')) return
+
+    try {
+      const response = await fetch(`/api/ai/analyses/${analysisId}/notes/${noteId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setNotes((prev) => ({
+          ...prev,
+          [analysisId]: prev[analysisId].filter((n) => n.id !== noteId),
+        }))
+        showToast('Not silindi', 'success')
+      } else {
+        const data = await response.json()
+        showToast(data.error || 'Not silinirken hata oluştu', 'error')
+      }
+    } catch (error) {
+      showToast('Not silinirken hata oluştu', 'error')
+    }
+  }
+
+  // Favorites management functions
+  const checkFavorite = async (analysisId: string) => {
+    try {
+      const response = await fetch(`/api/ai/analyses/${analysisId}/favorite`)
+      if (response.ok) {
+        const data = await response.json()
+        setFavorites((prev) => ({ ...prev, [analysisId]: data.isFavorite }))
+      }
+    } catch (error) {
+      console.error('Error checking favorite:', error)
+    }
+  }
+
+  const toggleFavorite = async (analysisId: string) => {
+    const isFavorite = favorites[analysisId]
+
+    try {
+      const response = await fetch(`/api/ai/analyses/${analysisId}/favorite`, {
+        method: isFavorite ? 'DELETE' : 'POST',
+      })
+
+      if (response.ok) {
+        setFavorites((prev) => ({ ...prev, [analysisId]: !isFavorite }))
+        showToast(
+          isFavorite ? 'Favorilerden kaldırıldı' : 'Favorilere eklendi',
+          'success'
+        )
+      } else {
+        const data = await response.json()
+        showToast(data.error || 'İşlem başarısız oldu', 'error')
+      }
+    } catch (error) {
+      showToast('İşlem başarısız oldu', 'error')
+    }
+  }
+
+  // Email export function
+  const sendEmail = async () => {
+    if (!emailAddress.trim()) {
+      showToast('E-posta adresi gerekli', 'warning')
+      return
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(emailAddress)) {
+      showToast('Geçerli bir e-posta adresi giriniz', 'warning')
+      return
+    }
+
+    setEmailSending(true)
+    try {
+      const response = await fetch(`/api/ai/analyses/${latestAnalysis.id}/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailAddress,
+          message: emailMessage,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        showToast('E-posta gönderildi', 'success')
+        setEmailModalOpen(false)
+        setEmailAddress('')
+        setEmailMessage('')
+      } else {
+        const data = await response.json()
+        showToast(data.error || 'E-posta gönderilirken hata oluştu', 'error')
+      }
+    } catch (error) {
+      showToast('E-posta gönderilirken hata oluştu', 'error')
+    } finally {
+      setEmailSending(false)
+    }
+  }
 
   // Filter analyses based on search and filter
   const filteredAnalyses = useMemo(() => {
@@ -259,6 +478,25 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
               >
                 Tümünü Kapat
               </button>
+
+              {/* Favorite Button */}
+              <button
+                onClick={() => toggleFavorite(latestAnalysis.id)}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2',
+                  favorites[latestAnalysis.id]
+                    ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                )}
+              >
+                <Star
+                  className={cn(
+                    'w-4 h-4',
+                    favorites[latestAnalysis.id] ? 'fill-yellow-500 text-yellow-500' : ''
+                  )}
+                />
+                {favorites[latestAnalysis.id] ? 'Favorilerde' : 'Favorilere Ekle'}
+              </button>
               {analyses.length > 1 && (
                 <button
                   onClick={() => {
@@ -315,6 +553,21 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
                   />
                 </svg>
                 Yazdır
+              </button>
+
+              <button
+                onClick={() => setEmailModalOpen(true)}
+                className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                E-posta Gönder
               </button>
             </div>
 
@@ -666,6 +919,22 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
               </div>
             </CollapsibleCard>
           )}
+
+          {/* Notes Section */}
+          <NotesSection
+            analysisId={latestAnalysis.id}
+            notes={notes[latestAnalysis.id] || []}
+            newNoteText={newNoteText}
+            setNewNoteText={setNewNoteText}
+            editingNoteId={editingNoteId}
+            setEditingNoteId={setEditingNoteId}
+            editingNoteText={editingNoteText}
+            setEditingNoteText={setEditingNoteText}
+            notesLoading={notesLoading[latestAnalysis.id]}
+            onAddNote={() => addNote(latestAnalysis.id)}
+            onUpdateNote={(noteId) => updateNote(latestAnalysis.id, noteId)}
+            onDeleteNote={(noteId) => deleteNote(latestAnalysis.id, noteId)}
+          />
             </div>
             {/* End Current Analysis */}
           </div>
@@ -758,26 +1027,33 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
               {filteredAnalyses.map((analysis) => (
                 <div
                   key={analysis.id}
-                  onClick={() => {
-                    if (compareMode) {
-                      setCompareAnalysis(analysis)
-                    } else {
-                      setSelectedAnalysis(analysis)
-                    }
-                  }}
                   className={cn(
-                    'flex justify-between items-center p-4 bg-gradient-to-r rounded-lg transition-all duration-200 cursor-pointer group border',
+                    'flex justify-between items-center p-4 bg-gradient-to-r rounded-lg transition-all duration-200 group border',
                     compareAnalysis?.id === analysis.id && compareMode
                       ? 'from-purple-100 to-purple-200 border-purple-400'
                       : 'from-gray-50 to-gray-100 hover:from-blue-50 hover:to-indigo-50 border-transparent hover:border-blue-200'
                   )}
                 >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {analysis.analysis_type === 'initial'
-                        ? '📝 İlk Değerlendirme'
-                        : '🔄 Güncellenmiş Analiz'}
-                    </p>
+                  <div
+                    onClick={() => {
+                      if (compareMode) {
+                        setCompareAnalysis(analysis)
+                      } else {
+                        setSelectedAnalysis(analysis)
+                      }
+                    }}
+                    className="flex-1 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                        {analysis.analysis_type === 'initial'
+                          ? '📝 İlk Değerlendirme'
+                          : '🔄 Güncellenmiş Analiz'}
+                      </p>
+                      {favorites[analysis.id] && (
+                        <Star className="w-4 h-4 fill-yellow-500 text-yellow-500 flex-shrink-0" />
+                      )}
+                    </div>
                     <p className="text-xs text-gray-500 mt-1">
                       {formatDistanceToNow(new Date(analysis.created_at), {
                         addSuffix: true,
@@ -790,14 +1066,33 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
                       </p>
                     )}
                   </div>
-                  <svg
-                    className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0 ml-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleFavorite(analysis.id)
+                      }}
+                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                      aria-label={favorites[analysis.id] ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+                    >
+                      <Star
+                        className={cn(
+                          'w-5 h-5',
+                          favorites[analysis.id]
+                            ? 'fill-yellow-500 text-yellow-500'
+                            : 'text-gray-400 hover:text-yellow-500'
+                        )}
+                      />
+                    </button>
+                    <svg
+                      className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               ))}
             </div>
@@ -830,6 +1125,112 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
           size="xl"
         >
           <AnalysisDetailView analysis={selectedAnalysis} />
+        </Modal>
+      )}
+
+      {/* Email Modal */}
+      {latestAnalysis && (
+        <Modal
+          isOpen={emailModalOpen}
+          onClose={() => {
+            setEmailModalOpen(false)
+            setEmailAddress('')
+            setEmailMessage('')
+          }}
+          title="Analizi E-posta ile Gönder"
+          size="md"
+        >
+          <div className="space-y-4">
+            <p className="text-gray-600 text-sm">
+              Analiz raporunu e-posta ile göndermek için alıcı e-posta adresini girin.
+            </p>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                E-posta Adresi *
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={emailAddress}
+                onChange={(e) => setEmailAddress(e.target.value)}
+                placeholder="ornek@email.com"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                disabled={emailSending}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                Mesaj (İsteğe bağlı)
+              </label>
+              <textarea
+                id="message"
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                placeholder="E-posta ile birlikte göndermek istediğiniz mesaj..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                rows={4}
+                disabled={emailSending}
+              />
+            </div>
+
+            <div className="flex items-start gap-2 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+              <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <p className="text-sm text-blue-800">
+                Analiz raporu profesyonel formatta HTML e-posta olarak gönderilecektir.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={sendEmail}
+                disabled={emailSending || !emailAddress.trim()}
+                className={cn(
+                  'flex-1 px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200',
+                  emailSending || !emailAddress.trim()
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg'
+                )}
+              >
+                {emailSending ? (
+                  <>
+                    <Spinner />
+                    <span>Gönderiliyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                    <span>Gönder</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setEmailModalOpen(false)
+                  setEmailAddress('')
+                  setEmailMessage('')
+                }}
+                disabled={emailSending}
+                className="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                İptal
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>
@@ -1278,6 +1679,170 @@ function AnalysisTimeline({ analyses }: { analyses: AIAnalysis[] }) {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function NotesSection({
+  analysisId,
+  notes,
+  newNoteText,
+  setNewNoteText,
+  editingNoteId,
+  setEditingNoteId,
+  editingNoteText,
+  setEditingNoteText,
+  notesLoading,
+  onAddNote,
+  onUpdateNote,
+  onDeleteNote,
+}: {
+  analysisId: string
+  notes: Note[]
+  newNoteText: string
+  setNewNoteText: (text: string) => void
+  editingNoteId: string | null
+  setEditingNoteId: (id: string | null) => void
+  editingNoteText: string
+  setEditingNoteText: (text: string) => void
+  notesLoading: boolean
+  onAddNote: () => void
+  onUpdateNote: (noteId: string) => void
+  onDeleteNote: (noteId: string) => void
+}) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="p-5 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <span className="text-2xl">📝</span>
+          Notlar
+          <span className="ml-2 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+            {notes.length}
+          </span>
+        </h3>
+        <p className="text-sm text-gray-600 mt-1">Analiz hakkında notlarınızı ekleyin</p>
+      </div>
+
+      {/* Content */}
+      <div className="p-5">
+        {/* Add Note Form */}
+        <div className="mb-6">
+          <div className="flex gap-2">
+            <textarea
+              value={newNoteText}
+              onChange={(e) => setNewNoteText(e.target.value)}
+              placeholder="Yeni not ekle..."
+              className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              rows={3}
+              disabled={notesLoading}
+            />
+          </div>
+          <button
+            onClick={onAddNote}
+            disabled={notesLoading || !newNoteText.trim()}
+            className={cn(
+              'mt-2 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-all duration-200',
+              notesLoading || !newNoteText.trim()
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg'
+            )}
+          >
+            <Plus className="w-4 h-4" />
+            {notesLoading ? 'Ekleniyor...' : 'Not Ekle'}
+          </button>
+        </div>
+
+        {/* Notes List */}
+        {notes.length > 0 ? (
+          <div className="space-y-3">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:border-indigo-300 transition-all duration-200"
+              >
+                {editingNoteId === note.id ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editingNoteText}
+                      onChange={(e) => setEditingNoteText(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                      rows={3}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => onUpdateNote(note.id)}
+                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-1"
+                      >
+                        <Save className="w-4 h-4" />
+                        Kaydet
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingNoteId(null)
+                          setEditingNoteText('')
+                        }}
+                        className="px-3 py-1.5 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors text-sm flex items-center gap-1"
+                      >
+                        <X className="w-4 h-4" />
+                        İptal
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-gray-800 whitespace-pre-wrap mb-3">{note.note}</p>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>
+                        {formatDistanceToNow(new Date(note.created_at), {
+                          addSuffix: true,
+                          locale: tr,
+                        })}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingNoteId(note.id)
+                            setEditingNoteText(note.note)
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                          aria-label="Düzenle"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteNote(note.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                          aria-label="Sil"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <svg
+              className="w-12 h-12 mx-auto mb-3 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <p className="text-sm">Henüz not eklenmemiş</p>
+          </div>
+        )}
       </div>
     </div>
   )
