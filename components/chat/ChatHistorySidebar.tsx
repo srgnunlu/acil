@@ -56,6 +56,13 @@ export function ChatHistorySidebar({
     loadSessions()
   }, [loadSessions])
 
+  // Yeni session oluşturulduğunda listeyi yenile
+  useEffect(() => {
+    if (currentSessionId && !sessions.find((s) => s.id === currentSessionId)) {
+      loadSessions()
+    }
+  }, [currentSessionId, sessions, loadSessions])
+
   const deleteSession = async (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation()
 
