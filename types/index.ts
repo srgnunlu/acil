@@ -9,8 +9,11 @@ import type {
   AIAnalysisResponse,
 } from './patient.types'
 
-// Re-export all patient types
+import type { WorkflowState } from './multi-tenant.types'
+
+// Re-export all types
 export * from './patient.types'
+export * from './multi-tenant.types'
 
 export interface Patient {
   id: string
@@ -20,7 +23,25 @@ export interface Patient {
   gender: string | null
   created_at: string
   updated_at: string
-  status: 'active' | 'discharged' | 'consultation'
+
+  // Legacy (deprecated - replaced by category_id)
+  status?: 'active' | 'discharged' | 'consultation'
+
+  // Multi-tenant fields
+  workspace_id?: string | null
+  organization_id?: string | null
+  category_id?: string | null
+  assigned_to?: string | null
+
+  // Dates
+  admission_date?: string | null
+  discharge_date?: string | null
+
+  // Workflow
+  workflow_state?: WorkflowState
+
+  // Soft delete
+  deleted_at?: string | null
 }
 
 export type PatientDataContent =
@@ -68,6 +89,17 @@ export interface ChatMessage {
   created_at: string
 }
 
+export interface NotificationPreferences {
+  email: boolean
+  push: boolean
+  sms: boolean
+  mention: boolean
+  assignment: boolean
+  critical_alerts: boolean
+  patient_updates: boolean
+  daily_digest: boolean
+}
+
 export interface Profile {
   id: string
   user_id: string
@@ -78,6 +110,14 @@ export interface Profile {
   patient_limit: number
   created_at: string
   updated_at: string
+
+  // Multi-tenant fields
+  current_organization_id?: string | null
+  avatar_url?: string | null
+  title?: string | null
+  phone?: string | null
+  notification_preferences?: NotificationPreferences
+  last_seen_at?: string | null
 }
 
 export interface Reminder {
