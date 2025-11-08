@@ -1,0 +1,459 @@
+### ============================================
+### FAZ 1: Multi-Tenant API Test Script
+### ============================================
+### REST Client kullanarak API'leri test edin
+### VS Code: "REST Client" extension yükleyin
+### ============================================
+
+### Variables
+@baseUrl = http://localhost:3000
+@apiUrl = {{baseUrl}}/api
+
+### ============================================
+### 1. ORGANIZATIONS API TESTS
+### ============================================
+
+### 1.1. Get all organizations (kullanıcının erişebildikleri)
+GET {{apiUrl}}/organizations
+Content-Type: application/json
+
+###
+
+### 1.2. Create new organization
+POST {{apiUrl}}/organizations
+Content-Type: application/json
+
+{
+  "name": "Test Hastanesi",
+  "slug": "test-hastanesi",
+  "type": "hospital",
+  "contact_email": "info@test.com",
+  "contact_phone": "+90 555 123 4567"
+}
+
+###
+
+### 1.3. Get organization by ID
+# @organizationId değişkenini yukarıdaki response'dan alın
+@organizationId = paste-organization-id-here
+
+GET {{apiUrl}}/organizations/{{organizationId}}
+Content-Type: application/json
+
+###
+
+### 1.4. Update organization
+PUT {{apiUrl}}/organizations/{{organizationId}}
+Content-Type: application/json
+
+{
+  "name": "Test Hastanesi (Güncellenmiş)",
+  "logo_url": "https://example.com/logo.png",
+  "settings": {
+    "timezone": "Europe/Istanbul",
+    "language": "tr"
+  }
+}
+
+###
+
+### 1.5. Delete organization (soft delete)
+# DELETE {{apiUrl}}/organizations/{{organizationId}}
+
+### ============================================
+### 2. WORKSPACES API TESTS
+### ============================================
+
+### 2.1. Get all workspaces
+GET {{apiUrl}}/workspaces
+Content-Type: application/json
+
+###
+
+### 2.2. Get workspaces by organization
+GET {{apiUrl}}/workspaces?organization_id={{organizationId}}
+Content-Type: application/json
+
+###
+
+### 2.3. Create new workspace (Acil Servis)
+POST {{apiUrl}}/workspaces
+Content-Type: application/json
+
+{
+  "organization_id": "{{organizationId}}",
+  "name": "Acil Servis",
+  "slug": "acil-servis",
+  "description": "Acil Tıp Servisi",
+  "type": "emergency",
+  "color": "#dc2626",
+  "icon": "🚑",
+  "settings": {
+    "patient_limit": 100,
+    "enable_auto_analysis": true,
+    "enable_notifications": true
+  }
+}
+
+###
+
+### 2.4. Create another workspace (Kardiyoloji)
+POST {{apiUrl}}/workspaces
+Content-Type: application/json
+
+{
+  "organization_id": "{{organizationId}}",
+  "name": "Kardiyoloji Servisi",
+  "slug": "kardiyoloji",
+  "description": "Kardiyoloji ve Koroner Yoğun Bakım",
+  "type": "cardiology",
+  "color": "#dc2626",
+  "icon": "❤️"
+}
+
+###
+
+### 2.5. Get workspace by ID
+@workspaceId = paste-workspace-id-here
+
+GET {{apiUrl}}/workspaces/{{workspaceId}}
+Content-Type: application/json
+
+###
+
+### 2.6. Update workspace
+PUT {{apiUrl}}/workspaces/{{workspaceId}}
+Content-Type: application/json
+
+{
+  "name": "Acil Servis (Kırmızı Alan)",
+  "description": "Acil Tıp Servisi - Kırmızı Alan",
+  "color": "#b91c1c"
+}
+
+###
+
+### 2.7. Deactivate workspace
+PUT {{apiUrl}}/workspaces/{{workspaceId}}
+Content-Type: application/json
+
+{
+  "is_active": false
+}
+
+###
+
+### 2.8. Delete workspace (soft delete)
+# DELETE {{apiUrl}}/workspaces/{{workspaceId}}
+
+### ============================================
+### 3. WORKSPACE MEMBERS API TESTS
+### ============================================
+
+### 3.1. Get workspace members
+GET {{apiUrl}}/workspaces/{{workspaceId}}/members
+Content-Type: application/json
+
+###
+
+### 3.2. Invite/Add member to workspace
+@newUserId = paste-user-id-here
+
+POST {{apiUrl}}/workspaces/{{workspaceId}}/members
+Content-Type: application/json
+
+{
+  "user_id": "{{newUserId}}",
+  "role": "doctor",
+  "permissions": []
+}
+
+###
+
+### 3.3. Add admin member
+POST {{apiUrl}}/workspaces/{{workspaceId}}/members
+Content-Type: application/json
+
+{
+  "user_id": "{{newUserId}}",
+  "role": "admin",
+  "permissions": ["workspace.settings", "users.invite"]
+}
+
+###
+
+### 3.4. Update member role
+@memberId = paste-member-id-here
+
+PUT {{apiUrl}}/workspaces/{{workspaceId}}/members/{{memberId}}
+Content-Type: application/json
+
+{
+  "role": "senior_doctor"
+}
+
+###
+
+### 3.5. Update member permissions
+PUT {{apiUrl}}/workspaces/{{workspaceId}}/members/{{memberId}}
+Content-Type: application/json
+
+{
+  "permissions": ["patients.delete", "ai.analyze"]
+}
+
+###
+
+### 3.6. Deactivate member
+PUT {{apiUrl}}/workspaces/{{workspaceId}}/members/{{memberId}}
+Content-Type: application/json
+
+{
+  "status": "inactive"
+}
+
+###
+
+### 3.7. Remove member
+# DELETE {{apiUrl}}/workspaces/{{workspaceId}}/members/{{memberId}}
+
+### ============================================
+### 4. PATIENT CATEGORIES API TESTS
+### ============================================
+
+### 4.1. Get workspace categories
+GET {{apiUrl}}/workspaces/{{workspaceId}}/categories
+Content-Type: application/json
+
+###
+
+### 4.2. Create custom category
+POST {{apiUrl}}/workspaces/{{workspaceId}}/categories
+Content-Type: application/json
+
+{
+  "name": "VIP Hastalar",
+  "slug": "vip",
+  "color": "#f59e0b",
+  "icon": "⭐",
+  "description": "Özel ilgi gerektiren hastalar",
+  "is_default": false
+}
+
+###
+
+### 4.3. Create another category
+POST {{apiUrl}}/workspaces/{{workspaceId}}/categories
+Content-Type: application/json
+
+{
+  "name": "Gözlem Altında",
+  "slug": "observation",
+  "color": "#3b82f6",
+  "icon": "👁️",
+  "description": "Gözlem altındaki hastalar"
+}
+
+###
+
+### 4.4. Update category
+@categoryId = paste-category-id-here
+
+PUT {{apiUrl}}/workspaces/{{workspaceId}}/categories?category_id={{categoryId}}
+Content-Type: application/json
+
+{
+  "name": "VIP Hastalar (Güncellenmiş)",
+  "color": "#d97706",
+  "sort_order": 0
+}
+
+###
+
+### 4.5. Set category as default
+PUT {{apiUrl}}/workspaces/{{workspaceId}}/categories?category_id={{categoryId}}
+Content-Type: application/json
+
+{
+  "is_default": true
+}
+
+###
+
+### 4.6. Delete category (only if no patients)
+# DELETE {{apiUrl}}/workspaces/{{workspaceId}}/categories?category_id={{categoryId}}
+
+### ============================================
+### 5. INTEGRATION TESTS
+### ============================================
+
+### 5.1. Full workflow test
+# 1. Create organization
+# 2. Create workspace
+# 3. Add member
+# 4. Create categories
+# 5. Verify everything
+
+### Step 1: Create organization
+POST {{apiUrl}}/organizations
+Content-Type: application/json
+
+{
+  "name": "İntegrasyon Test Kliniği",
+  "slug": "integration-test-clinic-{{$timestamp}}",
+  "type": "clinic"
+}
+
+# Copy organization ID from response
+
+### Step 2: Create workspace
+# @testOrgId = paste-org-id-here
+
+POST {{apiUrl}}/workspaces
+Content-Type: application/json
+
+{
+  "organization_id": "{{testOrgId}}",
+  "name": "Test Servisi",
+  "slug": "test-servisi",
+  "type": "general",
+  "color": "#3b82f6",
+  "icon": "🧪"
+}
+
+# Copy workspace ID from response
+
+### Step 3: Verify workspace has default categories
+# @testWorkspaceId = paste-workspace-id-here
+
+GET {{apiUrl}}/workspaces/{{testWorkspaceId}}/categories
+Content-Type: application/json
+
+### Expected: 3 default categories (Aktif Yatan, Konsülte, Taburcu)
+
+###
+
+### Step 4: Verify workspace member (creator should be owner)
+GET {{apiUrl}}/workspaces/{{testWorkspaceId}}/members
+Content-Type: application/json
+
+### Expected: 1 member with role 'owner'
+
+###
+
+### ============================================
+### 6. ERROR HANDLING TESTS
+### ============================================
+
+### 6.1. Try to create workspace without organization_id (should fail)
+POST {{apiUrl}}/workspaces
+Content-Type: application/json
+
+{
+  "name": "Test",
+  "slug": "test"
+}
+
+### Expected: 400 Bad Request
+
+###
+
+### 6.2. Try to create organization with duplicate slug (should fail)
+POST {{apiUrl}}/organizations
+Content-Type: application/json
+
+{
+  "name": "Duplicate Test",
+  "slug": "test-hastanesi"
+}
+
+### Expected: 409 Conflict
+
+###
+
+### 6.3. Try to access non-existent workspace (should fail)
+GET {{apiUrl}}/workspaces/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+### Expected: 404 Not Found
+
+###
+
+### 6.4. Try to delete system category (should fail)
+# First, get categories and find a system one (is_system: true)
+GET {{apiUrl}}/workspaces/{{workspaceId}}/categories
+
+# Then try to delete it
+# DELETE {{apiUrl}}/workspaces/{{workspaceId}}/categories?category_id={{systemCategoryId}}
+
+### Expected: 400 Bad Request - "Cannot delete system categories"
+
+###
+
+### 6.5. Try to delete category with patients (should fail)
+# First, ensure category has patients, then try to delete
+# DELETE {{apiUrl}}/workspaces/{{workspaceId}}/categories?category_id={{categoryWithPatients}}
+
+### Expected: 400 Bad Request - "Cannot delete category with N active patients"
+
+###
+
+### ============================================
+### 7. PERMISSION TESTS
+### ============================================
+
+### 7.1. Try to update workspace as non-admin (should fail)
+# Login as a user with 'doctor' role, then:
+PUT {{apiUrl}}/workspaces/{{workspaceId}}
+Content-Type: application/json
+
+{
+  "name": "Hacked Name"
+}
+
+### Expected: 403 Forbidden
+
+###
+
+### 7.2. Try to add member as non-admin (should fail)
+POST {{apiUrl}}/workspaces/{{workspaceId}}/members
+Content-Type: application/json
+
+{
+  "user_id": "some-user-id",
+  "role": "doctor"
+}
+
+### Expected: 403 Forbidden
+
+###
+
+### ============================================
+### 8. PERFORMANCE TESTS
+### ============================================
+
+### 8.1. Get workspaces with stats (should be fast)
+GET {{apiUrl}}/workspaces
+Content-Type: application/json
+
+### Expected: < 500ms response time
+
+###
+
+### 8.2. Get workspace with detailed stats
+GET {{apiUrl}}/workspaces/{{workspaceId}}
+Content-Type: application/json
+
+### Expected: < 300ms response time
+
+###
+
+### ============================================
+### NOTES
+### ============================================
+# - Replace {{organizationId}}, {{workspaceId}}, etc. with actual IDs
+# - Run tests sequentially (top to bottom)
+# - Check response status codes and body
+# - Verify database state after each test
+# - Clean up test data after running all tests
+### ============================================
