@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import { Edit2, Check, X } from 'lucide-react'
 
 interface ChatSession {
   id: string
@@ -31,6 +32,8 @@ export function ChatHistorySidebar({
 }: ChatHistorySidebarProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
   const supabase = createClient()
 
   const loadSessions = useCallback(async () => {
@@ -62,6 +65,43 @@ export function ChatHistorySidebar({
       loadSessions()
     }
   }, [currentSessionId, sessions, loadSessions])
+
+  const startEditing = (session: ChatSession, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingId(session.id)
+    setEditingTitle(session.title)
+  }
+
+  const cancelEditing = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingId(null)
+    setEditingTitle('')
+  }
+
+  const saveTitle = async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    if (!editingTitle.trim()) {
+      cancelEditing(e)
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .update({ title: editingTitle.trim() })
+        .eq('id', sessionId)
+
+      if (error) throw error
+
+      setSessions(sessions.map((s) => (s.id === sessionId ? { ...s, title: editingTitle.trim() } : s)))
+      setEditingId(null)
+      setEditingTitle('')
+    } catch (error) {
+      console.error('Error updating session title:', error)
+      alert('Başlık güncellenirken hata oluştu')
+    }
+  }
 
   const deleteSession = async (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -183,14 +223,10 @@ export function ChatHistorySidebar({
               </div>
             ) : (
               sessions.map((session) => (
-                <button
+                <div
                   key={session.id}
-                  onClick={() => {
-                    onSessionSelect(session.id)
-                    onClose()
-                  }}
                   className={`
-                    w-full text-left p-3 rounded-lg transition-all
+                    w-full text-left p-3 rounded-lg transition-all group
                     ${
                       currentSessionId === session.id
                         ? 'bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 shadow-sm'
@@ -199,32 +235,85 @@ export function ChatHistorySidebar({
                   `}
                 >
                   <div className="flex items-start justify-between mb-1">
-                    <h4
-                      className={`font-medium text-sm line-clamp-2 flex-1 ${
-                        currentSessionId === session.id ? 'text-blue-900' : 'text-gray-900'
-                      }`}
-                    >
-                      {session.title}
-                    </h4>
-                    <button
-                      onClick={(e) => deleteSession(session.id, e)}
-                      className="ml-2 p-1 hover:bg-red-100 rounded transition-colors flex-shrink-0"
-                      title="Sil"
-                    >
-                      <svg
-                        className="w-4 h-4 text-red-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    {editingId === session.id ? (
+                      <div className="flex-1 flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              saveTitle(session.id, e as any)
+                            } else if (e.key === 'Escape') {
+                              cancelEditing(e as any)
+                            }
+                          }}
                         />
-                      </svg>
-                    </button>
+                        <button
+                          onClick={(e) => saveTitle(session.id, e)}
+                          className="p-1 hover:bg-green-100 rounded transition-colors"
+                          title="Kaydet"
+                        >
+                          <Check className="w-4 h-4 text-green-600" />
+                        </button>
+                        <button
+                          onClick={cancelEditing}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          title="İptal"
+                        >
+                          <X className="w-4 h-4 text-gray-600" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            onSessionSelect(session.id)
+                            onClose()
+                          }}
+                          className="flex-1 text-left"
+                        >
+                          <h4
+                            className={`font-medium text-sm line-clamp-2 ${
+                              currentSessionId === session.id ? 'text-blue-900' : 'text-gray-900'
+                            }`}
+                          >
+                            {session.title}
+                          </h4>
+                        </button>
+                        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => startEditing(session, e)}
+                            className="p-1 hover:bg-blue-100 rounded transition-colors flex-shrink-0"
+                            title="Düzenle"
+                          >
+                            <Edit2 className="w-4 h-4 text-blue-600" />
+                          </button>
+                          <button
+                            onClick={(e) => deleteSession(session.id, e)}
+                            className="p-1 hover:bg-red-100 rounded transition-colors flex-shrink-0"
+                            title="Sil"
+                          >
+                            <svg
+                              className="w-4 h-4 text-red-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <p
                     className={`text-xs ${
@@ -236,7 +325,7 @@ export function ChatHistorySidebar({
                       locale: tr,
                     })}
                   </p>
-                </button>
+                </div>
               ))
             )}
           </div>
