@@ -246,53 +246,50 @@ export default async function DashboardHome() {
         </div>
       }>
         <div className="grid md:grid-cols-3 gap-4">
-          <Button 
-            variant="outline" 
-            size="lg" 
-            leftIcon={<Plus className="h-5 w-5" />}
-            className="h-full flex-col items-center justify-center text-center group hover:border-blue-500 hover:bg-blue-50"
-            asChild
-          >
-            <Link href="/dashboard/patients">
+          <Link href="/dashboard/patients">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              leftIcon={<Plus className="h-5 w-5" />}
+              className="h-full flex-col items-center justify-center text-center group hover:border-blue-500 hover:bg-blue-50 w-full"
+            >
               <div className="text-2xl mb-2 group-hover:scale-110 transition">➕</div>
               <p className="font-medium text-gray-900">Yeni Hasta Ekle</p>
               <p className="text-sm text-gray-500 mt-1">
                 Hasta kaydı oluştur ve takibe başla
               </p>
-            </Link>
-          </Button>
+            </Button>
+          </Link>
 
-          <Button 
-            variant="outline" 
-            size="lg"
-            leftIcon={<BarChart3 className="h-5 w-5" />}
-            className="h-full flex-col items-center justify-center text-center group hover:border-green-500 hover:bg-green-50"
-            asChild
-          >
-            <Link href="/dashboard/statistics">
+          <Link href="/dashboard/statistics">
+            <Button 
+              variant="outline" 
+              size="lg"
+              leftIcon={<BarChart3 className="h-5 w-5" />}
+              className="h-full flex-col items-center justify-center text-center group hover:border-green-500 hover:bg-green-50 w-full"
+            >
               <div className="text-2xl mb-2 group-hover:scale-110 transition">📈</div>
               <p className="font-medium text-gray-900">İstatistikleri Görüntüle</p>
               <p className="text-sm text-gray-500 mt-1">
                 Grafikler ve detaylı analizler
               </p>
-            </Link>
-          </Button>
+            </Button>
+          </Link>
 
-          <Button 
-            variant="outline" 
-            size="lg"
-            leftIcon={<BookOpen className="h-5 w-5" />}
-            className="h-full flex-col items-center justify-center text-center group hover:border-purple-500 hover:bg-purple-50"
-            asChild
-          >
-            <Link href="/dashboard/guidelines">
+          <Link href="/dashboard/guidelines">
+            <Button 
+              variant="outline" 
+              size="lg"
+              leftIcon={<BookOpen className="h-5 w-5" />}
+              className="h-full flex-col items-center justify-center text-center group hover:border-purple-500 hover:bg-purple-50 w-full"
+            >
               <div className="text-2xl mb-2 group-hover:scale-110 transition">📚</div>
               <p className="font-medium text-gray-900">Rehberlere Bak</p>
               <p className="text-sm text-gray-500 mt-1">
                 Acil tıp protokolleri ve kılavuzlar
               </p>
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </Card>
 
