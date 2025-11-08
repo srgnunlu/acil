@@ -1,4 +1,4 @@
-import { test as base } from '@playwright/test'
+import { test as base, Page } from '@playwright/test'
 
 /**
  * Custom fixtures for authenticated tests
@@ -10,7 +10,7 @@ type AuthFixtures = {
 }
 
 export const test = base.extend<AuthFixtures>({
-  authenticatedPage: async ({ page }, use) => {
+  authenticatedPage: async ({ page }: { page: Page }, use: any) => {
     const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'test@example.com'
     const TEST_PASSWORD = process.env.TEST_USER_PASSWORD || 'testpassword123'
 

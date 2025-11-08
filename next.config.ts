@@ -21,11 +21,6 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'date-fns'],
   },
 
-  // Turbopack configuration
-  turbopack: {
-    root: '/Users/sergenunlu/Desktop/kodlar/acilai/acil',
-  },
-
   // Logging
   logging: {
     fetches: {

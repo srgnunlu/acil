@@ -20,7 +20,7 @@ export async function GET() {
     // Hasta durum dağılımı
     const { data: patients } = await supabase
       .from('patients')
-      .select('status, admission_date')
+      .select('id, status, admission_date')
       .eq('user_id', user.id)
 
     const statusCounts = {

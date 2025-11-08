@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { PatientTest } from '@/types'
 
-interface AddTestFormProps {
-  patientId: string
-  testType: string
+interface EditTestFormProps {
+  test: PatientTest
   onClose: () => void
 }
 
@@ -25,18 +25,14 @@ interface FormConfig {
   fields: FormField[]
 }
 
-export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) {
+export function EditTestForm({ test, onClose }: EditTestFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [analyzingImage, setAnalyzingImage] = useState(false)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [formData, setFormData] = useState<Record<string, string>>({})
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const formConfigs: Record<string, FormConfig> = {
     laboratory: {
-      title: 'Laboratuvar Sonucu Ekle',
+      title: 'Laboratuvar Sonucunu Düzenle',
       fields: [
         { name: 'hemoglobin', label: 'Hemoglobin (g/dL)', type: 'number', step: '0.1' },
         { name: 'wbc', label: 'Lökosit (10³/µL)', type: 'number', step: '0.1' },
@@ -54,7 +50,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
       ],
     },
     ekg: {
-      title: 'EKG Sonucu Ekle',
+      title: 'EKG Sonucunu Düzenle',
       fields: [
         {
           name: 'rhythm',
@@ -74,7 +70,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
       ],
     },
     xray: {
-      title: 'Radyoloji Sonucu Ekle',
+      title: 'Radyoloji Sonucunu Düzenle',
       fields: [
         {
           name: 'exam_type',
@@ -97,7 +93,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
       ],
     },
     consultation: {
-      title: 'Konsültasyon Sonucu Ekle',
+      title: 'Konsültasyon Sonucunu Düzenle',
       fields: [
         { name: 'department', label: 'Konsülte Edilen Bölüm', type: 'text', required: true },
         { name: 'consulting_physician', label: 'Konsültan Hekim', type: 'text' },
@@ -107,7 +103,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
       ],
     },
     other: {
-      title: 'Diğer Tetkik Ekle',
+      title: 'Diğer Tetkik Düzenle',
       fields: [
         { name: 'test_name', label: 'Tetkik Adı', type: 'text', required: true },
         { name: 'results', label: 'Sonuçlar', type: 'textarea', required: true },
@@ -116,81 +112,10 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
     },
   }
 
-  const config = formConfigs[testType]
+  const config = formConfigs[test.test_type]
 
   if (!config) {
     return null
-  }
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Check file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
-    if (!validTypes.includes(file.type)) {
-      setError('Sadece JPG, PNG veya PDF dosyaları yükleyebilirsiniz')
-      return
-    }
-
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Dosya boyutu 10MB'dan küçük olmalıdır")
-      return
-    }
-
-    setAnalyzingImage(true)
-    setError(null)
-
-    try {
-      // Convert to base64
-      const reader = new FileReader()
-      reader.onloadend = async () => {
-        const base64 = reader.result as string
-        setImagePreview(base64)
-
-        // Call AI vision API
-        const response = await fetch('/api/ai/vision', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64: base64,
-            analysisType: 'lab_results',
-            context: 'Laboratuvar sonuç görselinden değerleri çıkar',
-          }),
-        })
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Görsel analizi başarısız')
-        }
-
-        // Auto-fill form with extracted values
-        if (data.analysis?.values) {
-          const newFormData: Record<string, string> = {}
-          Object.entries(data.analysis.values).forEach(([key, value]) => {
-            if (value !== null && value !== undefined) {
-              newFormData[key] = String(value)
-            }
-          })
-          setFormData(newFormData)
-        }
-
-        setAnalyzingImage(false)
-      }
-
-      reader.onerror = () => {
-        setError('Dosya okunamadı')
-        setAnalyzingImage(false)
-      }
-
-      reader.readAsDataURL(file)
-    } catch (err: unknown) {
-      const error = err as Error
-      setError(error.message || 'Görsel analizi yapılırken hata oluştu')
-      setAnalyzingImage(false)
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -198,43 +123,41 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
     setLoading(true)
     setError(null)
 
-    const formDataObj = new FormData(e.currentTarget)
+    const formData = new FormData(e.currentTarget)
     const results: Record<string, string> = {}
 
-    // Merge AI-extracted values with form values
-    const allData = { ...formData }
-    config.fields.forEach((field: { name: string }) => {
-      const value = formDataObj.get(field.name)
+    config.fields.forEach((field: FormField) => {
+      const value = formData.get(field.name)
       if (value) {
-        allData[field.name] = String(value)
-      }
-    })
-
-    // Filter out empty values
-    Object.entries(allData).forEach(([key, value]) => {
-      if (value && value.trim()) {
-        results[key] = value
+        results[field.name] = String(value)
       }
     })
 
     try {
       const supabase = createClient()
 
-      const { error: insertError } = await supabase.from('patient_tests').insert({
-        patient_id: patientId,
-        test_type: testType,
-        results,
-      })
+      const { error: updateError } = await supabase
+        .from('patient_tests')
+        .update({ results })
+        .eq('id', test.id)
 
-      if (insertError) throw insertError
+      if (updateError) throw updateError
 
       router.refresh()
       onClose()
     } catch (err: unknown) {
       const error = err as Error
-      setError(error.message || 'Tetkik eklenirken bir hata oluştu')
+      setError(error.message || 'Tetkik güncellenirken bir hata oluştu')
       setLoading(false)
     }
+  }
+
+  const getDefaultValue = (fieldName: string): string => {
+    if (typeof test.results === 'object' && test.results !== null) {
+      const value = (test.results as Record<string, unknown>)[fieldName]
+      return value ? String(value) : ''
+    }
+    return ''
   }
 
   return (
@@ -245,69 +168,13 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition"
-            disabled={loading || analyzingImage}
+            disabled={loading}
           >
             ✕
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Image Upload for Laboratory Tests */}
-          {testType === 'laboratory' && (
-            <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 border-dashed rounded-xl">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h3 className="font-semibold text-blue-900 text-sm mb-1">
-                    🤖 Yapay Zeka ile Otomatik Doldur
-                  </h3>
-                  <p className="text-xs text-blue-700">
-                    Laboratuvar sonucu görselinizi veya PDF&apos;inizi yükleyin, AI değerleri
-                    otomatik çıkarsın
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={analyzingImage}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
-                >
-                  {analyzingImage ? '⏳ Analiz ediliyor...' : '📁 Dosya Seç'}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,application/pdf"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
-
-              {imagePreview && (
-                <div className="mt-3">
-                  {imagePreview.startsWith('data:application/pdf') ? (
-                    <div className="bg-gray-100 p-4 rounded-lg text-center">
-                      <p className="text-sm text-gray-600">📄 PDF Yüklendi</p>
-                    </div>
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={imagePreview}
-                      alt="Lab result preview"
-                      className="max-h-40 rounded-lg mx-auto"
-                    />
-                  )}
-                </div>
-              )}
-
-              {analyzingImage && (
-                <div className="mt-3 text-center">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-                  <p className="text-sm text-blue-700 mt-2">AI değerleri çıkarıyor...</p>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Form Fields - Compact Grid Layout */}
           <div className="grid grid-cols-2 gap-3">
             {config.fields.map(
@@ -338,7 +205,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
                       name={field.name}
                       required={field.required}
                       rows={2}
-                      defaultValue={formData[field.name] || ''}
+                      defaultValue={getDefaultValue(field.name)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                       placeholder={field.placeholder}
                     />
@@ -347,7 +214,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
                       id={field.name}
                       name={field.name}
                       required={field.required}
-                      defaultValue={formData[field.name] || ''}
+                      defaultValue={getDefaultValue(field.name)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     >
                       <option value="">Seçiniz</option>
@@ -364,7 +231,7 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
                       type={field.type || 'text'}
                       required={field.required}
                       step={field.step}
-                      defaultValue={formData[field.name] || ''}
+                      defaultValue={getDefaultValue(field.name)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                       placeholder={field.placeholder}
                     />
@@ -385,16 +252,16 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
               type="button"
               onClick={onClose}
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
-              disabled={loading || analyzingImage}
+              disabled={loading}
             >
               İptal
             </button>
             <button
               type="submit"
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
-              disabled={loading || analyzingImage}
+              disabled={loading}
             >
-              {loading ? 'Kaydediliyor...' : 'Kaydet'}
+              {loading ? 'Güncelleniyor...' : 'Güncelle'}
             </button>
           </div>
         </form>

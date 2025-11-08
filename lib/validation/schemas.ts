@@ -156,6 +156,6 @@ export function validateRequest<T>(
 export function safeParseRequest<T>(
   schema: z.ZodSchema<T>,
   data: unknown
-): z.SafeParseReturnType<unknown, T> {
+) {
   return schema.safeParse(data)
 }
