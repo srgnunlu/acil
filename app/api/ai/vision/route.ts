@@ -7,15 +7,12 @@ export async function POST(request: Request) {
     const { imageUrl, imageBase64, analysisType, patientId, context } = await request.json()
 
     if (!imageUrl && !imageBase64) {
-      return NextResponse.json(
-        { error: 'Görsel URL veya Base64 gerekli' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Görsel URL veya Base64 gerekli' }, { status: 400 })
     }
 
     if (!analysisType) {
       return NextResponse.json(
-        { error: 'Analiz tipi gerekli (ekg, skin_lesion, xray, other)' },
+        { error: 'Analiz tipi gerekli (ekg, skin_lesion, xray, lab_results, other)' },
         { status: 400 }
       )
     }
@@ -42,25 +39,19 @@ export async function POST(request: Request) {
         base64Image = `data:${imageResponse.headers.get('content-type') || 'image/jpeg'};base64,${base64}`
       } catch (error) {
         console.error('Image fetch error:', error)
-        return NextResponse.json(
-          { error: 'Görsel indirilemedi' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'Görsel indirilemedi' }, { status: 400 })
       }
     }
 
     if (!base64Image) {
-      return NextResponse.json(
-        { error: 'Base64 görsel oluşturulamadı' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Base64 görsel oluşturulamadı' }, { status: 400 })
     }
 
     // Gemini Vision API ile analiz yap
     console.log('Gemini Vision analizi başlatılıyor...')
     const analysis = await analyzeImage(
       base64Image,
-      analysisType as 'ekg' | 'skin_lesion' | 'xray' | 'other',
+      analysisType as 'ekg' | 'skin_lesion' | 'xray' | 'lab_results' | 'other',
       context
     )
 
@@ -89,10 +80,11 @@ export async function POST(request: Request) {
       success: true,
       analysis,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error
     console.error('Vision API error:', error)
     return NextResponse.json(
-      { error: error.message || 'Görsel analizi yapılırken hata oluştu' },
+      { error: err.message || 'Görsel analizi yapılırken hata oluştu' },
       { status: 500 }
     )
   }

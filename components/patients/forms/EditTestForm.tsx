@@ -10,12 +10,27 @@ interface EditTestFormProps {
   onClose: () => void
 }
 
+interface FormField {
+  name: string
+  label: string
+  type?: string
+  required?: boolean
+  placeholder?: string
+  step?: string
+  options?: string[]
+}
+
+interface FormConfig {
+  title: string
+  fields: FormField[]
+}
+
 export function EditTestForm({ test, onClose }: EditTestFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
-  const formConfigs: Record<string, any> = {
+  const formConfigs: Record<string, FormConfig> = {
     laboratory: {
       title: 'Laboratuvar Sonucunu Düzenle',
       fields: [
@@ -37,7 +52,13 @@ export function EditTestForm({ test, onClose }: EditTestFormProps) {
     ekg: {
       title: 'EKG Sonucunu Düzenle',
       fields: [
-        { name: 'rhythm', label: 'Ritim', type: 'text', required: true, placeholder: 'Sinüs ritmi' },
+        {
+          name: 'rhythm',
+          label: 'Ritim',
+          type: 'text',
+          required: true,
+          placeholder: 'Sinüs ritmi',
+        },
         { name: 'rate', label: 'Kalp Hızı (atım/dk)', type: 'number', required: true },
         { name: 'pr_interval', label: 'PR Aralığı (ms)', type: 'number' },
         { name: 'qrs_duration', label: 'QRS Süresi (ms)', type: 'number' },
@@ -51,7 +72,20 @@ export function EditTestForm({ test, onClose }: EditTestFormProps) {
     xray: {
       title: 'Radyoloji Sonucunu Düzenle',
       fields: [
-        { name: 'exam_type', label: 'İnceleme Türü', type: 'select', required: true, options: ['PA Akciğer Grafisi', 'Toraks BT', 'Kranial BT', 'Abdominal USG', 'MR', 'Diğer'] },
+        {
+          name: 'exam_type',
+          label: 'İnceleme Türü',
+          type: 'select',
+          required: true,
+          options: [
+            'PA Akciğer Grafisi',
+            'Toraks BT',
+            'Kranial BT',
+            'Abdominal USG',
+            'MR',
+            'Diğer',
+          ],
+        },
         { name: 'technique', label: 'Teknik', type: 'text' },
         { name: 'findings', label: 'Bulgular', type: 'textarea', required: true },
         { name: 'impression', label: 'Kanı/Yorum', type: 'textarea', required: true },
@@ -90,12 +124,12 @@ export function EditTestForm({ test, onClose }: EditTestFormProps) {
     setError(null)
 
     const formData = new FormData(e.currentTarget)
-    const results: Record<string, any> = {}
+    const results: Record<string, string> = {}
 
-    config.fields.forEach((field: any) => {
+    config.fields.forEach((field: FormField) => {
       const value = formData.get(field.name)
       if (value) {
-        results[field.name] = value
+        results[field.name] = String(value)
       }
     })
 
@@ -111,93 +145,120 @@ export function EditTestForm({ test, onClose }: EditTestFormProps) {
 
       router.refresh()
       onClose()
-    } catch (err: any) {
-      setError(err.message || 'Tetkik güncellenirken bir hata oluştu')
+    } catch (err: unknown) {
+      const error = err as Error
+      setError(error.message || 'Tetkik güncellenirken bir hata oluştu')
       setLoading(false)
     }
   }
 
-  const getDefaultValue = (fieldName: string) => {
+  const getDefaultValue = (fieldName: string): string => {
     if (typeof test.results === 'object' && test.results !== null) {
-      return (test.results as Record<string, any>)[fieldName] || ''
+      const value = (test.results as Record<string, unknown>)[fieldName]
+      return value ? String(value) : ''
     }
     return ''
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-2xl w-full p-8 my-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{config.title}</h2>
+      <div className="bg-white rounded-2xl max-w-3xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900">{config.title}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition"
+            disabled={loading}
+          >
+            ✕
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {config.fields.map((field: any) => (
-            <div key={field.name}>
-              <label
-                htmlFor={field.name}
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </label>
-
-              {field.type === 'textarea' ? (
-                <textarea
-                  id={field.name}
-                  name={field.name}
-                  required={field.required}
-                  rows={3}
-                  defaultValue={getDefaultValue(field.name)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder={field.placeholder}
-                />
-              ) : field.type === 'select' ? (
-                <select
-                  id={field.name}
-                  name={field.name}
-                  required={field.required}
-                  defaultValue={getDefaultValue(field.name)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          {/* Form Fields - Compact Grid Layout */}
+          <div className="grid grid-cols-2 gap-3">
+            {config.fields.map(
+              (field: {
+                name: string
+                label: string
+                type?: string
+                required?: boolean
+                placeholder?: string
+                step?: string
+                options?: string[]
+              }) => (
+                <div
+                  key={field.name}
+                  className={field.type === 'textarea' ? 'col-span-2' : 'col-span-1'}
                 >
-                  <option value="">Seçiniz</option>
-                  {field.options?.map((option: string) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id={field.name}
-                  name={field.name}
-                  type={field.type || 'text'}
-                  required={field.required}
-                  step={field.step}
-                  defaultValue={getDefaultValue(field.name)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder={field.placeholder}
-                />
-              )}
-            </div>
-          ))}
+                  <label
+                    htmlFor={field.name}
+                    className="block text-xs font-medium text-gray-700 mb-1"
+                  >
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+
+                  {field.type === 'textarea' ? (
+                    <textarea
+                      id={field.name}
+                      name={field.name}
+                      required={field.required}
+                      rows={2}
+                      defaultValue={getDefaultValue(field.name)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      placeholder={field.placeholder}
+                    />
+                  ) : field.type === 'select' ? (
+                    <select
+                      id={field.name}
+                      name={field.name}
+                      required={field.required}
+                      defaultValue={getDefaultValue(field.name)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      <option value="">Seçiniz</option>
+                      {field.options?.map((option: string) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id={field.name}
+                      name={field.name}
+                      type={field.type || 'text'}
+                      required={field.required}
+                      step={field.step}
+                      defaultValue={getDefaultValue(field.name)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      placeholder={field.placeholder}
+                    />
+                  )}
+                </div>
+              )
+            )}
+          </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
               {error}
             </div>
           )}
 
-          <div className="flex space-x-4 pt-4">
+          <div className="flex space-x-3 pt-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
               disabled={loading}
             >
               İptal
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
               disabled={loading}
             >
               {loading ? 'Güncelleniyor...' : 'Güncelle'}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -10,12 +10,31 @@ interface AddTestFormProps {
   onClose: () => void
 }
 
+interface FormField {
+  name: string
+  label: string
+  type?: string
+  required?: boolean
+  placeholder?: string
+  step?: string
+  options?: string[]
+}
+
+interface FormConfig {
+  title: string
+  fields: FormField[]
+}
+
 export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [analyzingImage, setAnalyzingImage] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [formData, setFormData] = useState<Record<string, string>>({})
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  const formConfigs: Record<string, any> = {
+  const formConfigs: Record<string, FormConfig> = {
     laboratory: {
       title: 'Laboratuvar Sonucu Ekle',
       fields: [
@@ -37,7 +56,13 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
     ekg: {
       title: 'EKG Sonucu Ekle',
       fields: [
-        { name: 'rhythm', label: 'Ritim', type: 'text', required: true, placeholder: 'Sinüs ritmi' },
+        {
+          name: 'rhythm',
+          label: 'Ritim',
+          type: 'text',
+          required: true,
+          placeholder: 'Sinüs ritmi',
+        },
         { name: 'rate', label: 'Kalp Hızı (atım/dk)', type: 'number', required: true },
         { name: 'pr_interval', label: 'PR Aralığı (ms)', type: 'number' },
         { name: 'qrs_duration', label: 'QRS Süresi (ms)', type: 'number' },
@@ -51,7 +76,20 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
     xray: {
       title: 'Radyoloji Sonucu Ekle',
       fields: [
-        { name: 'exam_type', label: 'İnceleme Türü', type: 'select', required: true, options: ['PA Akciğer Grafisi', 'Toraks BT', 'Kranial BT', 'Abdominal USG', 'MR', 'Diğer'] },
+        {
+          name: 'exam_type',
+          label: 'İnceleme Türü',
+          type: 'select',
+          required: true,
+          options: [
+            'PA Akciğer Grafisi',
+            'Toraks BT',
+            'Kranial BT',
+            'Abdominal USG',
+            'MR',
+            'Diğer',
+          ],
+        },
         { name: 'technique', label: 'Teknik', type: 'text' },
         { name: 'findings', label: 'Bulgular', type: 'textarea', required: true },
         { name: 'impression', label: 'Kanı/Yorum', type: 'textarea', required: true },
@@ -84,18 +122,98 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
     return null
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+    if (!validTypes.includes(file.type)) {
+      setError('Sadece JPG, PNG veya PDF dosyaları yükleyebilirsiniz')
+      return
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Dosya boyutu 10MB'dan küçük olmalıdır")
+      return
+    }
+
+    setAnalyzingImage(true)
+    setError(null)
+
+    try {
+      // Convert to base64
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const base64 = reader.result as string
+        setImagePreview(base64)
+
+        // Call AI vision API
+        const response = await fetch('/api/ai/vision', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: base64,
+            analysisType: 'lab_results',
+            context: 'Laboratuvar sonuç görselinden değerleri çıkar',
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Görsel analizi başarısız')
+        }
+
+        // Auto-fill form with extracted values
+        if (data.analysis?.values) {
+          const newFormData: Record<string, string> = {}
+          Object.entries(data.analysis.values).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+              newFormData[key] = String(value)
+            }
+          })
+          setFormData(newFormData)
+        }
+
+        setAnalyzingImage(false)
+      }
+
+      reader.onerror = () => {
+        setError('Dosya okunamadı')
+        setAnalyzingImage(false)
+      }
+
+      reader.readAsDataURL(file)
+    } catch (err: unknown) {
+      const error = err as Error
+      setError(error.message || 'Görsel analizi yapılırken hata oluştu')
+      setAnalyzingImage(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
-    const formData = new FormData(e.currentTarget)
-    const results: Record<string, any> = {}
+    const formDataObj = new FormData(e.currentTarget)
+    const results: Record<string, string> = {}
 
-    config.fields.forEach((field: any) => {
-      const value = formData.get(field.name)
+    // Merge AI-extracted values with form values
+    const allData = { ...formData }
+    config.fields.forEach((field: { name: string }) => {
+      const value = formDataObj.get(field.name)
       if (value) {
-        results[field.name] = value
+        allData[field.name] = String(value)
+      }
+    })
+
+    // Filter out empty values
+    Object.entries(allData).forEach(([key, value]) => {
+      if (value && value.trim()) {
+        results[key] = value
       }
     })
 
@@ -112,84 +230,169 @@ export function AddTestForm({ patientId, testType, onClose }: AddTestFormProps) 
 
       router.refresh()
       onClose()
-    } catch (err: any) {
-      setError(err.message || 'Tetkik eklenirken bir hata oluştu')
+    } catch (err: unknown) {
+      const error = err as Error
+      setError(error.message || 'Tetkik eklenirken bir hata oluştu')
       setLoading(false)
     }
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-2xl w-full p-8 my-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{config.title}</h2>
+      <div className="bg-white rounded-2xl max-w-3xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900">{config.title}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition"
+            disabled={loading || analyzingImage}
+          >
+            ✕
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {config.fields.map((field: any) => (
-            <div key={field.name}>
-              <label
-                htmlFor={field.name}
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </label>
-
-              {field.type === 'textarea' ? (
-                <textarea
-                  id={field.name}
-                  name={field.name}
-                  required={field.required}
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder={field.placeholder}
-                />
-              ) : field.type === 'select' ? (
-                <select
-                  id={field.name}
-                  name={field.name}
-                  required={field.required}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          {/* Image Upload for Laboratory Tests */}
+          {testType === 'laboratory' && (
+            <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 border-dashed rounded-xl">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="font-semibold text-blue-900 text-sm mb-1">
+                    🤖 Yapay Zeka ile Otomatik Doldur
+                  </h3>
+                  <p className="text-xs text-blue-700">
+                    Laboratuvar sonucu görselinizi veya PDF&apos;inizi yükleyin, AI değerleri
+                    otomatik çıkarsın
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={analyzingImage}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
                 >
-                  <option value="">Seçiniz</option>
-                  {field.options?.map((option: string) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              ) : (
+                  {analyzingImage ? '⏳ Analiz ediliyor...' : '📁 Dosya Seç'}
+                </button>
                 <input
-                  id={field.name}
-                  name={field.name}
-                  type={field.type || 'text'}
-                  required={field.required}
-                  step={field.step}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder={field.placeholder}
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,application/pdf"
+                  onChange={handleImageUpload}
+                  className="hidden"
                 />
+              </div>
+
+              {imagePreview && (
+                <div className="mt-3">
+                  {imagePreview.startsWith('data:application/pdf') ? (
+                    <div className="bg-gray-100 p-4 rounded-lg text-center">
+                      <p className="text-sm text-gray-600">📄 PDF Yüklendi</p>
+                    </div>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={imagePreview}
+                      alt="Lab result preview"
+                      className="max-h-40 rounded-lg mx-auto"
+                    />
+                  )}
+                </div>
+              )}
+
+              {analyzingImage && (
+                <div className="mt-3 text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+                  <p className="text-sm text-blue-700 mt-2">AI değerleri çıkarıyor...</p>
+                </div>
               )}
             </div>
-          ))}
+          )}
+
+          {/* Form Fields - Compact Grid Layout */}
+          <div className="grid grid-cols-2 gap-3">
+            {config.fields.map(
+              (field: {
+                name: string
+                label: string
+                type?: string
+                required?: boolean
+                placeholder?: string
+                step?: string
+                options?: string[]
+              }) => (
+                <div
+                  key={field.name}
+                  className={field.type === 'textarea' ? 'col-span-2' : 'col-span-1'}
+                >
+                  <label
+                    htmlFor={field.name}
+                    className="block text-xs font-medium text-gray-700 mb-1"
+                  >
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+
+                  {field.type === 'textarea' ? (
+                    <textarea
+                      id={field.name}
+                      name={field.name}
+                      required={field.required}
+                      rows={2}
+                      defaultValue={formData[field.name] || ''}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      placeholder={field.placeholder}
+                    />
+                  ) : field.type === 'select' ? (
+                    <select
+                      id={field.name}
+                      name={field.name}
+                      required={field.required}
+                      defaultValue={formData[field.name] || ''}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      <option value="">Seçiniz</option>
+                      {field.options?.map((option: string) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id={field.name}
+                      name={field.name}
+                      type={field.type || 'text'}
+                      required={field.required}
+                      step={field.step}
+                      defaultValue={formData[field.name] || ''}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                      placeholder={field.placeholder}
+                    />
+                  )}
+                </div>
+              )
+            )}
+          </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
               {error}
             </div>
           )}
 
-          <div className="flex space-x-4 pt-4">
+          <div className="flex space-x-3 pt-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
-              disabled={loading}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+              disabled={loading || analyzingImage}
             >
               İptal
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
-              disabled={loading}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
+              disabled={loading || analyzingImage}
             >
               {loading ? 'Kaydediliyor...' : 'Kaydet'}
             </button>
