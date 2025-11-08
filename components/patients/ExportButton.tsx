@@ -73,7 +73,7 @@ export function ExportButton({ patientId, patientName }: ExportButtonProps) {
       <button
         onClick={() => setShowMenu(!showMenu)}
         disabled={loading}
-        className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 flex items-center space-x-2"
+        className="group px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-105 flex items-center space-x-2"
       >
         {loading ? (
           <>
@@ -97,17 +97,17 @@ export function ExportButton({ patientId, patientName }: ExportButtonProps) {
           </>
         ) : (
           <>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
               />
             </svg>
             <span>Rapor İndir</span>
             <svg
-              className={`w-4 h-4 transition-transform ${showMenu ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 transition-transform duration-200 ${showMenu ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -124,49 +124,80 @@ export function ExportButton({ patientId, patientName }: ExportButtonProps) {
       </button>
 
       {showMenu && !loading && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-          <button
-            onClick={() => handleExport('pdf')}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center space-x-2"
-          >
-            <svg
-              className="w-5 h-5 text-red-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setShowMenu(false)}
+          />
+          <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border-2 border-gray-200 py-2 z-20 animate-fadeIn">
+            <div className="px-3 py-2 border-b border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Rapor Formatı Seçin
+              </p>
+            </div>
+            <button
+              onClick={() => handleExport('pdf')}
+              className="w-full px-4 py-3 text-left hover:bg-red-50 transition-colors flex items-center space-x-3 group"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-              />
-            </svg>
-            <span>PDF Rapor</span>
-          </button>
-          <button
-            onClick={() => handleExport('json')}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center space-x-2"
-          >
-            <svg
-              className="w-5 h-5 text-blue-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                <svg
+                  className="w-6 h-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-gray-900">PDF Rapor</p>
+                <p className="text-xs text-gray-500">Yazdırılabilir belge</p>
+              </div>
+              <svg className="w-5 h-5 text-gray-400 group-hover:text-red-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => handleExport('json')}
+              className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors flex items-center space-x-3 group"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-              />
-            </svg>
-            <span>JSON Data</span>
-          </button>
-        </div>
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-gray-900">JSON Data</p>
+                <p className="text-xs text-gray-500">Ham veri formatı</p>
+              </div>
+              <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </>
       )}
 
-      {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+      {error && (
+        <div className="absolute right-0 mt-2 px-4 py-2 bg-red-100 border border-red-300 rounded-lg text-sm text-red-700 animate-fadeIn">
+          {error}
+        </div>
+      )}
     </div>
   )
 }

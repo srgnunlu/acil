@@ -92,40 +92,113 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
   }
 
   const suggestedQuestions = [
-    'Bu hastanın mevcut risk faktörleri nelerdir?',
-    'Hangi tetkikler öncelikli olarak istenmeli?',
-    'Ayırıcı tanılarda nelere dikkat etmeliyim?',
-    'Tedavi planında hangi ilaçları önerirsin?',
-    'Konsültasyon gerekli mi?',
+    {
+      text: 'Bu hastanın mevcut risk faktörleri nelerdir?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      )
+    },
+    {
+      text: 'Hangi tetkikler öncelikli olarak istenmeli?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      )
+    },
+    {
+      text: 'Ayırıcı tanılarda nelere dikkat etmeliyim?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+      )
+    },
+    {
+      text: 'Tedavi planında hangi ilaçları önerirsin?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+        </svg>
+      )
+    },
+    {
+      text: 'Konsültasyon gerekli mi?',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      )
+    },
   ]
 
   return (
-    <div className="flex flex-col h-[600px] bg-white rounded-xl shadow-sm border border-gray-200">
+    <div className="flex flex-col h-[700px] bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border border-blue-200">
+      {/* Chat Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">AI Klinik Asistan</h3>
+              <p className="text-xs text-blue-100">Hasta: {patientName}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-medium flex items-center">
+              <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
+              Aktif
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="text-6xl mb-4">💬</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {patientName} için AI Asistanı
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {patientName} için AI Asistan
             </h3>
-            <p className="text-gray-600 mb-6 max-w-md">
-              Bu hasta hakkında soru sorabilir, tanı ve tedavi önerileri
-              alabilirsiniz
+            <p className="text-gray-600 mb-8 max-w-md">
+              Bu hasta hakkında soru sorabilir, tanı ve tedavi önerileri alabilirsiniz.
+              AI asistan hasta verilerinizi analiz ederek size yardımcı olur.
             </p>
 
             <div className="w-full max-w-2xl">
-              <p className="text-sm font-medium text-gray-700 mb-3">
-                Örnek sorular:
-              </p>
-              <div className="space-y-2">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-semibold text-gray-700 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Hızlı Başlangıç Soruları
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
                 {suggestedQuestions.map((question, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setInput(question)}
-                    className="w-full text-left px-4 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm text-gray-700 transition"
+                    onClick={() => setInput(question.text)}
+                    className="group text-left px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-lg text-sm text-gray-700 transition-all border border-blue-200 hover:border-blue-300 hover:shadow-md flex items-center space-x-3"
                   >
-                    {question}
+                    <div className="flex-shrink-0 w-8 h-8 bg-white rounded-lg flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                      {question.icon}
+                    </div>
+                    <span className="flex-1">{question.text}</span>
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
                 ))}
               </div>
@@ -138,33 +211,55 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
                 key={message.id || idx}
                 className={`flex ${
                   message.role === 'user' ? 'justify-end' : 'justify-start'
-                }`}
+                } animate-fadeIn`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                  className={`max-w-[80%] rounded-2xl shadow-md ${
                     message.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-900'
+                      ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white'
+                      : 'bg-white border border-gray-200 text-gray-900'
                   }`}
                 >
-                  <div className="flex items-start space-x-2">
-                    <span className="text-lg">
-                      {message.role === 'user' ? '👤' : '🤖'}
-                    </span>
-                    <div className="flex-1">
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                      <p
-                        className={`text-xs mt-2 ${
-                          message.role === 'user'
-                            ? 'text-blue-100'
-                            : 'text-gray-500'
-                        }`}
-                      >
-                        {formatDistanceToNow(new Date(message.created_at), {
-                          addSuffix: true,
-                          locale: tr,
-                        })}
-                      </p>
+                  <div className="flex items-start space-x-3 px-4 py-3">
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                      message.role === 'user'
+                        ? 'bg-white/20'
+                        : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                    }`}>
+                      {message.role === 'user' ? (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/20">
+                        <p
+                          className={`text-xs ${
+                            message.role === 'user'
+                              ? 'text-white/70'
+                              : 'text-gray-500'
+                          }`}
+                        >
+                          {formatDistanceToNow(new Date(message.created_at), {
+                            addSuffix: true,
+                            locale: tr,
+                          })}
+                        </p>
+                        {message.role === 'assistant' && (
+                          <span className="text-xs text-gray-400 flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            AI Yanıtı
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -172,15 +267,20 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
             ))}
 
             {loading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg px-4 py-3">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg">🤖</span>
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              <div className="flex justify-start animate-fadeIn">
+                <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-md">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
                     </div>
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                    <span className="text-sm text-gray-600 font-medium">AI düşünüyor...</span>
                   </div>
                 </div>
               </div>
@@ -191,30 +291,49 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-gray-200 p-4">
-        <form onSubmit={handleSubmit} className="flex space-x-4">
+      {/* Enhanced Input Area */}
+      <div className="border-t-2 border-blue-200 bg-white p-4 rounded-b-xl">
+        <form onSubmit={handleSubmit} className="flex space-x-3">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Hastanız hakkında bir soru sorun..."
             disabled={loading}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
+            className="flex-1 px-5 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed transition-all text-sm"
           />
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-105 flex items-center space-x-2"
           >
-            {loading ? '⏳' : '📤'}
+            {loading ? (
+              <>
+                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Gönderiliyor</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                <span>Gönder</span>
+              </>
+            )}
           </button>
         </form>
 
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          AI asistanı hasta verilerinizi kullanarak size yardımcı olur. Nihai
-          kararlar hekim sorumluluğundadır.
-        </p>
+        <div className="mt-3 flex items-center justify-center space-x-2 text-xs text-gray-500">
+          <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <p>
+            AI asistanı hasta verilerinizi kullanarak size yardımcı olur. Nihai kararlar hekim sorumluluğundadır.
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -74,32 +74,121 @@ export default async function PatientDetailPage({ params }: PageProps) {
     )
   }
 
+  // Hasta adının baş harflerini al (Avatar için)
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  // Yatış süresini hesapla
+  const getAdmissionDuration = (createdAt: string) => {
+    const now = new Date()
+    const admission = new Date(createdAt)
+    const diffMs = now.getTime() - admission.getTime()
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+
+    if (diffHours > 24) {
+      const days = Math.floor(diffHours / 24)
+      return `${days} gün ${diffHours % 24} saat`
+    }
+    return `${diffHours} saat ${diffMins} dakika`
+  }
+
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/dashboard/patients"
-          className="text-blue-600 hover:text-blue-700 font-medium mb-4 inline-block"
-        >
-          ← Hasta Listesine Dön
-        </Link>
+      {/* Breadcrumb Navigation */}
+      <div className="mb-4">
+        <nav className="flex items-center space-x-2 text-sm text-gray-600">
+          <Link href="/dashboard" className="hover:text-blue-600 transition">
+            Ana Sayfa
+          </Link>
+          <span>›</span>
+          <Link href="/dashboard/patients" className="hover:text-blue-600 transition">
+            Hastalar
+          </Link>
+          <span>›</span>
+          <span className="text-gray-900 font-medium">{patient.name}</span>
+        </nav>
+      </div>
 
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {patient.name}
-            </h1>
-            <div className="flex items-center space-x-4 text-gray-600">
-              {patient.age && <span>{patient.age} yaş</span>}
-              {patient.gender && <span>• {patient.gender}</span>}
-              <span>
-                • {new Date(patient.created_at).toLocaleDateString('tr-TR')}
-              </span>
+      {/* Enhanced Patient Header Card */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl shadow-lg border border-blue-100 p-6 mb-6">
+        <div className="flex items-start justify-between">
+          {/* Left Section: Avatar & Info */}
+          <div className="flex items-start space-x-4">
+            {/* Avatar */}
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                {getInitials(patient.name)}
+              </div>
+              {/* Live Status Indicator */}
+              {patient.status === 'active' && (
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white animate-pulse"></div>
+              )}
+            </div>
+
+            {/* Patient Info */}
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {patient.name}
+                </h1>
+                {getStatusBadge(patient.status)}
+              </div>
+
+              {/* Quick Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                {/* Age & Gender */}
+                <div className="flex items-center space-x-2 text-gray-700">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="font-medium">{patient.age || '-'} yaş · {patient.gender || '-'}</span>
+                </div>
+
+                {/* Admission Date */}
+                <div className="flex items-center space-x-2 text-gray-700">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <div>
+                    <div className="text-xs text-gray-500">Kayıt Tarihi</div>
+                    <div className="font-medium">{new Date(patient.created_at).toLocaleDateString('tr-TR')}</div>
+                  </div>
+                </div>
+
+                {/* Duration */}
+                <div className="flex items-center space-x-2 text-gray-700">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <div className="text-xs text-gray-500">Yatış Süresi</div>
+                    <div className="font-medium">{getAdmissionDuration(patient.created_at)}</div>
+                  </div>
+                </div>
+
+                {/* Data Count */}
+                <div className="flex items-center space-x-2 text-gray-700">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <div>
+                    <div className="text-xs text-gray-500">Toplam Kayıt</div>
+                    <div className="font-medium">{(patientData?.length || 0) + (tests?.length || 0)}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Right Section: Action Buttons */}
           <div className="flex items-center space-x-3">
-            {getStatusBadge(patient.status)}
             <ExportButton patientId={patient.id} patientName={patient.name} />
             <PatientActions patientId={patient.id} patientName={patient.name} />
           </div>
