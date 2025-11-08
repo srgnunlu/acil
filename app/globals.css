@@ -138,3 +138,48 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Print Styles */
+@media print {
+  body {
+    background: white !important;
+  }
+
+  /* Hide navigation, buttons, and interactive elements */
+  nav,
+  button,
+  .no-print,
+  [class*="hover:"],
+  [class*="cursor-pointer"] {
+    display: none !important;
+  }
+
+  /* Ensure content is visible */
+  .print-visible {
+    display: block !important;
+  }
+
+  /* Remove shadows and gradients for cleaner print */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Ensure good contrast */
+  body {
+    color: #000;
+  }
+
+  /* Page breaks */
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  .page-break-avoid {
+    page-break-inside: avoid;
+  }
+}

@@ -20,11 +20,10 @@ export function MarkdownMessage({ content }: MarkdownMessageProps) {
             className,
             children,
             ...props
-          }: {
+          }: React.HTMLAttributes<HTMLElement> & {
             inline?: boolean
             className?: string
             children?: React.ReactNode
-            [key: string]: unknown
           }) {
             const match = /language-(\w+)/.exec(className || '')
             return !inline && match ? (
