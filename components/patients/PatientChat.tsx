@@ -1,10 +1,23 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { ChatHistorySidebar } from '@/components/chat/ChatHistorySidebar'
+import { MarkdownMessage } from '@/components/chat/MarkdownMessage'
+import {
+  Copy,
+  Check,
+  RefreshCw,
+  Download,
+  Search,
+  X,
+  Sparkles,
+  MessageCircle,
+  Send,
+  Loader2,
+} from 'lucide-react'
 
 interface PatientChatProps {
   patientId: string
@@ -24,181 +37,264 @@ export function PatientChat({ patientId, patientName }: PatientChatProps) {
   const [loading, setLoading] = useState(false)
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [streamingMessage, setStreamingMessage] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, streamingMessage, scrollToBottom])
 
-  const loadSessionMessages = async (sessionId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-
-      setMessages(data || [])
-      setCurrentSessionId(sessionId)
-    } catch (error) {
-      console.error('Error loading messages:', error)
+  // Klavye kısayolları
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K: Arama aç
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen((prev) => !prev)
+      }
+      // Escape: Arama kapat veya input temizle
+      if (e.key === 'Escape') {
+        if (searchOpen) {
+          setSearchOpen(false)
+          setSearchQuery('')
+        } else if (input) {
+          setInput('')
+        }
+      }
+      // Ctrl/Cmd + /: Input'a focus
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault()
+        inputRef.current?.focus()
+      }
     }
-  }
 
-  const handleSessionSelect = (sessionId: string) => {
-    loadSessionMessages(sessionId)
-  }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [searchOpen, input])
 
-  const handleNewChat = () => {
+  const loadSessionMessages = useCallback(
+    async (sessionId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: true })
+
+        if (error) throw error
+
+        setMessages(data || [])
+        setCurrentSessionId(sessionId)
+      } catch (error) {
+        console.error('Error loading messages:', error)
+      }
+    },
+    [supabase]
+  )
+
+  const handleSessionSelect = useCallback(
+    (sessionId: string) => {
+      loadSessionMessages(sessionId)
+    },
+    [loadSessionMessages]
+  )
+
+  const handleNewChat = useCallback(() => {
     setMessages([])
     setCurrentSessionId(null)
-  }
+    setStreamingMessage('')
+  }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent, messageToSend?: string) => {
+      e.preventDefault()
 
-    if (!input.trim() || loading) return
+      const userMessage = messageToSend || input.trim()
+      if (!userMessage || loading) return
 
-    const userMessage = input.trim()
-    setInput('')
-    setLoading(true)
+      setInput('')
+      setLoading(true)
+      setStreamingMessage('')
 
-    // Optimistic UI update
-    const tempUserMessage: Message = {
-      id: `temp-${Date.now()}`,
-      role: 'user',
-      content: userMessage,
-      created_at: new Date().toISOString(),
-    }
+      // Optimistic UI update
+      const tempUserMessage: Message = {
+        id: `temp-${Date.now()}`,
+        role: 'user',
+        content: userMessage,
+        created_at: new Date().toISOString(),
+      }
 
-    setMessages((prev) => [...prev, tempUserMessage])
+      setMessages((prev) => [...prev, tempUserMessage])
 
+      try {
+        const response = await fetch('/api/ai/chat/stream', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            patientId,
+            message: userMessage,
+            sessionId: currentSessionId,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Yanıt alınamadı')
+        }
+
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        let accumulatedResponse = ''
+        let newSessionId = currentSessionId
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value)
+            const lines = chunk.split('\n')
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6)
+                if (data === '[DONE]') {
+                  break
+                }
+
+                try {
+                  const parsed = JSON.parse(data)
+                  if (parsed.type === 'session') {
+                    newSessionId = parsed.sessionId
+                    if (!currentSessionId) {
+                      setCurrentSessionId(newSessionId)
+                    }
+                  } else if (parsed.type === 'content') {
+                    accumulatedResponse += parsed.content
+                    setStreamingMessage(accumulatedResponse)
+                  }
+                } catch (e) {
+                  // Ignore parse errors
+                }
+              }
+            }
+          }
+        }
+
+        // AI yanıtını messages'a ekle
+        const aiMessage: Message = {
+          id: `ai-${Date.now()}`,
+          role: 'assistant',
+          content: accumulatedResponse,
+          created_at: new Date().toISOString(),
+        }
+
+        setMessages((prev) => [...prev, aiMessage])
+        setStreamingMessage('')
+      } catch (error: unknown) {
+        const errorText = error instanceof Error ? error.message : 'Bir hata oluştu'
+        const errorMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content: `❌ Hata: ${errorText}`,
+          created_at: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, errorMessage])
+        setStreamingMessage('')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [input, loading, patientId, currentSessionId]
+  )
+
+  const handleCopy = useCallback(async (text: string, id: string) => {
     try {
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          patientId,
-          message: userMessage,
-          sessionId: currentSessionId,
-        }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Yanıt alınamadı')
-      }
-
-      const data = await response.json()
-
-      // Update session ID if new session was created
-      if (data.sessionId && !currentSessionId) {
-        setCurrentSessionId(data.sessionId)
-      }
-
-      // AI yanıtını ekle
-      const aiMessage: Message = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant',
-        content: data.message,
-        created_at: new Date().toISOString(),
-      }
-
-      setMessages((prev) => [...prev, aiMessage])
-    } catch (error: unknown) {
-      // Hata mesajı göster
-      const errorText = error instanceof Error ? error.message : 'Bir hata oluştu'
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: `❌ Hata: ${errorText}`,
-        created_at: new Date().toISOString(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
-    } finally {
-      setLoading(false)
+      await navigator.clipboard.writeText(text)
+      setCopiedId(id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (error) {
+      console.error('Copy failed:', error)
     }
-  }
+  }, [])
 
-  const suggestedQuestions = [
-    {
-      text: 'Bu hastanın mevcut risk faktörleri nelerdir?',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-      ),
+  const handleRegenerate = useCallback(
+    (messageIndex: number) => {
+      if (messageIndex < 1) return
+
+      // Son AI yanıtını sil ve önceki kullanıcı mesajını tekrar gönder
+      const userMessage = messages[messageIndex - 1]
+      if (userMessage && userMessage.role === 'user') {
+        setMessages((prev) => prev.slice(0, messageIndex))
+        handleSubmit(new Event('submit') as any, userMessage.content)
+      }
     },
-    {
-      text: 'Hangi tetkikler öncelikli olarak istenmeli?',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-          />
-        </svg>
-      ),
-    },
-    {
-      text: 'Ayırıcı tanılarda nelere dikkat etmeliyim?',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-          />
-        </svg>
-      ),
-    },
-    {
-      text: 'Tedavi planında hangi ilaçları önerirsin?',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-          />
-        </svg>
-      ),
-    },
-    {
-      text: 'Konsültasyon gerekli mi?',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-          />
-        </svg>
-      ),
-    },
-  ]
+    [messages, handleSubmit]
+  )
+
+  const handleExport = useCallback(() => {
+    const content = messages
+      .map((msg) => {
+        const timestamp = format(new Date(msg.created_at), 'dd/MM/yyyy HH:mm', { locale: tr })
+        const role = msg.role === 'user' ? 'Kullanıcı' : 'AI Asistan'
+        return `[${timestamp}] ${role}:\n${msg.content}\n`
+      })
+      .join('\n---\n\n')
+
+    const blob = new Blob([`${patientName} - Konuşma Geçmişi\n\n${content}`], {
+      type: 'text/plain',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${patientName}-konusma-${format(new Date(), 'dd-MM-yyyy')}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [messages, patientName])
+
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery.trim()) return messages
+    return messages.filter((msg) => msg.content.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [messages, searchQuery])
+
+  const suggestedQuestions = useMemo(
+    () => [
+      {
+        text: 'Bu hastanın mevcut risk faktörleri nelerdir?',
+        icon: <Sparkles className="w-4 h-4" />,
+      },
+      {
+        text: 'Hangi tetkikler öncelikli olarak istenmeli?',
+        icon: <MessageCircle className="w-4 h-4" />,
+      },
+      {
+        text: 'Ayırıcı tanılarda nelere dikkat etmeliyim?',
+        icon: <Sparkles className="w-4 h-4" />,
+      },
+      {
+        text: 'Tedavi planında hangi ilaçları önerirsin?',
+        icon: <MessageCircle className="w-4 h-4" />,
+      },
+      {
+        text: 'Konsültasyon gerekli mi?',
+        icon: <Sparkles className="w-4 h-4" />,
+      },
+    ],
+    []
+  )
 
   return (
-    <div className="flex h-[calc(100vh-200px)] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+    <div className="flex h-[calc(100vh-200px)] bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl shadow-2xl border border-slate-200/50 overflow-hidden backdrop-blur-sm">
       {/* Chat History Sidebar */}
       <ChatHistorySidebar
         patientId={patientId}
@@ -212,12 +308,12 @@ export function PatientChat({ patientId, patientName }: PatientChatProps) {
       {/* Main Chat Area */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Chat Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 flex-shrink-0">
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white px-6 py-4 flex-shrink-0 shadow-lg">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 min-w-0">
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
+                className="p-2 hover:bg-white/20 rounded-xl transition-all duration-200 flex-shrink-0 active:scale-95"
                 title="Konuşma Geçmişi"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,94 +326,97 @@ export function PatientChat({ patientId, patientName }: PatientChatProps) {
                 </svg>
               </button>
 
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0">
-                <svg
-                  className="w-6 h-6 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                  />
-                </svg>
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                <Sparkles className="w-6 h-6" />
               </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-lg truncate">AI Klinik Asistan</h3>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-lg truncate">AI Klinik Asistan</h3>
                 <p className="text-xs text-blue-100 truncate">Hasta: {patientName}</p>
               </div>
             </div>
             <div className="flex items-center space-x-2 flex-shrink-0">
-              <span className="hidden sm:flex px-3 py-1 bg-green-500 text-white rounded-full text-xs font-medium items-center">
+              <button
+                onClick={() => setSearchOpen(!searchOpen)}
+                className="p-2 hover:bg-white/20 rounded-xl transition-all duration-200 active:scale-95"
+                title="Ara (Ctrl+K)"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+              {messages.length > 0 && (
+                <button
+                  onClick={handleExport}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-all duration-200 active:scale-95"
+                  title="Konuşmayı İndir"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+              )}
+              <span className="hidden sm:flex px-3 py-1.5 bg-emerald-500 text-white rounded-full text-xs font-semibold items-center shadow-md">
                 <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
                 Aktif
               </span>
             </div>
           </div>
+
+          {/* Search Bar */}
+          {searchOpen && (
+            <div className="mt-4 relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Mesajlarda ara..."
+                className="w-full px-4 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-gradient-to-br from-gray-50 to-blue-50/30">
-          {messages.length === 0 ? (
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+          {filteredMessages.length === 0 && !streamingMessage ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
-                <svg
-                  className="w-10 h-10 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
+              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-3xl flex items-center justify-center mb-6 shadow-2xl animate-pulse">
+                <Sparkles className="w-12 h-12 text-white" />
               </div>
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
                 {patientName} için AI Asistan
               </h3>
-              <p className="text-gray-600 mb-8 max-w-md text-sm md:text-base">
+              <p className="text-slate-600 mb-8 max-w-md text-sm md:text-base">
                 Bu hasta hakkında soru sorabilir, tanı ve tedavi önerileri alabilirsiniz. AI asistan
                 hasta verilerinizi analiz ederek size yardımcı olur.
               </p>
 
               <div className="w-full max-w-3xl">
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm font-semibold text-gray-700 flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
+                  <p className="text-sm font-semibold text-slate-700 flex items-center">
+                    <Sparkles className="w-4 h-4 mr-2 text-blue-600" />
                     Hızlı Başlangıç Soruları
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2">
                   {suggestedQuestions.map((question, idx) => (
                     <button
                       key={idx}
                       onClick={() => setInput(question.text)}
-                      className="group text-left px-4 py-3 bg-white hover:bg-blue-50 rounded-lg text-sm text-gray-700 transition-all border border-gray-200 hover:border-blue-300 hover:shadow-md flex items-center space-x-3 h-fit"
+                      className="group text-left px-4 py-3 bg-white/80 backdrop-blur-sm hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-xl text-sm text-slate-700 transition-all border border-slate-200 hover:border-blue-300 hover:shadow-lg flex items-center space-x-3 h-fit"
                     >
-                      <div className="flex-shrink-0 w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                      <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform shadow-sm">
                         {question.icon}
                       </div>
-                      <span className="flex-1 break-words line-clamp-3">{question.text}</span>
+                      <span className="flex-1 break-words line-clamp-3 font-medium">
+                        {question.text}
+                      </span>
                       <svg
-                        className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0"
+                        className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors flex-shrink-0"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -336,26 +435,24 @@ export function PatientChat({ patientId, patientName }: PatientChatProps) {
             </div>
           ) : (
             <>
-              {messages.map((message, idx) => (
+              {filteredMessages.map((message, idx) => (
                 <div
                   key={message.id || idx}
-                  className={`flex ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  } animate-fadeIn`}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
                 >
                   <div
-                    className={`max-w-[85%] md:max-w-[75%] rounded-2xl shadow-md ${
+                    className={`group relative max-w-[85%] md:max-w-[75%] rounded-2xl shadow-lg ${
                       message.role === 'user'
-                        ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white'
-                        : 'bg-white border border-gray-200 text-gray-900'
+                        ? 'bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white'
+                        : 'bg-white border border-slate-200/50 text-slate-900'
                     }`}
                   >
-                    <div className="flex items-start space-x-3 px-4 py-3">
+                    <div className="flex items-start space-x-3 px-5 py-4">
                       <div
-                        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                        className={`flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center shadow-md ${
                           message.role === 'user'
-                            ? 'bg-white/20'
-                            : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                            ? 'bg-white/20 backdrop-blur-sm'
+                            : 'bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600'
                         }`}
                       >
                         {message.role === 'user' ? (
@@ -373,54 +470,53 @@ export function PatientChat({ patientId, patientName }: PatientChatProps) {
                             />
                           </svg>
                         ) : (
-                          <svg
-                            className="w-5 h-5 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                            />
-                          </svg>
+                          <Sparkles className="w-5 h-5 text-white" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
-                          {message.content}
-                        </p>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/20">
+                        {message.role === 'assistant' ? (
+                          <MarkdownMessage content={message.content} />
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words leading-relaxed text-sm md:text-base">
+                            {message.content}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
                           <p
-                            className={`text-xs ${
-                              message.role === 'user' ? 'text-white/70' : 'text-gray-500'
-                            }`}
+                            className={`text-xs ${message.role === 'user' ? 'text-white/70' : 'text-slate-500'}`}
+                            title={format(new Date(message.created_at), 'dd MMMM yyyy, HH:mm', {
+                              locale: tr,
+                            })}
                           >
                             {formatDistanceToNow(new Date(message.created_at), {
                               addSuffix: true,
                               locale: tr,
                             })}
                           </p>
-                          {message.role === 'assistant' && (
-                            <span className="text-xs text-gray-400 flex items-center">
-                              <svg
-                                className="w-3 h-3 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              AI Yanıtı
-                            </span>
-                          )}
+                          <div className="flex items-center space-x-2">
+                            {message.role === 'assistant' && (
+                              <>
+                                <button
+                                  onClick={() => handleCopy(message.content, message.id)}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-slate-100 rounded-lg"
+                                  title="Kopyala"
+                                >
+                                  {copiedId === message.id ? (
+                                    <Check className="w-4 h-4 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="w-4 h-4 text-slate-500" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleRegenerate(idx)}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-slate-100 rounded-lg"
+                                  title="Yeniden Oluştur"
+                                >
+                                  <RefreshCw className="w-4 h-4 text-slate-500" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -428,26 +524,33 @@ export function PatientChat({ patientId, patientName }: PatientChatProps) {
                 </div>
               ))}
 
-              {loading && (
+              {streamingMessage && (
                 <div className="flex justify-start animate-fadeIn">
-                  <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-md">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-5 h-5 text-white animate-spin"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          />
-                        </svg>
+                  <div className="group relative max-w-[85%] md:max-w-[75%] rounded-2xl shadow-lg bg-white border border-slate-200/50 text-slate-900">
+                    <div className="flex items-start space-x-3 px-5 py-4">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center shadow-md bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600">
+                        <Sparkles className="w-5 h-5 text-white" />
                       </div>
-                      <div className="flex space-x-1">
+                      <div className="flex-1 min-w-0">
+                        <MarkdownMessage content={streamingMessage} />
+                        <div className="flex items-center mt-2">
+                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                          <span className="ml-2 text-xs text-slate-500">AI yazıyor...</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {loading && !streamingMessage && (
+                <div className="flex justify-start animate-fadeIn">
+                  <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl px-5 py-4 shadow-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-md">
+                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                      </div>
+                      <div className="flex space-x-1.5">
                         <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"></div>
                         <div
                           className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-bounce"
@@ -458,7 +561,7 @@ export function PatientChat({ patientId, patientName }: PatientChatProps) {
                           style={{ animationDelay: '0.2s' }}
                         ></div>
                       </div>
-                      <span className="text-sm text-gray-600 font-medium">AI düşünüyor...</span>
+                      <span className="text-sm text-slate-600 font-medium">AI düşünüyor...</span>
                     </div>
                   </div>
                 </div>
@@ -469,60 +572,40 @@ export function PatientChat({ patientId, patientName }: PatientChatProps) {
           )}
         </div>
 
-        {/* Enhanced Input Area */}
-        <div className="border-t-2 border-blue-200 bg-white p-3 md:p-4 flex-shrink-0">
+        {/* Input Area */}
+        <div className="border-t-2 border-blue-200/50 bg-white/80 backdrop-blur-md p-3 md:p-4 flex-shrink-0 shadow-lg">
           <form onSubmit={handleSubmit} className="flex space-x-2 md:space-x-3">
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Hastanız hakkında bir soru sorun..."
+              placeholder="Hastanız hakkında bir soru sorun... (Shift+Enter: yeni satır)"
               disabled={loading}
-              className="flex-1 min-w-0 px-4 py-2.5 md:py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed transition-all text-sm"
+              className="flex-1 min-w-0 px-4 py-3 md:py-3.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed transition-all text-sm shadow-sm"
             />
             <button
               type="submit"
               disabled={!input.trim() || loading}
-              className="px-4 md:px-6 py-2.5 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-105 flex items-center space-x-2 flex-shrink-0"
+              className="px-5 md:px-7 py-3 md:py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 flex items-center space-x-2 flex-shrink-0"
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
+                  <Loader2 className="animate-spin w-5 h-5" />
                   <span className="hidden md:inline">Gönderiliyor</span>
                 </>
               ) : (
                 <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                    />
-                  </svg>
+                  <Send className="w-5 h-5" />
                   <span className="hidden md:inline">Gönder</span>
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-2 md:mt-3 flex items-center justify-center space-x-2 text-xs text-gray-500">
+          <div className="mt-3 flex items-center justify-center space-x-2 text-xs text-slate-500">
             <svg
-              className="w-4 h-4 text-yellow-500 flex-shrink-0"
+              className="w-4 h-4 text-amber-500 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -538,6 +621,12 @@ export function PatientChat({ patientId, patientName }: PatientChatProps) {
               AI asistanı hasta verilerinizi kullanarak size yardımcı olur. Nihai kararlar hekim
               sorumluluğundadır.
             </p>
+          </div>
+
+          <div className="mt-2 text-center text-xs text-slate-400">
+            Kısayollar: <kbd className="px-1.5 py-0.5 bg-slate-100 rounded">Ctrl+K</kbd> Ara ·{' '}
+            <kbd className="px-1.5 py-0.5 bg-slate-100 rounded">Esc</kbd> Temizle ·{' '}
+            <kbd className="px-1.5 py-0.5 bg-slate-100 rounded">Ctrl+/</kbd> Odaklan
           </div>
         </div>
       </div>
