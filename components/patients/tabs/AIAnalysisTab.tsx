@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/modal'
 import { cn, copyToClipboard } from '@/lib/utils'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
-import { Star, Trash2, Edit2, Plus, Save, X } from 'lucide-react'
+import { Star, Trash2, Edit2, Plus, Save, X, MessageSquare, Send } from 'lucide-react'
 
 interface AIAnalysisTabProps {
   patientId: string
@@ -72,6 +72,9 @@ export function AIAnalysisTab({ patientId, patientData, tests, analyses }: AIAna
   const [emailAddress, setEmailAddress] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
   const [emailSending, setEmailSending] = useState(false)
+
+  // AI Chat state
+  const [chatModalOpen, setChatModalOpen] = useState(false)
 
   const router = useRouter()
   const { showToast } = useToast()
@@ -497,6 +500,16 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
                 />
                 {favorites[latestAnalysis.id] ? 'Favorilerde' : 'Favorilere Ekle'}
               </button>
+
+              {/* AI Chat Button */}
+              <button
+                onClick={() => setChatModalOpen(true)}
+                className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+              >
+                <MessageSquare className="w-4 h-4" />
+                AI Chat
+              </button>
+
               {analyses.length > 1 && (
                 <button
                   onClick={() => {
@@ -1231,6 +1244,18 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
               </button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* AI Chat Modal */}
+      {latestAnalysis && (
+        <Modal
+          isOpen={chatModalOpen}
+          onClose={() => setChatModalOpen(false)}
+          title="🤖 AI ile Sohbet"
+          size="lg"
+        >
+          <AIChatInterface analysisId={latestAnalysis.id} />
         </Modal>
       )}
     </div>
@@ -2100,6 +2125,214 @@ function AnalysisDetailView({ analysis }: { analysis: AIAnalysis }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// AI Chat Interface Component
+function AIChatInterface({ analysisId }: { analysisId: string }) {
+  interface Message {
+    id: string
+    role: 'user' | 'assistant'
+    content: string
+  }
+
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  const { showToast } = useToast()
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input,
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setInput('')
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/ai/analyses/${analysisId}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: userMessage.content,
+          messages: messages,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Chat isteği başarısız oldu')
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('Stream okunamadı')
+      }
+
+      let assistantMessage = ''
+      const assistantId = (Date.now() + 1).toString()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        assistantMessage += chunk
+
+        setMessages((prev) => {
+          const existing = prev.find((m) => m.id === assistantId)
+          if (existing) {
+            return prev.map((m) =>
+              m.id === assistantId ? { ...m, content: assistantMessage } : m
+            )
+          } else {
+            return [
+              ...prev,
+              {
+                id: assistantId,
+                role: 'assistant' as const,
+                content: assistantMessage,
+              },
+            ]
+          }
+        })
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Bir hata oluştu'
+      setError(err instanceof Error ? err : new Error(errorMsg))
+      showToast(errorMsg, 'error')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col h-[500px]">
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center">
+              <MessageSquare className="w-8 h-8 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              AI Asistanına Sor
+            </h3>
+            <p className="text-gray-600 text-sm max-w-md mx-auto">
+              Analiz hakkında sorularınızı sorun. AI asistanı hasta verileri ve analiz sonuçları
+              kapsamında size yardımcı olacaktır.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2 justify-center">
+              <button
+                onClick={() => setInput('Kritik bulgular ne anlama geliyor?')}
+                className="px-3 py-1.5 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
+              >
+                Kritik bulgular ne anlama geliyor?
+              </button>
+              <button
+                onClick={() => setInput('Önerilen tetkiklerin öncelik sırası neden böyle?')}
+                className="px-3 py-1.5 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
+              >
+                Tetkik öncelikleri neden böyle?
+              </button>
+              <button
+                onClick={() => setInput('Ayırıcı tanılar arasındaki farklar nedir?')}
+                className="px-3 py-1.5 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
+              >
+                Ayırıcı tanılar nedir?
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={cn(
+                  'flex',
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                )}
+              >
+                <div
+                  className={cn(
+                    'max-w-[80%] rounded-2xl px-4 py-3',
+                    message.role === 'user'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                      : 'bg-gray-100 text-gray-900'
+                  )}
+                >
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                    <span className="text-sm text-gray-600">Düşünüyor...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="px-4 py-2 bg-red-50 border-l-4 border-red-500">
+          <p className="text-sm text-red-700">Hata: {error.message}</p>
+        </div>
+      )}
+
+      {/* Input Form */}
+      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={handleInputChange}
+            placeholder="Sorunuzu yazın..."
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className={cn(
+              'px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all duration-200',
+              isLoading || !input.trim()
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg'
+            )}
+          >
+            <Send className="w-4 h-4" />
+            <span className="hidden sm:inline">Gönder</span>
+          </button>
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          AI asistanı sadece analiz kapsamındaki bilgiler hakkında yanıt verir.
+        </p>
+      </form>
     </div>
   )
 }
