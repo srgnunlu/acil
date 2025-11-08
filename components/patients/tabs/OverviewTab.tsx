@@ -111,50 +111,51 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
   const displayedEvents = showAllTimeline ? filteredEvents : filteredEvents.slice(0, 10)
 
   return (
-    <div className="space-y-6">
-      {/* Enhanced Timeline */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Hasta Zaman Çizelgesi</h2>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Timeline Sidebar - Fixed height with scroll */}
+      <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" style={{ maxHeight: '800px' }}>
+        {/* Sticky Header */}
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 sticky top-0 z-10">
+          <h2 className="text-base font-semibold text-gray-900 mb-3">Zaman Çizelgesi</h2>
 
           {/* Timeline Filters */}
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap gap-1.5">
             <button
               onClick={() => setTimelineFilter('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                 timelineFilter === 'all'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
               }`}
             >
               Tümü ({allEvents.length})
             </button>
             <button
               onClick={() => setTimelineFilter('data')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                 timelineFilter === 'data'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
               }`}
             >
               Veri ({patientData.length})
             </button>
             <button
               onClick={() => setTimelineFilter('test')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                 timelineFilter === 'test'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
               }`}
             >
               Test ({tests.length})
             </button>
             <button
               onClick={() => setTimelineFilter('analysis')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                 timelineFilter === 'analysis'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
               }`}
             >
               AI ({analyses.length})
@@ -162,122 +163,95 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
           </div>
         </div>
 
-        {displayedEvents.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Scrollable Timeline Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+
+        {filteredEvents.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Henüz veri eklenmedi
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">
+              Henüz veri yok
             </h3>
-            <p className="text-gray-600 text-sm">
-              &quot;Hasta Bilgileri&quot; sekmesinden veri eklemeye başlayın
+            <p className="text-gray-600 text-xs">
+              Veri eklemeye başlayın
             </p>
           </div>
         ) : (
-          <>
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500"></div>
+          <div className="relative">
+            {/* Timeline line */}
+            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-400 via-indigo-400 to-purple-400"></div>
 
-              {/* Timeline events */}
-              <div className="space-y-6">
-                {displayedEvents.map((event, idx) => (
-                  <div key={idx} className="relative flex items-start space-x-4 group">
-                    {/* Timeline dot */}
-                    <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center ${
-                      getEventColor(event.type === 'data' ? ('subtype' in event ? event.subtype : event.type) : event.type)
-                    }`}>
+            {/* Timeline events */}
+            <div className="space-y-3">
+              {filteredEvents.map((event, idx) => (
+                <div key={idx} className="relative flex items-start space-x-2 group">
+                  {/* Timeline dot */}
+                  <div className={`relative z-10 flex-shrink-0 w-8 h-8 rounded-full border-2 border-white shadow flex items-center justify-center ${
+                    getEventColor(event.type === 'data' ? ('subtype' in event ? event.subtype : event.type) : event.type)
+                  }`}>
+                    <div className="scale-75">
                       {getEventIcon(event.type, 'subtype' in event ? event.subtype : undefined)}
                     </div>
+                  </div>
 
-                    {/* Event card */}
-                    <div className="flex-1 bg-gray-50 rounded-lg p-4 border border-gray-200 group-hover:shadow-md group-hover:border-blue-300 transition-all">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-1">
-                            {event.type === 'data' && 'subtype' in event &&
-                              `${
-                                {
-                                  anamnesis: 'Anamnez',
-                                  medications: 'İlaçlar',
-                                  vital_signs: 'Vital Bulgular',
-                                  demographics: 'Demografik Bilgi',
-                                  history: 'Özgeçmiş',
-                                }[event.subtype as string]
-                              } eklendi`}
-                            {event.type === 'test' &&
-                              `${(event.data as PatientTest).test_type} sonucu eklendi`}
-                            {event.type === 'analysis' && 'AI Analizi tamamlandı'}
-                          </h4>
+                  {/* Event card */}
+                  <div className="flex-1 bg-gray-50 rounded-lg p-2.5 border border-gray-200 group-hover:shadow group-hover:border-blue-300 transition-all">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-semibold text-gray-900 leading-tight">
+                        {event.type === 'data' && 'subtype' in event &&
+                          `${
+                            {
+                              anamnesis: 'Anamnez Eklendi',
+                              medications: 'İlaç Bilgisi Eklendi',
+                              vital_signs: 'Vital Bulgular Eklendi',
+                              demographics: 'Demografik Bilgi Eklendi',
+                              history: 'Özgeçmiş Eklendi',
+                            }[event.subtype as string]
+                          }`}
+                        {event.type === 'test' &&
+                          `${
+                            {
+                              ekg: 'EKG',
+                              laboratory: 'Laboratuvar',
+                              radiology: 'Radyoloji',
+                              xray: 'Röntgen',
+                              lesion_image: 'Lezyon Analizi',
+                            }[(event.data as PatientTest).test_type] || (event.data as PatientTest).test_type
+                          } ${(event.data as PatientTest).test_type === 'lesion_image' ? 'Eklendi' : 'Sonucu Eklendi'}`}
+                        {event.type === 'analysis' && 'AI Analizi Tamamlandı'}
+                      </h4>
 
-                          {/* Event preview */}
-                          <div className="text-sm text-gray-600">
-                            {event.type === 'data' && (
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {Object.entries((event.data as PatientData).content as Record<string, any>).slice(0, 2).map(([key, value]) => (
-                                  <span key={key} className="inline-flex items-center px-2 py-1 bg-white rounded text-xs border border-gray-200">
-                                    <span className="font-medium text-gray-700">{key}:</span>
-                                    <span className="ml-1 text-gray-900">{String(value).slice(0, 30)}{String(value).length > 30 ? '...' : ''}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                            {event.type === 'analysis' && (event.data as AIAnalysis).ai_response.summary && (
-                              <p className="mt-2 text-gray-700 line-clamp-2">
-                                {(event.data as AIAnalysis).ai_response.summary}
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                      {/* Timestamp */}
+                      <span className="text-xs text-gray-500">
+                        {formatDistanceToNow(new Date(event.date), {
+                          addSuffix: true,
+                          locale: tr,
+                        })}
+                      </span>
 
-                        {/* Timestamp badge */}
-                        <span className="ml-4 flex-shrink-0 px-3 py-1 bg-white rounded-full text-xs font-medium text-gray-600 border border-gray-200">
-                          {formatDistanceToNow(new Date(event.date), {
-                            addSuffix: true,
-                            locale: tr,
-                          })}
-                        </span>
-                      </div>
+                      {/* Event preview - only for analysis */}
+                      {event.type === 'analysis' && (event.data as AIAnalysis).ai_response.summary && (
+                        <p className="text-xs text-gray-600 line-clamp-2 mt-1">
+                          {(event.data as AIAnalysis).ai_response.summary.slice(0, 80)}...
+                        </p>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-
-            {/* Show More/Less Button */}
-            {filteredEvents.length > 10 && (
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => setShowAllTimeline(!showAllTimeline)}
-                  className="px-6 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-100 transition-colors"
-                >
-                  {showAllTimeline ? (
-                    <>
-                      <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
-                      Daha az göster
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                      Tüm geçmişi göster ({filteredEvents.length - 10} daha fazla)
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </>
+          </div>
         )}
+        </div>
       </div>
 
-      {/* Quick Info Cards */}
-      <div className="grid md:grid-cols-2 gap-6">
+      {/* Main Content Area - Quick Info Cards */}
+      <div className="lg:col-span-2 space-y-6">
+        <div className="grid md:grid-cols-2 gap-6">
         {/* Enhanced Vital Signs */}
         {latestVitals && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -516,6 +490,7 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
               <span className="font-semibold text-gray-900">{analyses.length}</span>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -220,11 +220,14 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Add Test Cards */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Tetkik Ekle</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className="space-y-4">
+      {/* Compact Test Type Cards - Single Row */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-4">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+          <span className="mr-2">📋</span>
+          Tetkik Ekle
+        </h2>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
           {testTypes.map((type) => (
             <button
               key={type.id}
@@ -232,21 +235,19 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                 setSelectedTestType(type.id)
                 setShowAddForm(true)
               }}
-              className={`${type.color} border-2 rounded-xl p-4 hover:shadow-lg transition-all text-left group`}
+              className={`${type.color} border-2 rounded-lg p-2.5 hover:shadow-md transition-all text-center group relative`}
+              title={type.description}
             >
-              <div className="text-2xl mb-2">{type.icon}</div>
-              <h3 className="font-semibold text-gray-900 mb-1 text-sm">
+              <div className="text-xl mb-1">{type.icon}</div>
+              <h3 className="font-semibold text-gray-900 text-xs leading-tight">
                 {type.label}
-                {type.special && (
-                  <span className="ml-2 text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
-                    AI
-                  </span>
-                )}
               </h3>
-              <p className="text-xs text-gray-600 mb-2">{type.description}</p>
-              <div
-                className={`text-xs font-medium ${type.special ? 'text-purple-600 group-hover:text-purple-700' : 'text-blue-600 group-hover:text-blue-700'}`}
-              >
+              {type.special && (
+                <span className="absolute -top-1 -right-1 text-xs bg-purple-600 text-white px-1.5 py-0.5 rounded-full shadow-sm">
+                  AI
+                </span>
+              )}
+              <div className="text-xs font-medium text-blue-600 group-hover:text-blue-700 mt-1">
                 + Ekle
               </div>
             </button>
@@ -254,28 +255,28 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
         </div>
       </div>
 
-      {/* Search, Filter and Sort Controls */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div className="grid md:grid-cols-3 gap-4">
+      {/* Compact Filter Bar */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Arama</label>
-            <input
-              type="text"
-              placeholder="Tetkik ara..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
+          <div className="flex-1 min-w-[200px]">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="🔍 Tetkik ara..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
           </div>
 
           {/* Filter by Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tetkik Tipi</label>
+          <div className="min-w-[180px]">
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
             >
               <option value="all">Tümü ({tests.length})</option>
               {testTypes.map((type) => {
@@ -290,30 +291,24 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
           </div>
 
           {/* Sort */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Sıralama</label>
+          <div className="min-w-[140px]">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
             >
               <option value="newest">En Yeni</option>
               <option value="oldest">En Eski</option>
               <option value="type">Tetkik Tipine Göre</option>
             </select>
           </div>
-        </div>
 
-        {/* Results count and Export */}
-        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
-          <p className="text-sm text-gray-600">
-            {filteredAndSortedTests.length} tetkik bulundu
-            {searchQuery && ` "${searchQuery}" araması için`}
-          </p>
+          {/* Export Button */}
           {filteredAndSortedTests.length > 0 && (
             <button
               onClick={handleExport}
-              className="text-sm px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition"
+              className="px-3 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition shadow-sm flex items-center gap-1"
+              title="Tetkikleri dışa aktar"
             >
               📥 Dışa Aktar
             </button>
@@ -323,7 +318,15 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
 
       {/* Existing Tests */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Tetkik Sonuçları</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+            <span className="mr-2">📊</span>
+            Tetkik Sonuçları
+            <span className="ml-3 text-sm font-normal text-gray-500">
+              ({filteredAndSortedTests.length})
+            </span>
+          </h2>
+        </div>
 
         {filteredAndSortedTests.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">

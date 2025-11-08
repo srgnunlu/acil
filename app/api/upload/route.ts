@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     const fileName = `${user.id}/${patientId}/${timestamp}.${fileExt}`
 
     // Supabase Storage'a yükle
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('medical-images')
       .upload(fileName, bytes, {
         contentType: file.type,
@@ -89,9 +89,12 @@ export async function POST(request: Request) {
       })
 
     if (uploadError) {
-      console.error('Upload error:', uploadError)
+      console.error('Supabase Storage upload error:', uploadError)
       return NextResponse.json(
-        { error: 'Dosya yüklenirken hata oluştu' },
+        {
+          error: `Dosya yüklenirken hata oluştu: ${uploadError.message}`,
+          details: uploadError.message,
+        },
         { status: 500 }
       )
     }

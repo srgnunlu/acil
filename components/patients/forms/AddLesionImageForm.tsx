@@ -60,8 +60,7 @@ export function AddLesionImageForm({ patientId, onClose }: AddLesionImageFormPro
 
       setImageUrl(data.url)
 
-      // Automatically trigger AI analysis when image is uploaded
-      await analyzeImage(data.url)
+      // Don't auto-analyze - wait for user to click analyze button
     } catch (err: any) {
       console.error('Upload error:', err)
       setError(err.message || 'Görsel yüklenirken hata oluştu')
@@ -258,8 +257,20 @@ export function AddLesionImageForm({ patientId, onClose }: AddLesionImageFormPro
                   </div>
 
                   <p className="text-sm text-gray-600">
-                    Resim başarıyla yüklendi. Değiştirmek için yeniden seçin.
+                    ✓ Resim başarıyla yüklendi
                   </p>
+
+                  {/* Analyze Button */}
+                  {!aiAnalysis && !analyzing && (
+                    <button
+                      type="button"
+                      onClick={() => analyzeImage(imageUrl)}
+                      className="mt-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition shadow-lg flex items-center gap-2 mx-auto"
+                    >
+                      <span className="text-lg">🤖</span>
+                      Yapay Zeka ile Analiz Et
+                    </button>
+                  )}
                 </div>
               ) : (
                 // Upload area
@@ -308,36 +319,129 @@ export function AddLesionImageForm({ patientId, onClose }: AddLesionImageFormPro
           {/* AI Analysis Result */}
           {aiAnalysis && !analyzing && (
             <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6">
-              <div className="flex items-center mb-4">
-                <div className="h-10 w-10 bg-purple-600 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-white text-lg">🤖</span>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="h-10 w-10 bg-purple-600 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-white text-lg">🤖</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">
+                      Yapay Zeka Analizi
+                    </h3>
+                    <p className="text-xs text-gray-600">
+                      Gemini Vision API tarafından oluşturuldu
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">
-                    Yapay Zeka Analizi
-                  </h3>
-                  <p className="text-xs text-gray-600">
-                    Gemini Vision API tarafından oluşturuldu
-                  </p>
-                </div>
+                {aiAnalysis.confidence && (
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    aiAnalysis.confidence === 'high' ? 'bg-green-100 text-green-700' :
+                    aiAnalysis.confidence === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    Güven: {aiAnalysis.confidence === 'high' ? 'Yüksek' : aiAnalysis.confidence === 'medium' ? 'Orta' : 'Düşük'}
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-3 text-sm">
-                {typeof aiAnalysis === 'object' ? (
-                  Object.entries(aiAnalysis).map(([key, value]) => (
-                    <div key={key} className="bg-white rounded-lg p-3">
-                      <p className="font-semibold text-gray-700 capitalize mb-1">
-                        {key.replace(/_/g, ' ')}:
-                      </p>
-                      <p className="text-gray-900 whitespace-pre-wrap">
-                        {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
-                      </p>
+              <div className="space-y-4">
+                {/* Description */}
+                {aiAnalysis.description && (
+                  <div className="bg-white rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                      <span className="mr-2">📝</span>
+                      Lezyon Tanımı
+                    </h4>
+                    <p className="text-sm text-gray-700 leading-relaxed">{aiAnalysis.description}</p>
+                  </div>
+                )}
+
+                {/* ABCDE Score */}
+                {aiAnalysis.abcde_score && (
+                  <div className="bg-white rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="mr-2">🔍</span>
+                      ABCDE Kriterleri
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.entries(aiAnalysis.abcde_score).map(([key, value]) => (
+                        <div key={key} className="text-sm">
+                          <span className="font-medium text-gray-700 capitalize">{key}:</span>
+                          <span className="ml-2 text-gray-900">{String(value)}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))
-                ) : (
+                  </div>
+                )}
+
+                {/* Malignancy Risk */}
+                {aiAnalysis.malignancy_risk && (
+                  <div className={`rounded-lg p-4 ${
+                    aiAnalysis.malignancy_risk === 'high' ? 'bg-red-50 border border-red-200' :
+                    aiAnalysis.malignancy_risk === 'medium' ? 'bg-yellow-50 border border-yellow-200' :
+                    'bg-green-50 border border-green-200'
+                  }`}>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                      <span className="mr-2">⚠️</span>
+                      Malignite Riski
+                    </h4>
+                    <p className={`text-sm font-medium ${
+                      aiAnalysis.malignancy_risk === 'high' ? 'text-red-700' :
+                      aiAnalysis.malignancy_risk === 'medium' ? 'text-yellow-700' :
+                      'text-green-700'
+                    }`}>
+                      {aiAnalysis.malignancy_risk === 'high' ? 'Yüksek Risk' :
+                       aiAnalysis.malignancy_risk === 'medium' ? 'Orta Risk' :
+                       'Düşük Risk'}
+                    </p>
+                    {aiAnalysis.urgent_evaluation_needed && (
+                      <p className="text-sm text-red-700 mt-2 font-medium">
+                        ⚠️ Acil değerlendirme gerekiyor!
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Differential Diagnosis */}
+                {aiAnalysis.differential_diagnosis && Array.isArray(aiAnalysis.differential_diagnosis) && (
+                  <div className="bg-white rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                      <span className="mr-2">🔬</span>
+                      Ayırıcı Tanı
+                    </h4>
+                    <ul className="space-y-1">
+                      {aiAnalysis.differential_diagnosis.map((diagnosis: string, idx: number) => (
+                        <li key={idx} className="text-sm text-gray-700 flex items-start">
+                          <span className="text-purple-600 mr-2">•</span>
+                          <span>{diagnosis}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {aiAnalysis.recommendations && Array.isArray(aiAnalysis.recommendations) && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                      <span className="mr-2">💡</span>
+                      Öneriler
+                    </h4>
+                    <ul className="space-y-1">
+                      {aiAnalysis.recommendations.map((rec: string, idx: number) => (
+                        <li key={idx} className="text-sm text-gray-700 flex items-start">
+                          <span className="text-blue-600 mr-2">→</span>
+                          <span>{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Raw Analysis fallback */}
+                {aiAnalysis.raw_analysis && (
                   <div className="bg-white rounded-lg p-3">
-                    <p className="text-gray-900 whitespace-pre-wrap">
-                      {String(aiAnalysis)}
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap">{aiAnalysis.raw_analysis}
                     </p>
                   </div>
                 )}

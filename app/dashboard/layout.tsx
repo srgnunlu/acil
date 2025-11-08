@@ -41,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
               <Link
-                href="/dashboard/patients"
+                href="/dashboard"
                 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent hover:from-blue-700 hover:to-indigo-700 transition-all"
               >
                 ACIL

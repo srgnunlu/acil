@@ -66,13 +66,16 @@ export async function POST(request: Request) {
         .single()
 
       if (patient) {
-        // Test sonucu olarak kaydet
-        await supabase.from('patient_tests').insert({
-          patient_id: patientId,
-          test_type: analysisType === 'ekg' ? 'ekg' : analysisType === 'xray' ? 'xray' : 'other',
-          results: analysis,
-          images: imageUrl ? [imageUrl] : [],
-        })
+        // Test sonucu olarak kaydet - SADECE skin_lesion DEĞİLSE
+        // skin_lesion için AddLesionImageForm zaten kaydediyor
+        if (analysisType !== 'skin_lesion') {
+          await supabase.from('patient_tests').insert({
+            patient_id: patientId,
+            test_type: analysisType === 'ekg' ? 'ekg' : analysisType === 'xray' ? 'xray' : 'other',
+            results: analysis,
+            images: imageUrl ? [imageUrl] : [],
+          })
+        }
       }
     }
 

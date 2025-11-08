@@ -8,7 +8,7 @@ export async function analyzeImage(
   analysisType: 'ekg' | 'skin_lesion' | 'xray' | 'lab_results' | 'other',
   additionalContext?: string
 ) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const prompts = {
     lab_results: `Sen deneyimli bir klinisyen yapay zeka asistanısın. Bu laboratuvar sonucu görselini/PDF'ini analiz et ve TÜM laboratuvar değerlerini çıkar.
@@ -166,12 +166,18 @@ YANIT FORMATI (JSON):
     ])
 
     const response = await result.response
-    const text = response.text()
+    let text = response.text()
 
     // JSON formatında dönen yanıtı parse et
     try {
-      return JSON.parse(text)
-    } catch {
+      // Markdown code blocks'u temizle (```json ... ``` veya ``` ... ```)
+      text = text.replace(/```json?\s*/g, '').replace(/```\s*$/g, '').trim()
+
+      const parsed = JSON.parse(text)
+      return parsed
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError)
+      console.log('Raw text:', text)
       // Eğer JSON parse edilemezse, text olarak dön
       return { raw_analysis: text, confidence: 'medium' }
     }
@@ -187,7 +193,7 @@ export async function compareImages(
   comparisonType: 'ekg' | 'xray' | 'other',
   context?: string
 ) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const prompts = {
     ekg: `İki EKG görselini karşılaştır ve aralarındaki farkları değerlendir.

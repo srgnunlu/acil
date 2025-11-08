@@ -76,14 +76,14 @@ export function EKGCard({ test }: EKGCardProps) {
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition disabled:opacity-50"
+              className="p-2 bg-white rounded-lg transition disabled:opacity-50 text-red-600 hover:bg-red-50 shadow-sm"
               title="Sil"
             >
               {isDeleting ? '⏳' : '🗑️'}
             </button>
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition"
+              className="p-2 bg-white rounded-lg transition text-gray-700 hover:bg-gray-50 shadow-sm"
               title={isExpanded ? 'Daralt' : 'Genişlet'}
             >
               {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
@@ -97,18 +97,21 @@ export function EKGCard({ test }: EKGCardProps) {
         <div className="grid grid-cols-3 gap-4">
           {results.rhythm && (
             <div className="text-center p-3 bg-red-50 rounded-lg">
+              <div className="text-2xl mb-1">🫀</div>
               <div className="text-xs text-gray-600 mb-1">Ritim</div>
               <div className="font-semibold text-gray-900">{results.rhythm}</div>
             </div>
           )}
           {results.rate && (
             <div className="text-center p-3 bg-red-50 rounded-lg">
+              <div className="text-2xl mb-1">💓</div>
               <div className="text-xs text-gray-600 mb-1">Kalp Hızı</div>
               <div className="font-semibold text-gray-900">{results.rate} atım/dk</div>
             </div>
           )}
           {results.axis && (
             <div className="text-center p-3 bg-red-50 rounded-lg">
+              <div className="text-2xl mb-1">📐</div>
               <div className="text-xs text-gray-600 mb-1">Aks</div>
               <div className="font-semibold text-gray-900">{results.axis}</div>
             </div>
