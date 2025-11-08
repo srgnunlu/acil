@@ -1,226 +1,249 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ChatMessage } from '@/types'
-import { formatDistanceToNow } from 'date-fns'
-import { tr } from 'date-fns/locale'
+import { Send, Loader2, User, Bot } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import type { ChatMessage } from '@/types'
 
 interface PatientChatProps {
   patientId: string
   patientName: string
-  initialMessages: ChatMessage[]
 }
 
-export function PatientChat({
-  patientId,
-  patientName,
-  initialMessages,
-}: PatientChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
+/**
+ * Patient Chat Component
+ */
+export function PatientChat({ patientId, patientName }: PatientChatProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const supabase = createClient()
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
+  // Load initial messages
   useEffect(() => {
-    scrollToBottom()
+    loadMessages()
+  }, [patientId])
+
+  // Auto scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const loadMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: true })
 
-    if (!input.trim() || loading) return
+      if (error) throw error
+      setMessages(data || [])
+    } catch (error) {
+      console.error('Failed to load messages:', error)
+    }
+  }
 
-    const userMessage = input.trim()
-    setInput('')
-    setLoading(true)
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return
 
-    // Optimistic UI update
-    const tempUserMessage: ChatMessage = {
-      id: `temp-${Date.now()}`,
+    const userMessage: Omit<ChatMessage, 'id' | 'created_at'> = {
       patient_id: patientId,
-      user_id: 'temp',
+      user_id: (await supabase.auth.getUser()).data.user?.id || '',
       role: 'user',
-      content: userMessage,
-      created_at: new Date().toISOString(),
+      content: input.trim(),
     }
 
-    setMessages((prev) => [...prev, tempUserMessage])
+    setIsLoading(true)
+    setInput('')
 
     try {
+      // Insert user message
+      const { error: insertError } = await supabase
+        .from('chat_messages')
+        .insert(userMessage)
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      // Get AI response
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId,
-          message: userMessage,
+          message: input.trim(),
         }),
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Yanıt alınamadı')
+        throw new Error('AI response failed')
       }
 
-      const data = await response.json()
+      const aiResponse = await response.json()
 
-      // AI yanıtını ekle
-      const aiMessage: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        patient_id: patientId,
-        user_id: 'ai',
-        role: 'assistant',
-        content: data.message,
-        created_at: new Date().toISOString(),
-      }
+      // Insert AI message
+      const { error: aiInsertError } = await supabase
+        .from('chat_messages')
+        .insert({
+          patient_id: patientId,
+          user_id: (await supabase.auth.getUser()).data.user?.id || '',
+          role: 'assistant',
+          content: aiResponse.message,
+        })
+        .select()
+        .single()
 
-      setMessages((prev) => [...prev, aiMessage])
-    } catch (error: any) {
-      // Hata mesajı göster
-      const errorMessage: ChatMessage = {
-        id: `error-${Date.now()}`,
-        patient_id: patientId,
-        user_id: 'system',
-        role: 'assistant',
-        content: `Hata: ${error.message}`,
-        created_at: new Date().toISOString(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
+      if (aiInsertError) throw aiInsertError
+
+      // Refresh messages
+      await loadMessages()
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      alert('Mesaj gönderilemedi')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
     }
   }
 
   const suggestedQuestions = [
     'Bu hastanın mevcut risk faktörleri nelerdir?',
-    'Hangi tetkikler öncelikli olarak istenmeli?',
-    'Ayırıcı tanılarda nelere dikkat etmeliyim?',
-    'Tedavi planında hangi ilaçları önerirsin?',
+    'Hangi tetkikleri önerirsiniz?',
+    'Tedavi algoritması nasıl olmalı?',
     'Konsültasyon gerekli mi?',
+    'Hastayı taburcu edebilir miyiz?',
   ]
 
   return (
-    <div className="flex flex-col h-[calc(100vh-250px)] bg-white rounded-xl shadow-sm border border-gray-200">
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="text-6xl mb-4">💬</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {patientName} için AI Asistanı
-            </h3>
-            <p className="text-gray-600 mb-6 max-w-md">
-              Bu hasta hakkında soru sorabilir, tanı ve tedavi önerileri
-              alabilirsiniz
-            </p>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-96 flex flex-col">
+      {/* Header */}
+      <div className="bg-blue-600 text-white p-4 rounded-t-lg">
+        <div className="flex items-center gap-3">
+          <Bot className="h-6 w-6" />
+          <div>
+            <h3 className="font-semibold">{patientName} - AI Asistan</h3>
+            <p className="text-sm opacity-90">Hasta verileriyle entegre sohbet</p>
+          </div>
+        </div>
+      </div>
 
-            <div className="w-full max-w-2xl">
-              <p className="text-sm font-medium text-gray-700 mb-3">
-                Örnek sorular:
-              </p>
-              <div className="space-y-2">
-                {suggestedQuestions.map((question, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setInput(question)}
-                    className="w-full text-left px-4 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm text-gray-700 transition"
-                  >
-                    {question}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <Bot className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p>Henüz mesaj yok</p>
+            <p className="text-sm">AI asistanına hastayla ilgili sorular sorun</p>
           </div>
         ) : (
-          <>
-            {messages.map((message, idx) => (
+          messages.map((message, index) => (
+            <div
+              key={message.id || index}
+              className={`flex gap-3 ${
+                message.role === 'user' ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              {/* Avatar */}
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                message.role === 'user' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 text-gray-600'
+              }`}>
+                {message.role === 'user' ? (
+                  <User className="h-5 w-5" />
+                ) : (
+                  <Bot className="h-5 w-5" />
+                )}
+              </div>
+
+              {/* Message */}
               <div
-                key={message.id || idx}
-                className={`flex ${
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  message.role === 'user'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-900'
                 }`}
               >
-                <div
-                  className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                    message.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  <div className="flex items-start space-x-2">
-                    <span className="text-lg">
-                      {message.role === 'user' ? '👤' : '🤖'}
-                    </span>
-                    <div className="flex-1">
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                      <p
-                        className={`text-xs mt-2 ${
-                          message.role === 'user'
-                            ? 'text-blue-100'
-                            : 'text-gray-500'
-                        }`}
-                      >
-                        {formatDistanceToNow(new Date(message.created_at), {
-                          addSuffix: true,
-                          locale: tr,
-                        })}
-                      </p>
-                    </div>
-                  </div>
+                <p className="text-sm whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
+                
+                {/* Timestamp */}
+                <div className="text-xs text-gray-500 mt-1">
+                  {new Date(message.created_at).toLocaleTimeString('tr-TR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </div>
               </div>
-            ))}
-
-            {loading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg px-4 py-3">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg">🤖</span>
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </>
+            </div>
+          ))
         )}
       </div>
 
-      {/* Input Area */}
+      {/* Suggested Questions */}
+      {messages.length === 0 && (
+        <div className="border-t border-gray-200 p-4">
+          <p className="text-sm font-medium text-gray-700 mb-3">
+            Örnek Sorular:
+          </p>
+          <div className="space-y-2">
+            {suggestedQuestions.map((question, index) => (
+              <button
+                key={index}
+                onClick={() => setInput(question)}
+                className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input */}
       <div className="border-t border-gray-200 p-4">
-        <form onSubmit={handleSubmit} className="flex space-x-4">
+        <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Hastanız hakkında bir soru sorun..."
-            disabled={loading}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
+            onKeyPress={handleKeyPress}
+            placeholder="Hastayla ilgili sorunuzu yazın..."
+            disabled={isLoading}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <button
-            type="submit"
-            disabled={!input.trim() || loading}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={sendMessage}
+            disabled={isLoading || !input.trim()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
           >
-            {loading ? '⏳' : '📤'} Gönder
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="sr-only">Yükleniyor...</span>
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                <span className="sr-only">Gönder</span>
+              </>
+            )}
           </button>
-        </form>
-
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          AI asistanı hasta verilerinizi kullanarak size yardımcı olur. Nihai
-          kararlar hekim sorumluluğundadır.
-        </p>
+        </div>
       </div>
+
+      {/* Scroll to bottom indicator */}
+      <div ref={messagesEndRef} />
     </div>
   )
 }

@@ -7,9 +7,11 @@ const ENVIRONMENT = process.env.NODE_ENV || 'development'
  * Sentry Server Configuration
  * Handles error tracking on the server side
  */
-Sentry.init({
-  dsn: SENTRY_DSN,
-  environment: ENVIRONMENT,
+// Only initialize Sentry if DSN is provided
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: ENVIRONMENT,
 
   // Adjust the sample rate to control how many events are sent
   tracesSampleRate: ENVIRONMENT === 'production' ? 0.1 : 1.0,
@@ -64,4 +66,7 @@ Sentry.init({
     // Validation errors (expected)
     'ZodError',
   ],
-})
+  })
+} else if (ENVIRONMENT === 'development') {
+  console.log('⚠️  Sentry DSN not found, skipping Sentry initialization')
+}

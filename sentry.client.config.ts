@@ -7,9 +7,11 @@ const ENVIRONMENT = process.env.NODE_ENV || 'development'
  * Sentry Client Configuration
  * Handles error tracking in the browser
  */
-Sentry.init({
-  dsn: SENTRY_DSN,
-  environment: ENVIRONMENT,
+// Only initialize Sentry if DSN is provided
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: ENVIRONMENT,
 
   // Adjust the sample rate to control how many events are sent
   // 1.0 = 100% of errors, 0.1 = 10% of errors
@@ -76,4 +78,5 @@ Sentry.init({
     'AbortError',
     'Request aborted',
   ],
-})
+  })
+}

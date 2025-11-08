@@ -61,4 +61,6 @@ const sentryWebpackPluginOptions = {
 }
 
 // Export config with Sentry
+// Sentry plugins are already disabled in development mode
+// Sentry initialization in config files will be skipped if DSN is not provided
 export default withSentryConfig(nextConfig, sentryWebpackPluginOptions)

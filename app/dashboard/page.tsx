@@ -3,6 +3,22 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format, subDays } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { PatientStatusBadge, UrgencyBadge, ActivityBadge } from '@/components/ui/badge'
+import { 
+  Users, 
+  Activity, 
+  TrendingUp, 
+  Brain, 
+  Calendar,
+  Clock,
+  AlertCircle,
+  Plus,
+  BarChart3,
+  BookOpen,
+  Info
+} from 'lucide-react'
 
 export default async function DashboardHome() {
   const supabase = await createClient()
@@ -57,27 +73,6 @@ export default async function DashboardHome() {
       patients?.map((p) => p.id) || []
     )
 
-  const getStatusBadge = (status: string) => {
-    const badges = {
-      active: 'bg-green-100 text-green-800',
-      discharged: 'bg-gray-100 text-gray-800',
-      consultation: 'bg-yellow-100 text-yellow-800',
-    }
-    const labels = {
-      active: 'Aktif',
-      discharged: 'Taburcu',
-      consultation: 'Konsültasyon',
-    }
-    return (
-      <span
-        className={`px-3 py-1 rounded-full text-xs font-medium ${
-          badges[status as keyof typeof badges]
-        }`}
-      >
-        {labels[status as keyof typeof labels]}
-      </span>
-    )
-  }
 
   return (
     <div className="space-y-6">
@@ -93,65 +88,62 @@ export default async function DashboardHome() {
 
       {/* Quick Stats Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Link
-          href="/dashboard/patients"
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition group"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-600">Aktif Hasta</h3>
-            <span className="text-3xl group-hover:scale-110 transition">🏥</span>
-          </div>
-          <p className="text-3xl font-bold text-green-600">{activePatients.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Toplam {patients?.length || 0} hasta</p>
-        </Link>
+        <Card variant="elevated" interactive className="group">
+          <Link href="/dashboard/patients">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-gray-600">Aktif Hasta</h3>
+              <Users className="h-8 w-8 text-green-600 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-3xl font-bold text-green-600">{activePatients.length}</p>
+            <p className="text-sm text-gray-500 mt-1">Toplam {patients?.length || 0} hasta</p>
+          </Link>
+        </Card>
 
-        <Link
-          href="/dashboard/statistics"
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition group"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-600">Test Sayısı</h3>
-            <span className="text-3xl group-hover:scale-110 transition">🧪</span>
-          </div>
-          <p className="text-3xl font-bold text-blue-600">{testCount || 0}</p>
-          <p className="text-sm text-gray-500 mt-1">
-            {activePatients.length > 0
-              ? `Ortalama ${((testCount || 0) / activePatients.length).toFixed(1)} test/hasta`
-              : 'Henüz test yok'}
-          </p>
-        </Link>
+        <Card variant="elevated" interactive className="group">
+          <Link href="/dashboard/statistics">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-gray-600">Test Sayısı</h3>
+              <Activity className="h-8 w-8 text-blue-600 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-3xl font-bold text-blue-600">{testCount || 0}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {activePatients.length > 0
+                ? `Ortalama ${((testCount || 0) / activePatients.length).toFixed(1)} test/hasta`
+                : 'Henüz test yok'}
+            </p>
+          </Link>
+        </Card>
 
-        <Link
-          href="/dashboard/statistics"
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition group"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-600">AI Analizi</h3>
-            <span className="text-3xl group-hover:scale-110 transition">🤖</span>
-          </div>
-          <p className="text-3xl font-bold text-purple-600">{aiAnalysisCount || 0}</p>
-          <p className="text-sm text-gray-500 mt-1">
-            {patients?.length && patients.length > 0
-              ? `${((aiAnalysisCount || 0) / patients.length * 100).toFixed(0)}% kullanım`
-              : 'Henüz analiz yok'}
-          </p>
-        </Link>
+        <Card variant="elevated" interactive className="group">
+          <Link href="/dashboard/statistics">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-gray-600">AI Analizi</h3>
+              <Brain className="h-8 w-8 text-purple-600 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-3xl font-bold text-purple-600">{aiAnalysisCount || 0}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {patients?.length && patients.length > 0
+                ? `${((aiAnalysisCount || 0) / patients.length * 100).toFixed(0)}% kullanım`
+                : 'Henüz analiz yok'}
+            </p>
+          </Link>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <Card variant="elevated">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-gray-600">Bugünkü Aktivite</h3>
-            <span className="text-3xl">📊</span>
+            <TrendingUp className="h-8 w-8 text-indigo-600" />
           </div>
           <p className="text-3xl font-bold text-indigo-600">{todayPatients.length}</p>
           <p className="text-sm text-gray-500 mt-1">Yeni hasta kaydı</p>
-        </div>
+        </Card>
       </div>
 
       {/* Two Column Layout */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent Patients */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
+        <Card variant="default" header={
+          <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">Son Hastalar</h2>
             <Link
               href="/dashboard/patients"
@@ -160,111 +152,149 @@ export default async function DashboardHome() {
               Tümünü Gör →
             </Link>
           </div>
-
+        }>
           {recentPatients.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              Henüz hasta eklenmedi
+              <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p>Henüz hasta eklenmedi</p>
             </div>
           ) : (
             <div className="space-y-3">
               {recentPatients.map((patient) => (
-                <Link
+                <div
                   key={patient.id}
-                  href={`/dashboard/patients/${patient.id}`}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer group"
                 >
-                  <div>
-                    <p className="font-medium text-gray-900">{patient.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {patient.age && `${patient.age} yaş`}
-                      {patient.gender && ` • ${patient.gender}`}
-                    </p>
-                  </div>
-                  {getStatusBadge(patient.status)}
-                </Link>
+                  <Link href={`/dashboard/patients/${patient.id}`} className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">{patient.name}</p>
+                        <p className="text-sm text-gray-600">
+                          {patient.age && `${patient.age} yaş`}
+                          {patient.gender && ` • ${patient.gender}`}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                  <PatientStatusBadge status={patient.status as any} compact />
+                </div>
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Upcoming Reminders */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Yaklaşan Hatırlatmalar
-          </h2>
-
+        <Card variant="default" header={
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">Yaklaşan Hatırlatmalar</h2>
+            <ActivityBadge isActive={!!(reminders && reminders.length > 0)} label="Aktif Hatırlatmalar" />
+          </div>
+        }>
           {!reminders || reminders.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              Henüz hatırlatma yok
+              <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p>Henüz hatırlatma yok</p>
             </div>
           ) : (
             <div className="space-y-3">
               {reminders.map((reminder: any) => (
                 <div
                   key={reminder.id}
-                  className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg"
+                  className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border-l-4 border-l-blue-400"
                 >
-                  <span className="text-2xl">⏰</span>
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                  </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">
-                      {reminder.patients?.name || 'Hasta'}
-                    </p>
-                    <p className="text-sm text-gray-600 capitalize">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium text-gray-900">
+                        {reminder.patients?.name || 'Hasta'}
+                      </p>
+                      <UrgencyBadge level="medium" size="sm" />
+                    </div>
+                    <p className="text-sm text-gray-600 capitalize mb-1">
                       {reminder.reminder_type.replace('_', ' ')}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {format(
-                        new Date(reminder.scheduled_time),
-                        'dd MMM yyyy, HH:mm',
-                        { locale: tr }
-                      )}
-                    </p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Calendar className="h-3 w-3" />
+                      <span>
+                        {format(
+                          new Date(reminder.scheduled_time),
+                          'dd MMM yyyy, HH:mm',
+                          { locale: tr }
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Hızlı İşlemler</h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          <Link
-            href="/dashboard/patients"
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-center group"
-          >
-            <div className="text-4xl mb-2 group-hover:scale-110 transition">➕</div>
-            <p className="font-medium text-gray-900">Yeni Hasta Ekle</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Hasta kaydı oluştur ve takibe başla
-            </p>
-          </Link>
-
-          <Link
-            href="/dashboard/statistics"
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition text-center group"
-          >
-            <div className="text-4xl mb-2 group-hover:scale-110 transition">📈</div>
-            <p className="font-medium text-gray-900">İstatistikleri Görüntüle</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Grafikler ve detaylı analizler
-            </p>
-          </Link>
-
-          <Link
-            href="/dashboard/guidelines"
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition text-center group"
-          >
-            <div className="text-4xl mb-2 group-hover:scale-110 transition">📚</div>
-            <p className="font-medium text-gray-900">Rehberlere Bak</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Acil tıp protokolleri ve kılavuzlar
-            </p>
-          </Link>
+      <Card variant="default" header={
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">Hızlı İşlemler</h2>
+          <Button variant="ghost" size="sm" rightIcon={<BarChart3 className="h-4 w-4" />}>
+            Tümünü Gör
+          </Button>
         </div>
-      </div>
+      }>
+        <div className="grid md:grid-cols-3 gap-4">
+          <Button 
+            variant="outline" 
+            size="lg" 
+            leftIcon={<Plus className="h-5 w-5" />}
+            className="h-full flex-col items-center justify-center text-center group hover:border-blue-500 hover:bg-blue-50"
+            asChild
+          >
+            <Link href="/dashboard/patients">
+              <div className="text-2xl mb-2 group-hover:scale-110 transition">➕</div>
+              <p className="font-medium text-gray-900">Yeni Hasta Ekle</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Hasta kaydı oluştur ve takibe başla
+              </p>
+            </Link>
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="lg"
+            leftIcon={<BarChart3 className="h-5 w-5" />}
+            className="h-full flex-col items-center justify-center text-center group hover:border-green-500 hover:bg-green-50"
+            asChild
+          >
+            <Link href="/dashboard/statistics">
+              <div className="text-2xl mb-2 group-hover:scale-110 transition">📈</div>
+              <p className="font-medium text-gray-900">İstatistikleri Görüntüle</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Grafikler ve detaylı analizler
+              </p>
+            </Link>
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="lg"
+            leftIcon={<BookOpen className="h-5 w-5" />}
+            className="h-full flex-col items-center justify-center text-center group hover:border-purple-500 hover:bg-purple-50"
+            asChild
+          >
+            <Link href="/dashboard/guidelines">
+              <div className="text-2xl mb-2 group-hover:scale-110 transition">📚</div>
+              <p className="font-medium text-gray-900">Rehberlere Bak</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Acil tıp protokolleri ve kılavuzlar
+              </p>
+            </Link>
+          </Button>
+        </div>
+      </Card>
 
       {/* Info Banner */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">

@@ -5,14 +5,19 @@
  */
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Server-side instrumentation
-    await import('./sentry.server.config')
-  }
+  try {
+    if (process.env.NEXT_RUNTIME === 'nodejs') {
+      // Server-side instrumentation
+      await import('./sentry.server.config')
+    }
 
-  if (process.env.NEXT_RUNTIME === 'edge') {
-    // Edge runtime instrumentation
-    await import('./sentry.edge.config')
+    if (process.env.NEXT_RUNTIME === 'edge') {
+      // Edge runtime instrumentation
+      await import('./sentry.edge.config')
+    }
+  } catch (error) {
+    // Don't block server startup if Sentry initialization fails
+    console.error('Failed to initialize Sentry:', error)
   }
 }
 

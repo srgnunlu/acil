@@ -7,9 +7,11 @@ const ENVIRONMENT = process.env.NODE_ENV || 'development'
  * Sentry Edge Runtime Configuration
  * Handles error tracking in Edge Runtime (middleware, edge functions)
  */
-Sentry.init({
-  dsn: SENTRY_DSN,
-  environment: ENVIRONMENT,
+// Only initialize Sentry if DSN is provided
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: ENVIRONMENT,
 
   // Adjust the sample rate to control how many events are sent
   tracesSampleRate: ENVIRONMENT === 'production' ? 0.1 : 1.0,
@@ -38,4 +40,5 @@ Sentry.init({
     // Auth errors (expected)
     'AuthApiError',
   ],
-})
+  })
+}
