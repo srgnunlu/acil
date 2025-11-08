@@ -89,8 +89,8 @@ export async function buildPatientContext(
         case 'demographics':
           context.demographics = {
             ...context.demographics,
-            ...(data.content as PatientContext['demographics']),
-          }
+            ...(data.content as any),
+          } as PatientContext['demographics']
           break
       }
     })

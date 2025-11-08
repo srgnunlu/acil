@@ -20,18 +20,10 @@ declare module 'next/dynamic' {
 }
 
 declare module '*.svg' {
-  import React = 'react'
-  
-  export interface ReactSVGProps {
-    [key: string]: any
-  }
-  
-  const ReactSVG: React.FC<ReactSVGProps> = ({
-    ...props
-  }) => {
-    return null // SVG component'leri için placeholder
-  }
-  
+  import type React from 'react'
+
+  const ReactSVG: React.FC<React.SVGProps<SVGSVGElement>>
+
   export default ReactSVG
 }
 
@@ -109,10 +101,10 @@ declare global {
   }
   
   const enum PerformanceEntryType {
-    mark = 0
-    measure = 1
-    navigation = 2
-    resource = 3
+    mark = 0,
+    measure = 1,
+    navigation = 2,
+    resource = 3,
     longtask = 4
   }
   

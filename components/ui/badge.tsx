@@ -112,7 +112,7 @@ export interface PatientStatusBadgeProps {
   compact?: boolean
 }
 
-export const PatientStatusBadge = forwardRef<HTMLSpanElement, PatientStatusBadgeProps>(
+export const PatientStatusBadge = forwardRef<HTMLDivElement, PatientStatusBadgeProps>(
   ({ status, size = 'md', showIcon = true, compact = false }, ref) => {
     const getStatusConfig = (status: string) => {
       switch (status) {
@@ -212,7 +212,7 @@ export interface UrgencyBadgeProps {
   size?: 'xs' | 'sm' | 'md' | 'lg'
 }
 
-export const UrgencyBadge = forwardRef<HTMLSpanElement, UrgencyBadgeProps>(
+export const UrgencyBadge = forwardRef<HTMLDivElement, UrgencyBadgeProps>(
   ({ level, showLabel = true, size = 'md' }, ref) => {
     const getUrgencyConfig = (level: string) => {
       switch (level) {
@@ -303,7 +303,7 @@ export interface VitalSignBadgeProps {
   size?: 'xs' | 'sm' | 'md' | 'lg'
 }
 
-export const VitalSignBadge = forwardRef<HTMLSpanElement, VitalSignBadgeProps>(
+export const VitalSignBadge = forwardRef<HTMLDivElement, VitalSignBadgeProps>(
   ({ vital, label, value, unit, trend, size = 'md' }, ref) => {
     const getVitalConfig = (vital: string) => {
       switch (vital) {
@@ -395,7 +395,7 @@ export interface DepartmentBadgeProps {
   showName?: boolean
 }
 
-export const DepartmentBadge = forwardRef<HTMLSpanElement, DepartmentBadgeProps>(
+export const DepartmentBadge = forwardRef<HTMLDivElement, DepartmentBadgeProps>(
   ({ department, size = 'md', showName = true }, ref) => {
     const getDepartmentConfig = (dept: string) => {
       switch (dept) {
@@ -477,7 +477,7 @@ export interface ActivityBadgeProps {
   showLabel?: boolean
 }
 
-export const ActivityBadge = forwardRef<HTMLSpanElement, ActivityBadgeProps>(
+export const ActivityBadge = forwardRef<HTMLDivElement, ActivityBadgeProps>(
   ({ isActive = false, label = 'Aktif', size = 'sm', showLabel = true }, ref) => {
     return (
       <div className="flex items-center gap-2" ref={ref}>

@@ -5,12 +5,47 @@ const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY)
 
 export async function analyzeImage(
   imageBase64: string,
-  analysisType: 'ekg' | 'skin_lesion' | 'xray' | 'other',
+  analysisType: 'ekg' | 'skin_lesion' | 'xray' | 'lab_results' | 'other',
   additionalContext?: string
 ) {
   const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' })
 
   const prompts = {
+    lab_results: `Sen deneyimli bir klinisyen yapay zeka asistanısın. Bu laboratuvar sonucu görselini/PDF'ini analiz et ve TÜM laboratuvar değerlerini çıkar.
+
+ÖNEMLİ KURALLAR:
+1. Görseldeki/PDF'teki TÜM test değerlerini dikkatle oku ve çıkar
+2. Test adlarını standart medikal isimlere dönüştür (örn: "Hb" -> "hemoglobin", "WBC" -> "wbc")
+3. Değerleri sayısal olarak çıkar, birimleri atla
+4. Eğer bir değer aralık olarak verilmişse (örn: "4.5-5.2"), ortalamasını al
+5. Referans aralıklarını göz ardı et, sadece hasta değerlerini al
+6. Tarih bilgisi varsa "test_date" alanına ekle
+
+YANIT FORMATI (JSON) - SADECE JSON DÖNDÜR, AÇIKLAMA YAZMA:
+{
+  "test_date": "DD.MM.YYYY formatında tarih (varsa)",
+  "values": {
+    "hemoglobin": sayısal_değer,
+    "wbc": sayısal_değer,
+    "platelet": sayısal_değer,
+    "glucose": sayısal_değer,
+    "creatinine": sayısal_değer,
+    "sodium": sayısal_değer,
+    "potassium": sayısal_değer,
+    "alt": sayısal_değer,
+    "ast": sayısal_değer,
+    "d_dimer": sayısal_değer,
+    "crp": sayısal_değer,
+    "troponin": "text değer",
+    "other": "Çıkardığın diğer önemli değerler (metin olarak)"
+  },
+  "detected_tests": ["Görselde tespit edilen tüm test adları"],
+  "confidence": "high/medium/low",
+  "notes": "Özel notlar veya uyarılar (varsa)"
+}
+
+NOT: Görselde olmayan değerler için null kullan. Sadece görselde/PDF'te AÇIKÇA görünen değerleri çıkar.`,
+
     ekg: `Sen deneyimli bir kardiyolog yapay zeka asistanısın. Bu EKG görselini detaylı analiz et.
 
 DEĞERLENDIR:
@@ -114,9 +149,7 @@ YANIT FORMATI (JSON):
   }
 
   const prompt = prompts[analysisType]
-  const contextAddition = additionalContext
-    ? `\n\nEK KLINIK BAĞLAM:\n${additionalContext}`
-    : ''
+  const contextAddition = additionalContext ? `\n\nEK KLINIK BAĞLAM:\n${additionalContext}` : ''
 
   try {
     // Base64 string'den data URL prefix'ini kaldır
