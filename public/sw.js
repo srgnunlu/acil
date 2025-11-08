@@ -1,17 +1,15 @@
 // Service Worker for PWA
 const CACHE_NAME = 'acil-v1'
-const urlsToCache = [
-  '/',
-  '/patients',
-  '/manifest.json',
-]
+const urlsToCache = ['/', '/patients', '/manifest.json']
 
 // Install event - cache resources
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('Opened cache')
-      return cache.addAll(urlsToCache)
+      return cache.addAll(urlsToCache).catch((err) => {
+        console.warn('Failed to cache some resources:', err)
+      })
     })
   )
   self.skipWaiting()
@@ -79,8 +77,6 @@ self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {}
   const options = {
     body: data.body || 'Yeni bildirim',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
     vibrate: [200, 100, 200],
     data: {
       dateOfArrival: Date.now(),
@@ -90,12 +86,10 @@ self.addEventListener('push', (event) => {
       {
         action: 'explore',
         title: 'Aç',
-        icon: '/icon-192.png',
       },
       {
         action: 'close',
         title: 'Kapat',
-        icon: '/icon-192.png',
       },
     ],
   }

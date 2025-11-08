@@ -212,10 +212,7 @@ export function AIAnalysisTab({ patientId, patientData, tests, analyses }: AIAna
 
       if (response.ok) {
         setFavorites((prev) => ({ ...prev, [analysisId]: !isFavorite }))
-        showToast(
-          isFavorite ? 'Favorilerden kaldırıldı' : 'Favorilere eklendi',
-          'success'
-        )
+        showToast(isFavorite ? 'Favorilerden kaldırıldı' : 'Favorilere eklendi', 'success')
       } else {
         const data = await response.json()
         showToast(data.error || 'İşlem başarısız oldu', 'error')
@@ -605,9 +602,7 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
           {/* Compare Mode Notice */}
           {compareMode && (
             <div className="p-4 bg-purple-50 border-l-4 border-purple-500 rounded-lg">
-              <p className="text-purple-900 font-medium">
-                📊 Karşılaştırma Modu Aktif
-              </p>
+              <p className="text-purple-900 font-medium">📊 Karşılaştırma Modu Aktif</p>
               <p className="text-purple-700 text-sm mt-1">
                 {compareAnalysis
                   ? 'Seçilen analiz güncel analiz ile yan yana görüntüleniyor. Kapatmak için tekrar "Karşılaştır" butonuna tıklayın.'
@@ -641,313 +636,320 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
               >
                 {latestAnalysis.ai_response.summary && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-4 rounded-lg">
-                    <p className="text-gray-800 leading-relaxed">{latestAnalysis.ai_response.summary}</p>
+                    <p className="text-gray-800 leading-relaxed">
+                      {latestAnalysis.ai_response.summary}
+                    </p>
                   </div>
                 )}
               </CollapsibleCard>
 
-          {/* Differential Diagnosis */}
-          {latestAnalysis.ai_response.differential_diagnosis && (
-            <CollapsibleCard
-              title="Ayırıcı Tanılar"
-              icon="🎯"
-              expanded={expandedSections.diagnosis}
-              onToggle={() => toggleSection('diagnosis')}
-              gradient="from-purple-50 to-pink-50"
-            >
-              <div className="space-y-3">
-                {latestAnalysis.ai_response.differential_diagnosis.map(
-                  (diagnosis: string, idx: number) => (
-                    <div
-                      key={idx}
-                      className="flex items-start p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all duration-200 group"
-                    >
-                      <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold rounded-lg mr-3 group-hover:scale-110 transition-transform">
-                        {idx + 1}
-                      </span>
-                      <span className="text-gray-800 flex-1">{diagnosis}</span>
-                    </div>
-                  )
-                )}
-              </div>
-            </CollapsibleCard>
-          )}
-
-          {/* Red Flags */}
-          {latestAnalysis.ai_response.red_flags &&
-            latestAnalysis.ai_response.red_flags.length > 0 && (
-              <CollapsibleCard
-                title="Kritik Bulgular"
-                icon="⚠️"
-                expanded={expandedSections.redFlags}
-                onToggle={() => toggleSection('redFlags')}
-                gradient="from-red-50 to-orange-50"
-                borderColor="border-red-200"
-              >
-                <div className="space-y-3">
-                  {latestAnalysis.ai_response.red_flags.map((flag: string, idx: number) => (
-                    <div
-                      key={idx}
-                      className="flex items-start p-4 bg-red-50 border-l-4 border-red-500 rounded-lg animate-pulse-slow"
-                    >
-                      <svg
-                        className="w-5 h-5 text-red-600 mr-3 flex-shrink-0 mt-0.5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span className="text-red-900 font-medium flex-1">{flag}</span>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleCard>
-            )}
-
-          {/* Recommended Tests */}
-          {latestAnalysis.ai_response.recommended_tests && (
-            <CollapsibleCard
-              title="Önerilen Tetkikler"
-              icon="🔬"
-              expanded={expandedSections.tests}
-              onToggle={() => toggleSection('tests')}
-              gradient="from-teal-50 to-cyan-50"
-            >
-              <div className="space-y-6">
-                {/* Priority Distribution Chart */}
-                <TestPriorityChart tests={latestAnalysis.ai_response.recommended_tests} />
-
-                {/* Tests List */}
-                <div className="space-y-3">
-                  {latestAnalysis.ai_response.recommended_tests.map(
-                    (test: { test: string; priority: string; rationale: string }, idx: number) => (
-                      <div
-                        key={idx}
-                        className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-lg transition-all duration-200 hover:border-teal-300"
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                            <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
-                            {test.test}
-                          </h4>
-                          {test.priority && (
-                            <PriorityBadge priority={test.priority} />
-                          )}
+              {/* Differential Diagnosis */}
+              {latestAnalysis.ai_response.differential_diagnosis && (
+                <CollapsibleCard
+                  title="Ayırıcı Tanılar"
+                  icon="🎯"
+                  expanded={expandedSections.diagnosis}
+                  onToggle={() => toggleSection('diagnosis')}
+                  gradient="from-purple-50 to-pink-50"
+                >
+                  <div className="space-y-3">
+                    {latestAnalysis.ai_response.differential_diagnosis.map(
+                      (diagnosis: string, idx: number) => (
+                        <div
+                          key={idx}
+                          className="flex items-start p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all duration-200 group"
+                        >
+                          <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold rounded-lg mr-3 group-hover:scale-110 transition-transform">
+                            {idx + 1}
+                          </span>
+                          <span className="text-gray-800 flex-1">{diagnosis}</span>
                         </div>
-                        {test.rationale && (
-                          <p className="text-sm text-gray-600 mt-2 pl-4 border-l-2 border-gray-200">
-                            {test.rationale}
-                          </p>
-                        )}
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            </CollapsibleCard>
-          )}
+                      )
+                    )}
+                  </div>
+                </CollapsibleCard>
+              )}
 
-          {/* Treatment Algorithm */}
-          {latestAnalysis.ai_response.treatment_algorithm && (
-            <CollapsibleCard
-              title="Tedavi Algoritması"
-              icon="💊"
-              expanded={expandedSections.treatment}
-              onToggle={() => toggleSection('treatment')}
-              gradient="from-green-50 to-emerald-50"
-            >
-              <div className="space-y-6">
-                {latestAnalysis.ai_response.treatment_algorithm.immediate && (
-                  <TreatmentSection
-                    title="Acil Müdahale"
-                    icon="🚨"
-                    items={latestAnalysis.ai_response.treatment_algorithm.immediate}
-                    color="red"
-                  />
+              {/* Red Flags */}
+              {latestAnalysis.ai_response.red_flags &&
+                latestAnalysis.ai_response.red_flags.length > 0 && (
+                  <CollapsibleCard
+                    title="Kritik Bulgular"
+                    icon="⚠️"
+                    expanded={expandedSections.redFlags}
+                    onToggle={() => toggleSection('redFlags')}
+                    gradient="from-red-50 to-orange-50"
+                    borderColor="border-red-200"
+                  >
+                    <div className="space-y-3">
+                      {latestAnalysis.ai_response.red_flags.map((flag: string, idx: number) => (
+                        <div
+                          key={idx}
+                          className="flex items-start p-4 bg-red-50 border-l-4 border-red-500 rounded-lg animate-pulse-slow"
+                        >
+                          <svg
+                            className="w-5 h-5 text-red-600 mr-3 flex-shrink-0 mt-0.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          <span className="text-red-900 font-medium flex-1">{flag}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleCard>
                 )}
 
-                {latestAnalysis.ai_response.treatment_algorithm.monitoring && (
-                  <TreatmentSection
-                    title="İzlem Parametreleri"
-                    icon="📊"
-                    items={latestAnalysis.ai_response.treatment_algorithm.monitoring}
-                    color="blue"
-                  />
-                )}
+              {/* Recommended Tests */}
+              {latestAnalysis.ai_response.recommended_tests && (
+                <CollapsibleCard
+                  title="Önerilen Tetkikler"
+                  icon="🔬"
+                  expanded={expandedSections.tests}
+                  onToggle={() => toggleSection('tests')}
+                  gradient="from-teal-50 to-cyan-50"
+                >
+                  <div className="space-y-6">
+                    {/* Priority Distribution Chart */}
+                    <TestPriorityChart tests={latestAnalysis.ai_response.recommended_tests} />
 
-                {latestAnalysis.ai_response.treatment_algorithm.medications && (
-                  <div>
-                    <h4 className="font-semibold text-green-700 mb-3 flex items-center gap-2">
-                      <span className="text-xl">💉</span>
-                      İlaç Önerileri
-                    </h4>
-                    <div className="space-y-2">
-                      {latestAnalysis.ai_response.treatment_algorithm.medications.map(
+                    {/* Tests List */}
+                    <div className="space-y-3">
+                      {latestAnalysis.ai_response.recommended_tests.map(
                         (
-                          item: string | { name: string; dose: string; frequency: string },
+                          test: { test: string; priority: string; rationale: string },
                           idx: number
                         ) => (
                           <div
                             key={idx}
-                            className="flex items-start p-3 bg-green-50 rounded-lg border border-green-200"
+                            className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-lg transition-all duration-200 hover:border-teal-300"
                           >
-                            <span className="text-green-600 mr-3 font-bold">→</span>
-                            <span className="text-gray-800">
-                              {typeof item === 'string'
-                                ? item
-                                : `${item.name || ''} ${item.dose || ''} - ${item.frequency || ''}`}
-                            </span>
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
+                                {test.test}
+                              </h4>
+                              {test.priority && <PriorityBadge priority={test.priority} />}
+                            </div>
+                            {test.rationale && (
+                              <p className="text-sm text-gray-600 mt-2 pl-4 border-l-2 border-gray-200">
+                                {test.rationale}
+                              </p>
+                            )}
                           </div>
                         )
                       )}
                     </div>
                   </div>
-                )}
-              </div>
-            </CollapsibleCard>
-          )}
-
-          {/* Consultation */}
-          {latestAnalysis.ai_response.consultation && (
-            <CollapsibleCard
-              title="Konsültasyon Önerisi"
-              icon="👨‍⚕️"
-              expanded={expandedSections.consultation}
-              onToggle={() => toggleSection('consultation')}
-              gradient="from-yellow-50 to-amber-50"
-            >
-              {latestAnalysis.ai_response.consultation.required && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">
-                      {latestAnalysis.ai_response.consultation.urgency === 'urgent' ? '⚡' : '📋'}
-                    </span>
-                    <p className="font-semibold text-yellow-900 text-lg">
-                      Konsültasyon{' '}
-                      {latestAnalysis.ai_response.consultation.urgency === 'urgent'
-                        ? 'ACİL gerekli'
-                        : 'önerilmektedir'}
-                    </p>
-                  </div>
-                  {latestAnalysis.ai_response.consultation.departments && (
-                    <div className="mb-3">
-                      <p className="text-yellow-800 font-medium mb-2">Bölümler:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {latestAnalysis.ai_response.consultation.departments.map(
-                          (dept: string, idx: number) => (
-                            <span
-                              key={idx}
-                              className="px-3 py-1 bg-yellow-100 text-yellow-900 rounded-full text-sm font-medium"
-                            >
-                              {dept}
-                            </span>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {latestAnalysis.ai_response.consultation.reason && (
-                    <div className="bg-white/50 rounded p-3">
-                      <p className="text-yellow-900">
-                        <span className="font-medium">Neden:</span>{' '}
-                        {latestAnalysis.ai_response.consultation.reason}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                </CollapsibleCard>
               )}
-            </CollapsibleCard>
-          )}
 
-          {/* Disposition */}
-          {latestAnalysis.ai_response.disposition && (
-            <CollapsibleCard
-              title="Hasta Yönlendirme"
-              icon="🏥"
-              expanded={expandedSections.disposition}
-              onToggle={() => toggleSection('disposition')}
-              gradient="from-indigo-50 to-blue-50"
-            >
-              <div className="bg-indigo-50 border-l-4 border-indigo-500 rounded-lg p-5">
-                <p className="font-semibold text-indigo-900 mb-3 text-lg flex items-center gap-2">
-                  <span className="text-2xl">
-                    {latestAnalysis.ai_response.disposition.recommendation === 'hospitalize'
-                      ? '🏥'
-                      : latestAnalysis.ai_response.disposition.recommendation === 'observe'
-                        ? '👁️'
-                        : '🏠'}
-                  </span>
-                  Öneri:{' '}
-                  {latestAnalysis.ai_response.disposition.recommendation === 'hospitalize'
-                    ? 'Yatış'
-                    : latestAnalysis.ai_response.disposition.recommendation === 'observe'
-                      ? 'Gözlem'
-                      : 'Taburcu'}
-                </p>
-                {latestAnalysis.ai_response.disposition.criteria && (
-                  <div className="bg-white/50 rounded p-3">
-                    <p className="text-indigo-800">{latestAnalysis.ai_response.disposition.criteria}</p>
+              {/* Treatment Algorithm */}
+              {latestAnalysis.ai_response.treatment_algorithm && (
+                <CollapsibleCard
+                  title="Tedavi Algoritması"
+                  icon="💊"
+                  expanded={expandedSections.treatment}
+                  onToggle={() => toggleSection('treatment')}
+                  gradient="from-green-50 to-emerald-50"
+                >
+                  <div className="space-y-6">
+                    {latestAnalysis.ai_response.treatment_algorithm.immediate && (
+                      <TreatmentSection
+                        title="Acil Müdahale"
+                        icon="🚨"
+                        items={latestAnalysis.ai_response.treatment_algorithm.immediate}
+                        color="red"
+                      />
+                    )}
+
+                    {latestAnalysis.ai_response.treatment_algorithm.monitoring && (
+                      <TreatmentSection
+                        title="İzlem Parametreleri"
+                        icon="📊"
+                        items={latestAnalysis.ai_response.treatment_algorithm.monitoring}
+                        color="blue"
+                      />
+                    )}
+
+                    {latestAnalysis.ai_response.treatment_algorithm.medications && (
+                      <div>
+                        <h4 className="font-semibold text-green-700 mb-3 flex items-center gap-2">
+                          <span className="text-xl">💉</span>
+                          İlaç Önerileri
+                        </h4>
+                        <div className="space-y-2">
+                          {latestAnalysis.ai_response.treatment_algorithm.medications.map(
+                            (
+                              item: string | { name: string; dose: string; frequency: string },
+                              idx: number
+                            ) => (
+                              <div
+                                key={idx}
+                                className="flex items-start p-3 bg-green-50 rounded-lg border border-green-200"
+                              >
+                                <span className="text-green-600 mr-3 font-bold">→</span>
+                                <span className="text-gray-800">
+                                  {typeof item === 'string'
+                                    ? item
+                                    : `${item.name || ''} ${item.dose || ''} - ${item.frequency || ''}`}
+                                </span>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </CollapsibleCard>
-          )}
+                </CollapsibleCard>
+              )}
 
-          {/* References */}
-          {latestAnalysis.ai_response.references && (
-            <CollapsibleCard
-              title="Akademik Kaynaklar"
-              icon="📚"
-              expanded={expandedSections.references}
-              onToggle={() => toggleSection('references')}
-              gradient="from-gray-50 to-slate-50"
-            >
-              <div className="space-y-4">
-                {latestAnalysis.ai_response.references.map(
-                  (
-                    ref: { title: string; source: string; year?: string; key_point?: string },
-                    idx: number
-                  ) => (
-                    <div
-                      key={idx}
-                      className="border-l-4 border-gray-400 pl-4 py-3 bg-white rounded-r-lg hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
-                    >
-                      <p className="font-medium text-gray-900 mb-1">{ref.title}</p>
-                      <p className="text-sm text-gray-600 mb-2">
-                        {ref.source}
-                        {ref.year && ` (${ref.year})`}
-                      </p>
-                      {ref.key_point && (
-                        <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded mt-2">
-                          <span className="font-medium">→</span> {ref.key_point}
+              {/* Consultation */}
+              {latestAnalysis.ai_response.consultation && (
+                <CollapsibleCard
+                  title="Konsültasyon Önerisi"
+                  icon="👨‍⚕️"
+                  expanded={expandedSections.consultation}
+                  onToggle={() => toggleSection('consultation')}
+                  gradient="from-yellow-50 to-amber-50"
+                >
+                  {latestAnalysis.ai_response.consultation.required && (
+                    <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">
+                          {latestAnalysis.ai_response.consultation.urgency === 'urgent'
+                            ? '⚡'
+                            : '📋'}
+                        </span>
+                        <p className="font-semibold text-yellow-900 text-lg">
+                          Konsültasyon{' '}
+                          {latestAnalysis.ai_response.consultation.urgency === 'urgent'
+                            ? 'ACİL gerekli'
+                            : 'önerilmektedir'}
                         </p>
+                      </div>
+                      {latestAnalysis.ai_response.consultation.departments && (
+                        <div className="mb-3">
+                          <p className="text-yellow-800 font-medium mb-2">Bölümler:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {latestAnalysis.ai_response.consultation.departments.map(
+                              (dept: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="px-3 py-1 bg-yellow-100 text-yellow-900 rounded-full text-sm font-medium"
+                                >
+                                  {dept}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {latestAnalysis.ai_response.consultation.reason && (
+                        <div className="bg-white/50 rounded p-3">
+                          <p className="text-yellow-900">
+                            <span className="font-medium">Neden:</span>{' '}
+                            {latestAnalysis.ai_response.consultation.reason}
+                          </p>
+                        </div>
                       )}
                     </div>
-                  )
-                )}
-              </div>
-            </CollapsibleCard>
-          )}
+                  )}
+                </CollapsibleCard>
+              )}
 
-          {/* Notes Section */}
-          <NotesSection
-            analysisId={latestAnalysis.id}
-            notes={notes[latestAnalysis.id] || []}
-            newNoteText={newNoteText}
-            setNewNoteText={setNewNoteText}
-            editingNoteId={editingNoteId}
-            setEditingNoteId={setEditingNoteId}
-            editingNoteText={editingNoteText}
-            setEditingNoteText={setEditingNoteText}
-            notesLoading={notesLoading[latestAnalysis.id]}
-            onAddNote={() => addNote(latestAnalysis.id)}
-            onUpdateNote={(noteId) => updateNote(latestAnalysis.id, noteId)}
-            onDeleteNote={(noteId) => deleteNote(latestAnalysis.id, noteId)}
-          />
+              {/* Disposition */}
+              {latestAnalysis.ai_response.disposition && (
+                <CollapsibleCard
+                  title="Hasta Yönlendirme"
+                  icon="🏥"
+                  expanded={expandedSections.disposition}
+                  onToggle={() => toggleSection('disposition')}
+                  gradient="from-indigo-50 to-blue-50"
+                >
+                  <div className="bg-indigo-50 border-l-4 border-indigo-500 rounded-lg p-5">
+                    <p className="font-semibold text-indigo-900 mb-3 text-lg flex items-center gap-2">
+                      <span className="text-2xl">
+                        {latestAnalysis.ai_response.disposition.recommendation === 'hospitalize'
+                          ? '🏥'
+                          : latestAnalysis.ai_response.disposition.recommendation === 'observe'
+                            ? '👁️'
+                            : '🏠'}
+                      </span>
+                      Öneri:{' '}
+                      {latestAnalysis.ai_response.disposition.recommendation === 'hospitalize'
+                        ? 'Yatış'
+                        : latestAnalysis.ai_response.disposition.recommendation === 'observe'
+                          ? 'Gözlem'
+                          : 'Taburcu'}
+                    </p>
+                    {latestAnalysis.ai_response.disposition.criteria && (
+                      <div className="bg-white/50 rounded p-3">
+                        <p className="text-indigo-800">
+                          {latestAnalysis.ai_response.disposition.criteria}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleCard>
+              )}
+
+              {/* References */}
+              {latestAnalysis.ai_response.references && (
+                <CollapsibleCard
+                  title="Akademik Kaynaklar"
+                  icon="📚"
+                  expanded={expandedSections.references}
+                  onToggle={() => toggleSection('references')}
+                  gradient="from-gray-50 to-slate-50"
+                >
+                  <div className="space-y-4">
+                    {latestAnalysis.ai_response.references.map(
+                      (
+                        ref: { title: string; source: string; year?: string; key_point?: string },
+                        idx: number
+                      ) => (
+                        <div
+                          key={idx}
+                          className="border-l-4 border-gray-400 pl-4 py-3 bg-white rounded-r-lg hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
+                        >
+                          <p className="font-medium text-gray-900 mb-1">{ref.title}</p>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {ref.source}
+                            {ref.year && ` (${ref.year})`}
+                          </p>
+                          {ref.key_point && (
+                            <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded mt-2">
+                              <span className="font-medium">→</span> {ref.key_point}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
+                </CollapsibleCard>
+              )}
+
+              {/* Notes Section */}
+              <NotesSection
+                analysisId={latestAnalysis.id}
+                notes={notes[latestAnalysis.id] || []}
+                newNoteText={newNoteText}
+                setNewNoteText={setNewNoteText}
+                editingNoteId={editingNoteId}
+                setEditingNoteId={setEditingNoteId}
+                editingNoteText={editingNoteText}
+                setEditingNoteText={setEditingNoteText}
+                notesLoading={notesLoading[latestAnalysis.id]}
+                onAddNote={() => addNote(latestAnalysis.id)}
+                onUpdateNote={(noteId) => updateNote(latestAnalysis.id, noteId)}
+                onDeleteNote={(noteId) => deleteNote(latestAnalysis.id, noteId)}
+              />
             </div>
             {/* End Current Analysis */}
           </div>
@@ -965,7 +967,12 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-6 h-6 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1006,7 +1013,12 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               )}
@@ -1086,7 +1098,9 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
                         toggleFavorite(analysis.id)
                       }}
                       className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                      aria-label={favorites[analysis.id] ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+                      aria-label={
+                        favorites[analysis.id] ? 'Favorilerden kaldır' : 'Favorilere ekle'
+                      }
                     >
                       <Star
                         className={cn(
@@ -1103,7 +1117,12 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
                       stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -1111,7 +1130,12 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              <svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-12 h-12 mx-auto mb-3 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1189,7 +1213,11 @@ ${latestAnalysis.ai_response.recommended_tests ? `\u00d6NER\u0130LEN TETK\u0130K
             </div>
 
             <div className="flex items-start gap-2 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
-              <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <svg
+                className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
                 <path
                   fillRule="evenodd"
                   d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
@@ -1304,7 +1332,14 @@ function Spinner() {
       fill="none"
       viewBox="0 0 24 24"
     >
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      ></circle>
       <path
         className="opacity-75"
         fill="currentColor"
@@ -1534,9 +1569,7 @@ function FilterButton({
       onClick={onClick}
       className={cn(
         'px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200',
-        active
-          ? 'bg-blue-600 text-white shadow-md'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        active ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
       )}
     >
       {label} <span className="ml-1">({count})</span>
@@ -1544,7 +1577,11 @@ function FilterButton({
   )
 }
 
-function TestPriorityChart({ tests }: { tests: Array<{ test: string; priority: string; rationale: string }> }) {
+function TestPriorityChart({
+  tests,
+}: {
+  tests: Array<{ test: string; priority: string; rationale: string }>
+}) {
   const priorityData = useMemo(() => {
     const counts = { urgent: 0, high: 0, routine: 0 }
     tests.forEach((test) => {
@@ -1565,7 +1602,12 @@ function TestPriorityChart({ tests }: { tests: Array<{ test: string; priority: s
   return (
     <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-6 border border-teal-200">
       <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5 text-teal-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -1576,8 +1618,8 @@ function TestPriorityChart({ tests }: { tests: Array<{ test: string; priority: s
         Öncelik Dağılımı
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height={256}>
             <PieChart>
               <Pie
                 data={priorityData}
@@ -1601,10 +1643,7 @@ function TestPriorityChart({ tests }: { tests: Array<{ test: string; priority: s
           {priorityData.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg">
               <div className="flex items-center gap-3">
-                <div
-                  className="w-4 h-4 rounded-full"
-                  style={{ backgroundColor: item.color }}
-                ></div>
+                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }}></div>
                 <span className="font-medium text-gray-900">{item.name}</span>
               </div>
               <span className="text-2xl font-bold text-gray-700">{item.value}</span>
@@ -1622,7 +1661,12 @@ function AnalysisTimeline({ analyses }: { analyses: AIAnalysis[] }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-        <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-6 h-6 text-gray-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -1670,7 +1714,9 @@ function AnalysisTimeline({ analyses }: { analyses: AIAnalysis[] }) {
                         : 'bg-green-100 text-green-800'
                     )}
                   >
-                    {analysis.analysis_type === 'initial' ? 'İlk Değerlendirme' : 'Güncellenmiş Analiz'}
+                    {analysis.analysis_type === 'initial'
+                      ? 'İlk Değerlendirme'
+                      : 'Güncellenmiş Analiz'}
                   </span>
                   <span className="text-xs text-gray-500">
                     {formatDistanceToNow(new Date(analysis.created_at), {
@@ -1680,19 +1726,23 @@ function AnalysisTimeline({ analyses }: { analyses: AIAnalysis[] }) {
                   </span>
                 </div>
                 {analysis.ai_response.summary && (
-                  <p className="text-sm text-gray-700 line-clamp-2">{analysis.ai_response.summary}</p>
+                  <p className="text-sm text-gray-700 line-clamp-2">
+                    {analysis.ai_response.summary}
+                  </p>
                 )}
                 {analysis.ai_response.differential_diagnosis &&
                   analysis.ai_response.differential_diagnosis.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {analysis.ai_response.differential_diagnosis.slice(0, 3).map((diag: string, i: number) => (
-                        <span
-                          key={i}
-                          className="px-2 py-1 bg-white text-gray-700 rounded text-xs border border-gray-200"
-                        >
-                          {diag}
-                        </span>
-                      ))}
+                      {analysis.ai_response.differential_diagnosis
+                        .slice(0, 3)
+                        .map((diag: string, i: number) => (
+                          <span
+                            key={i}
+                            className="px-2 py-1 bg-white text-gray-700 rounded text-xs border border-gray-200"
+                          >
+                            {diag}
+                          </span>
+                        ))}
                       {analysis.ai_response.differential_diagnosis.length > 3 && (
                         <span className="px-2 py-1 text-gray-500 text-xs">
                           +{analysis.ai_response.differential_diagnosis.length - 3} daha
@@ -1951,7 +2001,10 @@ function AnalysisDetailView({ analysis }: { analysis: AIAnalysis }) {
           </h4>
           <div className="space-y-2">
             {analysis.ai_response.red_flags.map((flag: string, idx: number) => (
-              <div key={idx} className="flex items-start p-3 bg-red-50 border-l-4 border-red-500 rounded-lg">
+              <div
+                key={idx}
+                className="flex items-start p-3 bg-red-50 border-l-4 border-red-500 rounded-lg"
+              >
                 <span className="text-red-600 mr-3">•</span>
                 <span className="text-red-900 font-medium">{flag}</span>
               </div>
@@ -1999,12 +2052,17 @@ function AnalysisDetailView({ analysis }: { analysis: AIAnalysis }) {
               <div>
                 <h5 className="font-medium text-red-700 mb-2">Acil Müdahale:</h5>
                 <div className="space-y-1">
-                  {analysis.ai_response.treatment_algorithm.immediate.map((item: string, idx: number) => (
-                    <div key={idx} className="flex items-start p-2 bg-red-50 rounded border-l-2 border-red-500">
-                      <span className="text-red-600 mr-2">→</span>
-                      <span className="text-gray-800 text-sm">{item}</span>
-                    </div>
-                  ))}
+                  {analysis.ai_response.treatment_algorithm.immediate.map(
+                    (item: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-start p-2 bg-red-50 rounded border-l-2 border-red-500"
+                      >
+                        <span className="text-red-600 mr-2">→</span>
+                        <span className="text-gray-800 text-sm">{item}</span>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -2013,12 +2071,17 @@ function AnalysisDetailView({ analysis }: { analysis: AIAnalysis }) {
               <div>
                 <h5 className="font-medium text-blue-700 mb-2">İzlem Parametreleri:</h5>
                 <div className="space-y-1">
-                  {analysis.ai_response.treatment_algorithm.monitoring.map((item: string, idx: number) => (
-                    <div key={idx} className="flex items-start p-2 bg-blue-50 rounded border-l-2 border-blue-500">
-                      <span className="text-blue-600 mr-2">→</span>
-                      <span className="text-gray-800 text-sm">{item}</span>
-                    </div>
-                  ))}
+                  {analysis.ai_response.treatment_algorithm.monitoring.map(
+                    (item: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-start p-2 bg-blue-50 rounded border-l-2 border-blue-500"
+                      >
+                        <span className="text-blue-600 mr-2">→</span>
+                        <span className="text-gray-800 text-sm">{item}</span>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -2028,8 +2091,14 @@ function AnalysisDetailView({ analysis }: { analysis: AIAnalysis }) {
                 <h5 className="font-medium text-green-700 mb-2">İlaç Önerileri:</h5>
                 <div className="space-y-1">
                   {analysis.ai_response.treatment_algorithm.medications.map(
-                    (item: string | { name: string; dose: string; frequency: string }, idx: number) => (
-                      <div key={idx} className="flex items-start p-2 bg-green-50 rounded border-l-2 border-green-500">
+                    (
+                      item: string | { name: string; dose: string; frequency: string },
+                      idx: number
+                    ) => (
+                      <div
+                        key={idx}
+                        className="flex items-start p-2 bg-green-50 rounded border-l-2 border-green-500"
+                      >
                         <span className="text-green-600 mr-2">→</span>
                         <span className="text-gray-800 text-sm">
                           {typeof item === 'string'
@@ -2056,7 +2125,9 @@ function AnalysisDetailView({ analysis }: { analysis: AIAnalysis }) {
           <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4">
             <p className="font-semibold text-yellow-900 mb-2">
               Konsültasyon{' '}
-              {analysis.ai_response.consultation.urgency === 'urgent' ? 'ACİL gerekli' : 'önerilmektedir'}
+              {analysis.ai_response.consultation.urgency === 'urgent'
+                ? 'ACİL gerekli'
+                : 'önerilmektedir'}
             </p>
             {analysis.ai_response.consultation.departments && (
               <div className="flex flex-wrap gap-2 mb-2">
@@ -2109,16 +2180,20 @@ function AnalysisDetailView({ analysis }: { analysis: AIAnalysis }) {
           </h4>
           <div className="space-y-3">
             {analysis.ai_response.references.map(
-              (ref: { title: string; source: string; year?: string; key_point?: string }, idx: number) => (
-                <div key={idx} className="border-l-4 border-gray-400 pl-3 py-2 bg-gray-50 rounded-r">
+              (
+                ref: { title: string; source: string; year?: string; key_point?: string },
+                idx: number
+              ) => (
+                <div
+                  key={idx}
+                  className="border-l-4 border-gray-400 pl-3 py-2 bg-gray-50 rounded-r"
+                >
                   <p className="font-medium text-gray-900 text-sm">{ref.title}</p>
                   <p className="text-xs text-gray-600">
                     {ref.source}
                     {ref.year && ` (${ref.year})`}
                   </p>
-                  {ref.key_point && (
-                    <p className="text-xs text-gray-700 mt-1">→ {ref.key_point}</p>
-                  )}
+                  {ref.key_point && <p className="text-xs text-gray-700 mt-1">→ {ref.key_point}</p>}
                 </div>
               )
             )}
@@ -2196,9 +2271,7 @@ function AIChatInterface({ analysisId }: { analysisId: string }) {
         setMessages((prev) => {
           const existing = prev.find((m) => m.id === assistantId)
           if (existing) {
-            return prev.map((m) =>
-              m.id === assistantId ? { ...m, content: assistantMessage } : m
-            )
+            return prev.map((m) => (m.id === assistantId ? { ...m, content: assistantMessage } : m))
           } else {
             return [
               ...prev,
@@ -2229,9 +2302,7 @@ function AIChatInterface({ analysisId }: { analysisId: string }) {
             <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center">
               <MessageSquare className="w-8 h-8 text-purple-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              AI Asistanına Sor
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Asistanına Sor</h3>
             <p className="text-gray-600 text-sm max-w-md mx-auto">
               Analiz hakkında sorularınızı sorun. AI asistanı hasta verileri ve analiz sonuçları
               kapsamında size yardımcı olacaktır.
@@ -2262,10 +2333,7 @@ function AIChatInterface({ analysisId }: { analysisId: string }) {
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={cn(
-                  'flex',
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                )}
+                className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
               >
                 <div
                   className={cn(
@@ -2284,9 +2352,18 @@ function AIChatInterface({ analysisId }: { analysisId: string }) {
                 <div className="bg-gray-100 rounded-2xl px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: '0ms' }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: '150ms' }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: '300ms' }}
+                      ></div>
                     </div>
                     <span className="text-sm text-gray-600">Düşünüyor...</span>
                   </div>

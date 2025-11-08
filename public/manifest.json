@@ -8,20 +8,7 @@
   "theme_color": "#2563eb",
   "orientation": "portrait-primary",
   "scope": "/",
-  "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    }
-  ],
+  "icons": [],
   "screenshots": [
     {
       "src": "/screenshot-mobile.png",
@@ -42,15 +29,13 @@
       "name": "Yeni Hasta",
       "short_name": "Yeni Hasta",
       "description": "Yeni hasta kaydı oluştur",
-      "url": "/patients?action=new",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/patients?action=new"
     },
     {
       "name": "Hastalar",
       "short_name": "Hastalar",
       "description": "Hasta listesine git",
-      "url": "/patients",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/patients"
     }
   ],
   "related_applications": [],
