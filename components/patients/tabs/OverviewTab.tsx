@@ -188,9 +188,9 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
                   <div key={idx} className="relative flex items-start space-x-4 group">
                     {/* Timeline dot */}
                     <div className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center ${
-                      getEventColor(event.type === 'data' ? event.subtype : event.type)
+                      getEventColor(event.type === 'data' ? ('subtype' in event ? event.subtype : event.type) : event.type)
                     }`}>
-                      {getEventIcon(event.type, event.subtype)}
+                      {getEventIcon(event.type, 'subtype' in event ? event.subtype : undefined)}
                     </div>
 
                     {/* Event card */}
@@ -198,7 +198,7 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900 mb-1">
-                            {event.type === 'data' &&
+                            {event.type === 'data' && 'subtype' in event &&
                               `${
                                 {
                                   anamnesis: 'Anamnez',
@@ -389,26 +389,26 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
 
             <div className="space-y-4">
               {/* Risk Score (if available in analysis) */}
-              {latestAnalysis.ai_response.risk_score !== undefined && (
+              {(latestAnalysis.ai_response as any).risk_score !== undefined && (
                 <div className="bg-white rounded-lg p-4 border border-green-200">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700">Risk Skoru</span>
                     <span className={`text-lg font-bold ${
-                      latestAnalysis.ai_response.risk_score > 7 ? 'text-red-600' :
-                      latestAnalysis.ai_response.risk_score > 4 ? 'text-yellow-600' :
+                      (latestAnalysis.ai_response as any).risk_score > 7 ? 'text-red-600' :
+                      (latestAnalysis.ai_response as any).risk_score > 4 ? 'text-yellow-600' :
                       'text-green-600'
                     }`}>
-                      {latestAnalysis.ai_response.risk_score}/10
+                      {(latestAnalysis.ai_response as any).risk_score}/10
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
                     <div
                       className={`h-2.5 rounded-full transition-all ${
-                        latestAnalysis.ai_response.risk_score > 7 ? 'bg-red-600' :
-                        latestAnalysis.ai_response.risk_score > 4 ? 'bg-yellow-600' :
+                        (latestAnalysis.ai_response as any).risk_score > 7 ? 'bg-red-600' :
+                        (latestAnalysis.ai_response as any).risk_score > 4 ? 'bg-yellow-600' :
                         'bg-green-600'
                       }`}
-                      style={{ width: `${(latestAnalysis.ai_response.risk_score / 10) * 100}%` }}
+                      style={{ width: `${((latestAnalysis.ai_response as any).risk_score / 10) * 100}%` }}
                     ></div>
                   </div>
                 </div>
@@ -429,7 +429,7 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
               )}
 
               {/* Key Findings (if available) */}
-              {latestAnalysis.ai_response.findings && Array.isArray(latestAnalysis.ai_response.findings) && latestAnalysis.ai_response.findings.length > 0 && (
+              {(latestAnalysis.ai_response as any).findings && Array.isArray((latestAnalysis.ai_response as any).findings) && (latestAnalysis.ai_response as any).findings.length > 0 && (
                 <div className="bg-white rounded-lg p-4 border border-green-200">
                   <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
                     <svg className="w-4 h-4 mr-1 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -438,7 +438,7 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
                     Öne Çıkan Bulgular
                   </h4>
                   <ul className="space-y-1 text-sm">
-                    {latestAnalysis.ai_response.findings.slice(0, 3).map((finding: string, idx: number) => (
+                    {(latestAnalysis.ai_response as any).findings.slice(0, 3).map((finding: string, idx: number) => (
                       <li key={idx} className="flex items-start text-gray-700">
                         <span className="text-green-600 mr-2">•</span>
                         <span>{finding}</span>
@@ -449,7 +449,7 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
               )}
 
               {/* Recommendations (if available) */}
-              {latestAnalysis.ai_response.recommendations && Array.isArray(latestAnalysis.ai_response.recommendations) && latestAnalysis.ai_response.recommendations.length > 0 && (
+              {(latestAnalysis.ai_response as any).recommendations && Array.isArray((latestAnalysis.ai_response as any).recommendations) && (latestAnalysis.ai_response as any).recommendations.length > 0 && (
                 <div className="bg-white rounded-lg p-4 border border-green-200">
                   <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
                     <svg className="w-4 h-4 mr-1 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -458,7 +458,7 @@ export function OverviewTab({ patientId, patientData, tests, analyses }: Overvie
                     Öneriler
                   </h4>
                   <ul className="space-y-1 text-sm">
-                    {latestAnalysis.ai_response.recommendations.slice(0, 3).map((rec: string, idx: number) => (
+                    {(latestAnalysis.ai_response as any).recommendations.slice(0, 3).map((rec: string, idx: number) => (
                       <li key={idx} className="flex items-start text-gray-700">
                         <span className="text-blue-600 mr-2">→</span>
                         <span>{rec}</span>

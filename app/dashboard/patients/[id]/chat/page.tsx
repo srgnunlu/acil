@@ -51,7 +51,6 @@ export default async function PatientChatPage({ params }: PageProps) {
       <PatientChat
         patientId={patient.id}
         patientName={patient.name}
-        initialMessages={messages || []}
       />
     </div>
   )

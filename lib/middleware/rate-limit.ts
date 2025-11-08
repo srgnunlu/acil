@@ -7,19 +7,19 @@ const rateLimitConfig = {
   // API endpoints için farklı limitler
   ai: {
     requests: 10,
-    window: '1 m', // 1 dakikada 10 istek
+    window: '1 m' as const, // 1 dakikada 10 istek
   },
   chat: {
     requests: 20,
-    window: '1 m', // 1 dakikada 20 istek
+    window: '1 m' as const, // 1 dakikada 20 istek
   },
   upload: {
     requests: 5,
-    window: '1 m', // 1 dakikada 5 upload
+    window: '1 m' as const, // 1 dakikada 5 upload
   },
   default: {
     requests: 30,
-    window: '1 m', // 1 dakikada 30 istek
+    window: '1 m' as const, // 1 dakikada 30 istek
   },
 }
 

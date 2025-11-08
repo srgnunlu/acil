@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { Eye, EyeOff, Search, AlertCircle, CheckCircle } from 'lucide-react'
 
 export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string
   error?: string
   success?: boolean
@@ -191,5 +191,3 @@ export const MedicalInput = forwardRef<HTMLInputElement, InputProps>(
   )
 )
 MedicalInput.displayName = 'MedicalInput'
-
-export { Input, SearchInput, MedicalInput }

@@ -1,4 +1,4 @@
-import { onCLS, onFID, onFCP, onLCP, onTTFB, onINP, Metric } from 'web-vitals'
+import { onCLS, onFCP, onLCP, onTTFB, onINP, Metric } from 'web-vitals'
 import { logger } from '@/lib/logger'
 
 /**
@@ -47,11 +47,10 @@ export function initWebVitals() {
   try {
     // Core Web Vitals
     onCLS(sendToAnalytics) // Cumulative Layout Shift
-    onFID(sendToAnalytics) // First Input Delay (deprecated, use INP)
     onFCP(sendToAnalytics) // First Contentful Paint
     onLCP(sendToAnalytics) // Largest Contentful Paint
     onTTFB(sendToAnalytics) // Time to First Byte
-    onINP(sendToAnalytics) // Interaction to Next Paint (new metric)
+    onINP(sendToAnalytics) // Interaction to Next Paint (replaces FID)
   } catch (error) {
     logger.error({
       type: 'web_vitals_error',

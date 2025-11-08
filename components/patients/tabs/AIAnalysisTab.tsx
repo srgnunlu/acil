@@ -202,10 +202,10 @@ export function AIAnalysisTab({ patientId, patientData, tests, analyses }: AIAna
               </h3>
               <div className="space-y-3">
                 {latestAnalysis.ai_response.recommended_tests.map(
-                  (test: string | { name: string; reason: string }, idx: number) => (
+                  (test: { test: string; priority: string; rationale: string }, idx: number) => (
                     <div key={idx} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold text-gray-900">{test.test || test}</h4>
+                        <h4 className="font-semibold text-gray-900">{test.test}</h4>
                         {test.priority && (
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium ${
@@ -286,7 +286,7 @@ export function AIAnalysisTab({ patientId, patientData, tests, analyses }: AIAna
                             <span className="text-gray-800">
                               {typeof item === 'string'
                                 ? item
-                                : `${item.name || ''} ${item.dose || ''} - ${item.rationale || ''}`}
+                                : `${item.name || ''} ${item.dose || ''} - ${item.frequency || ''}`}
                             </span>
                           </li>
                         )
@@ -365,7 +365,7 @@ export function AIAnalysisTab({ patientId, patientData, tests, analyses }: AIAna
               <div className="space-y-3">
                 {latestAnalysis.ai_response.references.map(
                   (
-                    ref: string | { title: string; authors: string; journal: string; year: number },
+                    ref: { title: string; source: string; year?: string; key_point?: string },
                     idx: number
                   ) => (
                     <div key={idx} className="border-l-4 border-gray-300 pl-4 py-2">

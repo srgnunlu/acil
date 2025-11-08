@@ -3,12 +3,14 @@
  * Web Vitals, API response times, cache hit rates
  */
 
+import { onCLS, onFCP, onLCP, onTTFB, onINP } from 'web-vitals'
+
 // Type definitions for performance monitoring
 interface PerformanceMetric {
   name: string
   value: number
   unit: string
-  timestamp: number
+  timestamp?: number
   tags?: Record<string, string>
 }
 
@@ -18,7 +20,7 @@ interface APIMetric {
   status: number
   duration: number
   cacheHit: boolean
-  timestamp: number
+  timestamp?: number
   userId?: string
 }
 
@@ -49,7 +51,7 @@ class PerformanceMonitor {
     if (typeof window === 'undefined') return
 
     // Core Web Vitals
-    getCLS((metric: any) => {
+    onCLS((metric: any) => {
       this.recordMetric({
         name: 'CLS',
         value: metric.value,
@@ -58,16 +60,16 @@ class PerformanceMonitor {
       })
     })
 
-    getFID((metric: any) => {
+    onINP((metric: any) => {
       this.recordMetric({
-        name: 'FID',
+        name: 'INP',
         value: metric.value,
         unit: 'ms',
         tags: { rating: this.getFIDRating(metric.value) }
       })
     })
 
-    getFCP((metric: any) => {
+    onFCP((metric: any) => {
       this.recordMetric({
         name: 'FCP',
         value: metric.value,
@@ -76,7 +78,7 @@ class PerformanceMonitor {
       })
     })
 
-    getLCP((metric: any) => {
+    onLCP((metric: any) => {
       this.recordMetric({
         name: 'LCP',
         value: metric.value,
@@ -85,7 +87,7 @@ class PerformanceMonitor {
       })
     })
 
-    getTTFB((metric: any) => {
+    onTTFB((metric: any) => {
       this.recordMetric({
         name: 'TTFB',
         value: metric.value,
@@ -155,7 +157,7 @@ class PerformanceMonitor {
 
     window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
       const start = performance.now()
-      const url = typeof input === 'string' ? input : input.url
+      const url = typeof input === 'string' ? input : (input instanceof URL ? input.toString() : input.url)
       const method = init?.method || 'GET'
 
       try {
@@ -210,7 +212,7 @@ class PerformanceMonitor {
   /**
    * Record performance metric
    */
-  private recordMetric(metric: PerformanceMetric) {
+  public recordMetric(metric: PerformanceMetric) {
     metric.timestamp = Date.now()
     this.metrics.push(metric)
 
@@ -465,7 +467,7 @@ export function trackUserInteraction(action: string, element?: string) {
     name: 'UserInteraction',
     value: 1,
     unit: 'count',
-    tags: { action, element }
+    tags: { action, ...(element && { element }) }
   })
 }
 
@@ -474,10 +476,10 @@ export function trackError(error: Error, context?: string) {
     name: 'JavaScriptError',
     value: 1,
     unit: 'count',
-    tags: { 
+    tags: {
       message: error.message,
-      stack: error.stack?.substring(0, 200),
-      context 
+      ...(error.stack && { stack: error.stack.substring(0, 200) }),
+      ...(context && { context })
     }
   })
 }

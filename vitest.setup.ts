@@ -14,7 +14,10 @@ process.env.OPENAI_API_KEY = 'sk-test-key-123456789'
 process.env.GEMINI_API_KEY = 'test-gemini-key'
 process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000'
 process.env.NEXT_PUBLIC_FREE_PATIENT_LIMIT = '3'
-process.env.NODE_ENV = 'test'
+// NODE_ENV is read-only in production builds
+if (process.env.NODE_ENV !== 'production') {
+  ;(process.env as any).NODE_ENV = 'test'
+}
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
