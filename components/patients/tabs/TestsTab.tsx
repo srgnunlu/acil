@@ -437,81 +437,10 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                     <div className="p-4">
                       {typeof test.results === 'object' ? (
                         <div className="space-y-3">
-                          {Object.entries(test.results as Record<string, unknown>).map(
-                            ([key, value]) => {
-                              // "other" alanı özel işlem
-                              if (
-                                key === 'other' &&
-                                typeof value === 'string' &&
-                                test.test_type === 'laboratory'
-                              ) {
-                                const otherFields = parseOtherField(value)
-
-                                // Eğer "other" alanında ayrıştırılmış veriler varsa, bunları göster
-                                if (Object.keys(otherFields).length > 0) {
-                                  return (
-                                    <div key={key} className="border-t border-gray-200 pt-3 mt-3">
-                                      <div className="mb-3">
-                                        <h4 className="font-semibold text-gray-800 text-sm flex items-center">
-                                          <span className="mr-2">📋</span>
-                                          Diğer Test Sonuçları
-                                        </h4>
-                                      </div>
-                                      <div className="space-y-2">
-                                        {Object.entries(otherFields).map(
-                                          ([otherKey, otherValue]) => (
-                                            <div
-                                              key={otherKey}
-                                              className="flex justify-between items-center py-2 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 transition"
-                                            >
-                                              <div className="flex-1">
-                                                <dt className="font-medium text-gray-700 text-sm">
-                                                  {otherKey}
-                                                </dt>
-                                              </div>
-                                              <div className="flex items-center space-x-2">
-                                                <dd className="text-gray-900 font-semibold text-sm">
-                                                  {otherValue}
-                                                </dd>
-                                              </div>
-                                            </div>
-                                          )
-                                        )}
-                                      </div>
-                                    </div>
-                                  )
-                                }
-                              }
-
-                              // Normal lab sonuçları göster (other hariç veya parsing başarısız olmuşsa)
-                              if (
-                                key === 'other' &&
-                                typeof value === 'string' &&
-                                test.test_type === 'laboratory'
-                              ) {
-                                const otherFields = parseOtherField(value)
-                                if (Object.keys(otherFields).length === 0) {
-                                  // Ayrıştırılmayan raw metin varsa düz göster
-                                  if (String(value).trim()) {
-                                    return (
-                                      <div
-                                        key={key}
-                                        className="p-3 rounded-lg bg-gray-50 border border-gray-200"
-                                      >
-                                        <dt className="font-medium text-gray-700 text-sm mb-2">
-                                          Diğer Sonuçlar
-                                        </dt>
-                                        <dd className="text-gray-600 text-sm whitespace-pre-wrap">
-                                          {value}
-                                        </dd>
-                                      </div>
-                                    )
-                                  }
-                                  return null
-                                }
-                                return null
-                              }
-
+                          {/* Normal lab sonuçlarını önce göster */}
+                          {Object.entries(test.results as Record<string, unknown>)
+                            .filter(([key]) => key !== 'other')
+                            .map(([key, value]) => {
                               const status =
                                 test.test_type === 'laboratory'
                                   ? getValueStatus(key, value)
@@ -554,8 +483,68 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                                   </div>
                                 </div>
                               )
+                            })}
+
+                          {/* "Other" alanını en sonda göster */}
+                          {(() => {
+                            const otherValue = (test.results as Record<string, unknown>)['other']
+                            if (
+                              otherValue &&
+                              typeof otherValue === 'string' &&
+                              test.test_type === 'laboratory'
+                            ) {
+                              const otherFields = parseOtherField(otherValue)
+
+                              // Eğer "other" alanında ayrıştırılmış veriler varsa, bunları göster
+                              if (Object.keys(otherFields).length > 0) {
+                                return (
+                                  <div className="border-t border-gray-200 pt-4 mt-4">
+                                    <div className="mb-3">
+                                      <h4 className="font-semibold text-gray-800 text-sm flex items-center">
+                                        <span className="mr-2">📋</span>
+                                        Diğer Test Sonuçları
+                                      </h4>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {Object.entries(otherFields).map(([otherKey, otherVal]) => (
+                                        <div
+                                          key={otherKey}
+                                          className="flex justify-between items-center py-2 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 transition"
+                                        >
+                                          <div className="flex-1">
+                                            <dt className="font-medium text-gray-700 text-sm">
+                                              {otherKey}
+                                            </dt>
+                                          </div>
+                                          <div className="flex items-center space-x-2">
+                                            <dd className="text-gray-900 font-semibold text-sm">
+                                              {otherVal}
+                                            </dd>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )
+                              }
+
+                              // Ayrıştırılmayan raw metin varsa düz göster
+                              if (String(otherValue).trim()) {
+                                return (
+                                  <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 border-t-2 mt-4">
+                                    <dt className="font-medium text-gray-700 text-sm mb-2">
+                                      Diğer Sonuçlar
+                                    </dt>
+                                    <dd className="text-gray-600 text-sm whitespace-pre-wrap">
+                                      {otherValue}
+                                    </dd>
+                                  </div>
+                                )
+                              }
                             }
-                          )}
+
+                            return null
+                          })()}
                         </div>
                       ) : (
                         <div className="p-4 bg-gray-50 rounded-lg">
