@@ -82,19 +82,19 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
       {/* Arama Çubuğu */}
       <div className="flex gap-3">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Hasta adı, yaş veya cinsiyet ile ara..."
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900 placeholder-gray-400 transition-colors"
             aria-label="Hasta ara"
           />
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="px-4 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 font-medium text-gray-700 dark:text-gray-200"
+          className="px-4 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 font-medium text-gray-700"
           aria-label="Filtreleri aç"
           aria-expanded={showFilters}
         >
@@ -115,7 +115,7 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             filters.status.length === 0
               ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Tümü
@@ -154,14 +154,12 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
 
       {/* Gelişmiş Filtreler Panel */}
       {showFilters && (
-        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-6 shadow-lg animate-in slide-in-from-top-5 fade-in">
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-lg animate-in slide-in-from-top-5 fade-in">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Gelişmiş Filtreler
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900">Gelişmiş Filtreler</h3>
             <button
               onClick={() => setShowFilters(false)}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="text-gray-400 hover:text-gray-600"
               aria-label="Filtreleri kapat"
             >
               <X className="w-5 h-5" />
@@ -171,9 +169,7 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
           <div className="grid md:grid-cols-2 gap-6">
             {/* Cinsiyet */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Cinsiyet
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cinsiyet</label>
               <div className="space-y-2">
                 {['Erkek', 'Kadın'].map((gender) => (
                   <label key={gender} className="flex items-center gap-2 cursor-pointer">
@@ -183,7 +179,7 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
                       onChange={() => toggleArrayFilter('gender', gender)}
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{gender}</span>
+                    <span className="text-sm text-gray-700">{gender}</span>
                   </label>
                 ))}
               </div>
@@ -191,13 +187,11 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
 
             {/* Yaş Aralığı */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Yaş Aralığı
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Yaş Aralığı</label>
               <select
                 value={filters.ageRange}
                 onChange={(e) => handleFilterChange('ageRange', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
               >
                 <option value="all">Tümü</option>
                 <option value="0-18">0-18 yaş</option>

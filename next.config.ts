@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
 
   // Turbopack configuration
   turbopack: {
-    root: '/Users/sergenunlu/Desktop/kodlar/acil/acil',
+    root: '/Users/sergenunlu/Desktop/kodlar/acilai/acil',
   },
 
   // Logging

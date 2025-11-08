@@ -26,8 +26,8 @@ export function DashboardNav() {
             href={item.href}
             className={`group relative px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
               isActive
-                ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                ? 'text-blue-600 bg-blue-50'
+                : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
             }`}
             aria-current={isActive ? 'page' : undefined}
           >
@@ -36,7 +36,7 @@ export function DashboardNav() {
 
             {/* Active indicator */}
             {isActive && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-blue-600 rounded-full" />
             )}
           </Link>
         )
