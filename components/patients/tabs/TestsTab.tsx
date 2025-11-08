@@ -3,7 +3,9 @@
 import { useState, useMemo } from 'react'
 import { PatientTest } from '@/types'
 import { AddTestForm } from '../forms/AddTestForm'
+import { AddLesionImageForm } from '../forms/AddLesionImageForm'
 import { EditTestForm } from '../forms/EditTestForm'
+import { LesionImageCard } from '../display/LesionImageCard'
 import { formatDistanceToNow, format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
@@ -28,6 +30,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
   const router = useRouter()
 
   const testTypes = [
+    { id: 'lesion_image', label: 'Lezyon Görseli', icon: '🔍', description: 'Deri lezyonu analizi', color: 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 hover:border-purple-500', special: true },
     { id: 'laboratory', label: 'Laboratuvar', icon: '🧪', description: 'Kan, idrar, biyokimya', color: 'bg-blue-50 border-blue-200 hover:border-blue-500' },
     { id: 'ekg', label: 'EKG', icon: '❤️', description: 'Elektrokardiyografi', color: 'bg-red-50 border-red-200 hover:border-red-500' },
     { id: 'xray', label: 'Radyoloji', icon: '🔬', description: 'Grafi, BT, MR, USG', color: 'bg-purple-50 border-purple-200 hover:border-purple-500' },
@@ -190,9 +193,14 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
               <div className="text-2xl mb-2">{type.icon}</div>
               <h3 className="font-semibold text-gray-900 mb-1 text-sm">
                 {type.label}
+                {(type as any).special && (
+                  <span className="ml-2 text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                    AI
+                  </span>
+                )}
               </h3>
               <p className="text-xs text-gray-600 mb-2">{type.description}</p>
-              <div className="text-xs font-medium text-blue-600 group-hover:text-blue-700">
+              <div className={`text-xs font-medium ${(type as any).special ? 'text-purple-600 group-hover:text-purple-700' : 'text-blue-600 group-hover:text-blue-700'}`}>
                 + Ekle
               </div>
             </button>
@@ -299,6 +307,11 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
               const typeInfo = testTypes.find(t => t.id === test.test_type)
               const isExpanded = expandedTests.has(test.id)
               const isDeleting = deletingTest === test.id
+
+              // Special display for lesion images
+              if (test.test_type === 'lesion_image') {
+                return <LesionImageCard key={test.id} test={test} />
+              }
 
               return (
                 <div
@@ -453,14 +466,26 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
 
       {/* Add Test Form Modal */}
       {showAddForm && (
-        <AddTestForm
-          patientId={patientId}
-          testType={selectedTestType}
-          onClose={() => {
-            setShowAddForm(false)
-            setSelectedTestType('')
-          }}
-        />
+        <>
+          {selectedTestType === 'lesion_image' ? (
+            <AddLesionImageForm
+              patientId={patientId}
+              onClose={() => {
+                setShowAddForm(false)
+                setSelectedTestType('')
+              }}
+            />
+          ) : (
+            <AddTestForm
+              patientId={patientId}
+              testType={selectedTestType}
+              onClose={() => {
+                setShowAddForm(false)
+                setSelectedTestType('')
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* Edit Test Form Modal */}
