@@ -4,8 +4,10 @@ import { useState, useMemo } from 'react'
 import { PatientTest } from '@/types'
 import { AddTestForm } from '../forms/AddTestForm'
 import { AddLesionImageForm } from '../forms/AddLesionImageForm'
+import { AddEKGForm } from '../forms/AddEKGForm'
 import { EditTestForm } from '../forms/EditTestForm'
 import { LesionImageCard } from '../display/LesionImageCard'
+import { EKGCard } from '../display/EKGCard'
 import { formatDistanceToNow, format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
@@ -29,13 +31,58 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
   const [deletingTest, setDeletingTest] = useState<string | null>(null)
   const router = useRouter()
 
-  const testTypes = [
-    { id: 'lesion_image', label: 'Lezyon Görseli', icon: '🔍', description: 'Deri lezyonu analizi', color: 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 hover:border-purple-500', special: true },
-    { id: 'laboratory', label: 'Laboratuvar', icon: '🧪', description: 'Kan, idrar, biyokimya', color: 'bg-blue-50 border-blue-200 hover:border-blue-500' },
-    { id: 'ekg', label: 'EKG', icon: '❤️', description: 'Elektrokardiyografi', color: 'bg-red-50 border-red-200 hover:border-red-500' },
-    { id: 'xray', label: 'Radyoloji', icon: '🔬', description: 'Grafi, BT, MR, USG', color: 'bg-purple-50 border-purple-200 hover:border-purple-500' },
-    { id: 'consultation', label: 'Konsültasyon', icon: '👨‍⚕️', description: 'Branş konsültasyonu', color: 'bg-green-50 border-green-200 hover:border-green-500' },
-    { id: 'other', label: 'Diğer', icon: '📄', description: 'Diğer tetkikler', color: 'bg-gray-50 border-gray-200 hover:border-gray-500' },
+  const testTypes: Array<{
+    id: string
+    label: string
+    icon: string
+    description: string
+    color: string
+    special?: boolean
+  }> = [
+    {
+      id: 'lesion_image',
+      label: 'Lezyon Görseli',
+      icon: '🔍',
+      description: 'Deri lezyonu analizi',
+      color:
+        'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 hover:border-purple-500',
+      special: true,
+    },
+    {
+      id: 'laboratory',
+      label: 'Laboratuvar',
+      icon: '🧪',
+      description: 'Kan, idrar, biyokimya',
+      color: 'bg-blue-50 border-blue-200 hover:border-blue-500',
+    },
+    {
+      id: 'ekg',
+      label: 'EKG',
+      icon: '❤️',
+      description: 'Elektrokardiyografi',
+      color: 'bg-red-50 border-red-200 hover:border-red-500',
+    },
+    {
+      id: 'xray',
+      label: 'Radyoloji',
+      icon: '🔬',
+      description: 'Grafi, BT, MR, USG',
+      color: 'bg-purple-50 border-purple-200 hover:border-purple-500',
+    },
+    {
+      id: 'consultation',
+      label: 'Konsültasyon',
+      icon: '👨‍⚕️',
+      description: 'Branş konsültasyonu',
+      color: 'bg-green-50 border-green-200 hover:border-green-500',
+    },
+    {
+      id: 'other',
+      label: 'Diğer',
+      icon: '📄',
+      description: 'Diğer tetkikler',
+      color: 'bg-gray-50 border-gray-200 hover:border-gray-500',
+    },
   ]
 
   // Laboratuvar referans aralıkları
@@ -53,7 +100,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
     crp: { min: 0, max: 5, unit: 'mg/L' },
   }
 
-  const getValueStatus = (key: string, value: any) => {
+  const getValueStatus = (key: string, value: unknown) => {
     if (typeof value !== 'number' && typeof value !== 'string') return 'normal'
     const numValue = typeof value === 'string' ? parseFloat(value) : value
     if (isNaN(numValue)) return 'normal'
@@ -68,17 +115,23 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'low': return 'text-blue-700 bg-blue-50 border-blue-200'
-      case 'high': return 'text-red-700 bg-red-50 border-red-200'
-      default: return 'text-green-700 bg-green-50 border-green-200'
+      case 'low':
+        return 'text-blue-700 bg-blue-50 border-blue-200'
+      case 'high':
+        return 'text-red-700 bg-red-50 border-red-200'
+      default:
+        return 'text-green-700 bg-green-50 border-green-200'
     }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'low': return '↓'
-      case 'high': return '↑'
-      default: return '✓'
+      case 'low':
+        return '↓'
+      case 'high':
+        return '↑'
+      default:
+        return '✓'
     }
   }
 
@@ -87,14 +140,14 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
 
     // Filtre: Tip
     if (filterType !== 'all') {
-      filtered = filtered.filter(t => t.test_type === filterType)
+      filtered = filtered.filter((t) => t.test_type === filterType)
     }
 
     // Filtre: Arama
     if (searchQuery.trim()) {
-      filtered = filtered.filter(test => {
+      filtered = filtered.filter((test) => {
         const searchLower = searchQuery.toLowerCase()
-        const typeLabel = testTypes.find(t => t.id === test.test_type)?.label || ''
+        const typeLabel = testTypes.find((t) => t.id === test.test_type)?.label || ''
         const resultsString = JSON.stringify(test.results).toLowerCase()
         return typeLabel.toLowerCase().includes(searchLower) || resultsString.includes(searchLower)
       })
@@ -117,12 +170,8 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
     return filtered
   }, [tests, filterType, searchQuery, sortBy])
 
-  const getTestsByType = (type: string) => {
-    return filteredAndSortedTests.filter((t) => t.test_type === type)
-  }
-
   const toggleExpand = (testId: string) => {
-    setExpandedTests(prev => {
+    setExpandedTests((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(testId)) {
         newSet.delete(testId)
@@ -141,10 +190,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
     setDeletingTest(testId)
     try {
       const supabase = createClient()
-      const { error } = await supabase
-        .from('patient_tests')
-        .delete()
-        .eq('id', testId)
+      const { error } = await supabase.from('patient_tests').delete().eq('id', testId)
 
       if (error) throw error
 
@@ -158,10 +204,10 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
   }
 
   const handleExport = () => {
-    const exportData = filteredAndSortedTests.map(test => ({
-      Tip: testTypes.find(t => t.id === test.test_type)?.label,
+    const exportData = filteredAndSortedTests.map((test) => ({
+      Tip: testTypes.find((t) => t.id === test.test_type)?.label,
       Tarih: format(new Date(test.created_at), 'dd.MM.yyyy HH:mm', { locale: tr }),
-      Sonuçlar: JSON.stringify(test.results, null, 2)
+      Sonuçlar: JSON.stringify(test.results, null, 2),
     }))
 
     const dataStr = JSON.stringify(exportData, null, 2)
@@ -177,9 +223,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
     <div className="space-y-6">
       {/* Add Test Cards */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Tetkik Ekle
-        </h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Tetkik Ekle</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {testTypes.map((type) => (
             <button
@@ -193,14 +237,16 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
               <div className="text-2xl mb-2">{type.icon}</div>
               <h3 className="font-semibold text-gray-900 mb-1 text-sm">
                 {type.label}
-                {(type as any).special && (
+                {type.special && (
                   <span className="ml-2 text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
                     AI
                   </span>
                 )}
               </h3>
               <p className="text-xs text-gray-600 mb-2">{type.description}</p>
-              <div className={`text-xs font-medium ${(type as any).special ? 'text-purple-600 group-hover:text-purple-700' : 'text-blue-600 group-hover:text-blue-700'}`}>
+              <div
+                className={`text-xs font-medium ${type.special ? 'text-purple-600 group-hover:text-purple-700' : 'text-blue-600 group-hover:text-blue-700'}`}
+              >
                 + Ekle
               </div>
             </button>
@@ -213,9 +259,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
         <div className="grid md:grid-cols-3 gap-4">
           {/* Search */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Arama
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Arama</label>
             <input
               type="text"
               placeholder="Tetkik ara..."
@@ -227,9 +271,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
 
           {/* Filter by Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tetkik Tipi
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tetkik Tipi</label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
@@ -237,7 +279,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
             >
               <option value="all">Tümü ({tests.length})</option>
               {testTypes.map((type) => {
-                const count = tests.filter(t => t.test_type === type.id).length
+                const count = tests.filter((t) => t.test_type === type.id).length
                 return (
                   <option key={type.id} value={type.id}>
                     {type.icon} {type.label} ({count})
@@ -249,9 +291,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
 
           {/* Sort */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sıralama
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Sıralama</label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -283,9 +323,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
 
       {/* Existing Tests */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Tetkik Sonuçları
-        </h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Tetkik Sonuçları</h2>
 
         {filteredAndSortedTests.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -304,13 +342,18 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
         ) : (
           <div className="space-y-4">
             {filteredAndSortedTests.map((test) => {
-              const typeInfo = testTypes.find(t => t.id === test.test_type)
+              const typeInfo = testTypes.find((t) => t.id === test.test_type)
               const isExpanded = expandedTests.has(test.id)
               const isDeleting = deletingTest === test.id
 
               // Special display for lesion images
               if (test.test_type === 'lesion_image') {
                 return <LesionImageCard key={test.id} test={test} />
+              }
+
+              // Special display for EKG
+              if (test.test_type === 'ekg') {
+                return <EKGCard key={test.id} test={test} />
               }
 
               return (
@@ -329,7 +372,9 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                           </h3>
                           <div className="flex items-center space-x-2 mt-1">
                             <span className="text-xs text-gray-500">
-                              {format(new Date(test.created_at), 'dd MMM yyyy, HH:mm', { locale: tr })}
+                              {format(new Date(test.created_at), 'dd MMM yyyy, HH:mm', {
+                                locale: tr,
+                              })}
                             </span>
                             <span className="text-xs text-gray-400">•</span>
                             <span className="text-xs text-gray-500">
@@ -375,11 +420,12 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                     <div className="p-4">
                       {typeof test.results === 'object' ? (
                         <div className="space-y-3">
-                          {Object.entries(test.results as Record<string, any>).map(
+                          {Object.entries(test.results as Record<string, unknown>).map(
                             ([key, value]) => {
-                              const status = test.test_type === 'laboratory'
-                                ? getValueStatus(key, value)
-                                : 'normal'
+                              const status =
+                                test.test_type === 'laboratory'
+                                  ? getValueStatus(key, value)
+                                  : 'normal'
                               const statusColor = getStatusColor(status)
                               const statusIcon = getStatusIcon(status)
                               const range = labReferenceRanges[key]
@@ -391,7 +437,9 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                                 >
                                   <div className="flex-1">
                                     <dt className="font-medium text-gray-700 text-sm">
-                                      {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                      {key
+                                        .replace(/_/g, ' ')
+                                        .replace(/\b\w/g, (l) => l.toUpperCase())}
                                     </dt>
                                     {range && (
                                       <dd className="text-xs text-gray-500 mt-1">
@@ -421,7 +469,9 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                         </div>
                       ) : (
                         <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-gray-900 whitespace-pre-wrap">{String(test.results)}</p>
+                          <p className="text-gray-900 whitespace-pre-wrap">
+                            {String(test.results)}
+                          </p>
                         </div>
                       )}
 
@@ -452,7 +502,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                     <div className="px-4 pb-4">
                       <div className="text-sm text-gray-600 line-clamp-2">
                         {typeof test.results === 'object'
-                          ? `${Object.keys(test.results as Record<string, any>).length} sonuç parametresi`
+                          ? `${Object.keys(test.results as Record<string, unknown>).length} sonuç parametresi`
                           : String(test.results).substring(0, 100)}
                       </div>
                     </div>
@@ -475,6 +525,14 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                 setSelectedTestType('')
               }}
             />
+          ) : selectedTestType === 'ekg' ? (
+            <AddEKGForm
+              patientId={patientId}
+              onClose={() => {
+                setShowAddForm(false)
+                setSelectedTestType('')
+              }}
+            />
           ) : (
             <AddTestForm
               patientId={patientId}
@@ -489,12 +547,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
       )}
 
       {/* Edit Test Form Modal */}
-      {editingTest && (
-        <EditTestForm
-          test={editingTest}
-          onClose={() => setEditingTest(null)}
-        />
-      )}
+      {editingTest && <EditTestForm test={editingTest} onClose={() => setEditingTest(null)} />}
     </div>
   )
 }
