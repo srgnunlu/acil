@@ -286,7 +286,7 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
                 hasta verilerinizi analiz ederek size yardımcı olur.
               </p>
 
-              <div className="w-full max-w-2xl">
+              <div className="w-full max-w-3xl">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm font-semibold text-gray-700 flex items-center">
                     <svg
@@ -305,19 +305,19 @@ export function ChatTab({ patientId, patientName }: ChatTabProps) {
                     Hızlı Başlangıç Soruları
                   </p>
                 </div>
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                   {suggestedQuestions.map((question, idx) => (
                     <button
                       key={idx}
                       onClick={() => setInput(question.text)}
-                      className="group text-left px-4 py-3 bg-white hover:bg-blue-50 rounded-lg text-sm text-gray-700 transition-all border border-gray-200 hover:border-blue-300 hover:shadow-md flex items-center space-x-3"
+                      className="group text-left px-4 py-3 bg-white hover:bg-blue-50 rounded-lg text-sm text-gray-700 transition-all border border-gray-200 hover:border-blue-300 hover:shadow-md flex items-center space-x-3 h-fit"
                     >
                       <div className="flex-shrink-0 w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
                         {question.icon}
                       </div>
-                      <span className="flex-1">{question.text}</span>
+                      <span className="flex-1 break-words line-clamp-3">{question.text}</span>
                       <svg
-                        className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors"
+                        className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
