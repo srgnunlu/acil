@@ -83,7 +83,7 @@ export function AddPatientButton({
             'warning'
           )
         }}
-        className="px-6 py-3 bg-gray-300 dark:bg-slate-700 text-gray-600 dark:text-gray-400 rounded-lg font-semibold cursor-not-allowed flex items-center gap-2"
+        className="px-6 py-3 bg-gray-300 text-gray-600 rounded-lg font-semibold cursor-not-allowed flex items-center gap-2"
         aria-label="Hasta limitine ulaşıldı"
       >
         <UserPlus className="w-5 h-5" />
@@ -109,21 +109,19 @@ export function AddPatientButton({
           onClick={() => !loading && setIsOpen(false)}
         >
           <div
-            className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-5"
+            className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                  <UserPlus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-blue-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  Yeni Hasta Ekle
-                </h2>
+                <h2 className="text-2xl font-bold text-gray-900">Yeni Hasta Ekle</h2>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-100 rounded-lg"
                 disabled={loading}
                 aria-label="Kapat"
               >
@@ -133,10 +131,7 @@ export function AddPatientButton({
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   Hasta Adı Soyadı <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -145,7 +140,7 @@ export function AddPatientButton({
                   type="text"
                   required
                   autoFocus
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900 placeholder-gray-400 transition-colors"
                   placeholder="Ahmet Yılmaz"
                   disabled={loading}
                 />
@@ -153,10 +148,7 @@ export function AddPatientButton({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label
-                    htmlFor="age"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                  >
+                  <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
                     Yaş
                   </label>
                   <input
@@ -165,23 +157,20 @@ export function AddPatientButton({
                     type="number"
                     min="0"
                     max="150"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900 placeholder-gray-400 transition-colors"
                     placeholder="45"
                     disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="gender"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                  >
+                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
                     Cinsiyet
                   </label>
                   <select
                     id="gender"
                     name="gender"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900 transition-colors"
                     disabled={loading}
                   >
                     <option value="">Seçiniz</option>
@@ -195,7 +184,7 @@ export function AddPatientButton({
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                   disabled={loading}
                 >
                   İptal

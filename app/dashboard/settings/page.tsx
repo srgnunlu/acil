@@ -25,52 +25,48 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Ayarlar</h1>
-        <p className="text-gray-600 dark:text-gray-400">Hesap ve uygulama ayarlarınız</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Ayarlar</h1>
+        <p className="text-gray-600">Hesap ve uygulama ayarlarınız</p>
       </div>
 
       {/* Profile Info */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Profil Bilgileri
-        </h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Profil Bilgileri</h2>
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">E-posta</label>
-            <p className="text-gray-900 dark:text-white">{user.email}</p>
+            <label className="text-sm font-medium text-gray-700">E-posta</label>
+            <p className="text-gray-900">{user.email}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ad Soyad</label>
-            <p className="text-gray-900 dark:text-white">{profile?.full_name || '-'}</p>
+            <label className="text-sm font-medium text-gray-700">Ad Soyad</label>
+            <p className="text-gray-900">{profile?.full_name || '-'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Uzmanlık</label>
-            <p className="text-gray-900 dark:text-white">{profile?.specialty || '-'}</p>
+            <label className="text-sm font-medium text-gray-700">Uzmanlık</label>
+            <p className="text-gray-900">{profile?.specialty || '-'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Kurum</label>
-            <p className="text-gray-900 dark:text-white">{profile?.institution || '-'}</p>
+            <label className="text-sm font-medium text-gray-700">Kurum</label>
+            <p className="text-gray-900">{profile?.institution || '-'}</p>
           </div>
         </div>
       </div>
 
       {/* Subscription Info */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Abonelik Bilgileri
-        </h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Abonelik Bilgileri</h2>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">Mevcut Plan</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="font-medium text-gray-900">Mevcut Plan</p>
+              <p className="text-sm text-gray-600">
                 {profile?.subscription_tier === 'free' ? 'Ücretsiz' : 'Pro Üyelik'}
               </p>
             </div>
             <span
               className={`px-4 py-2 rounded-lg font-semibold ${
                 profile?.subscription_tier === 'free'
-                  ? 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200'
+                  ? 'bg-gray-100 text-gray-800'
                   : 'bg-blue-600 text-white'
               }`}
             >
@@ -78,14 +74,14 @@ export default async function SettingsPage() {
             </span>
           </div>
 
-          <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-slate-600">
+          <div className="flex justify-between items-center pt-4 border-t border-gray-200">
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">Hasta Limiti</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="font-medium text-gray-900">Hasta Limiti</p>
+              <p className="text-sm text-gray-600">
                 {patientCount || 0} / {profile?.patient_limit || 3} hasta kullanılıyor
               </p>
             </div>
-            <div className="w-32 bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+            <div className="w-32 bg-gray-200 rounded-full h-2">
               <div
                 className="bg-blue-600 h-2 rounded-full"
                 style={{
@@ -96,12 +92,10 @@ export default async function SettingsPage() {
           </div>
 
           {profile?.subscription_tier === 'free' && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-600">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-6 border border-blue-100 dark:border-blue-800">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  Pro&apos;ya Yükselt
-                </h3>
-                <ul className="space-y-2 mb-4 text-sm text-gray-700 dark:text-gray-300">
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
+                <h3 className="font-semibold text-gray-900 mb-2">Pro&apos;ya Yükselt</h3>
+                <ul className="space-y-2 mb-4 text-sm text-gray-700">
                   <li className="flex items-center">
                     <span className="text-green-600 mr-2">✓</span>
                     Sınırsız hasta takibi
@@ -129,19 +123,13 @@ export default async function SettingsPage() {
       </div>
 
       {/* Notifications */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Bildirim Ayarları
-        </h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Bildirim Ayarları</h2>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">
-                Tetkik Sonucu Hatırlatıcıları
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Tetkik sonuçları için otomatik hatırlatma
-              </p>
+              <p className="font-medium text-gray-900">Tetkik Sonucu Hatırlatıcıları</p>
+              <p className="text-sm text-gray-600">Tetkik sonuçları için otomatik hatırlatma</p>
             </div>
             <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-blue-600">
               <span className="translate-x-5 inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" />
@@ -150,10 +138,8 @@ export default async function SettingsPage() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">E-posta Bildirimleri</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Önemli güncellemeler için e-posta al
-              </p>
+              <p className="font-medium text-gray-900">E-posta Bildirimleri</p>
+              <p className="text-sm text-gray-600">Önemli güncellemeler için e-posta al</p>
             </div>
             <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-gray-200">
               <span className="translate-x-0 inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" />
@@ -163,13 +149,11 @@ export default async function SettingsPage() {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-red-200 dark:border-red-900 p-6">
-        <h2 className="text-xl font-semibold text-red-900 dark:text-red-400 mb-4">
-          Tehlikeli Bölge
-        </h2>
+      <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
+        <h2 className="text-xl font-semibold text-red-900 mb-4">Tehlikeli Bölge</h2>
         <div className="space-y-4">
           <div>
-            <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+            <p className="text-sm text-gray-700 mb-3">
               Hesabınızı silmek tüm verilerinizi kalıcı olarak siler. Bu işlem geri alınamaz.
             </p>
             <button className="px-4 py-2 border-2 border-red-600 text-red-600 rounded-lg font-medium hover:bg-red-50 transition">

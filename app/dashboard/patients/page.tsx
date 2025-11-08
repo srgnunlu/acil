@@ -33,13 +33,11 @@ export default async function PatientsPage() {
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Hastalar</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-2">
-            <span className="font-semibold text-gray-900 dark:text-gray-100">
-              {activePatients.length}
-            </span>
+          <h1 className="text-3xl font-bold text-gray-900">Hastalar</h1>
+          <p className="text-gray-600 mt-2 flex items-center gap-2">
+            <span className="font-semibold text-gray-900">{activePatients.length}</span>
             aktif hasta
-            <span className="text-gray-400 dark:text-gray-500">•</span>
+            <span className="text-gray-400">•</span>
             <span className="text-sm">{profile?.patient_limit || 3} hasta limiti</span>
           </p>
         </div>
@@ -54,13 +52,11 @@ export default async function PatientsPage() {
 
       {/* Warning Banner */}
       {usagePercentage >= 75 && usagePercentage < 100 && (
-        <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 flex items-start gap-3">
-          <TrendingUp className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
+          <TrendingUp className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <h4 className="font-semibold text-yellow-900 dark:text-yellow-200 mb-1">
-              Hasta limitinize yaklaşıyorsunuz
-            </h4>
-            <p className="text-sm text-yellow-800 dark:text-yellow-300">
+            <h4 className="font-semibold text-yellow-900 mb-1">Hasta limitinize yaklaşıyorsunuz</h4>
+            <p className="text-sm text-yellow-800">
               {activePatients.length}/{profile?.patient_limit || 3} hasta slotu kullanılıyor (
               {Math.round(usagePercentage)}%)
             </p>
@@ -69,40 +65,32 @@ export default async function PatientsPage() {
       )}
 
       {!patients || patients.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
           <div className="max-w-md mx-auto">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Sparkles className="w-12 h-12 text-blue-600 dark:text-blue-400" />
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="w-12 h-12 text-blue-600" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
-              Hasta listeniz boş
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Hasta listeniz boş</h3>
+            <p className="text-gray-600 mb-8 leading-relaxed">
               İlk hastanızı ekleyerek AI destekli hasta takip sistemini kullanmaya başlayın.
               Otomatik raporlar, akıllı öneriler ve daha fazlası sizi bekliyor.
             </p>
 
             <div className="grid sm:grid-cols-3 gap-4 mb-8 text-left">
-              <div className="p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="text-2xl mb-2">🤖</div>
-                <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1">
-                  AI Asistan
-                </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Akıllı hasta analizi</p>
+                <h4 className="font-semibold text-sm text-gray-900 mb-1">AI Asistan</h4>
+                <p className="text-xs text-gray-600">Akıllı hasta analizi</p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="text-2xl mb-2">📊</div>
-                <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1">
-                  Raporlar
-                </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Otomatik raporlama</p>
+                <h4 className="font-semibold text-sm text-gray-900 mb-1">Raporlar</h4>
+                <p className="text-xs text-gray-600">Otomatik raporlama</p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+              <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="text-2xl mb-2">🔒</div>
-                <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1">
-                  Güvenli
-                </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Şifreli veri saklama</p>
+                <h4 className="font-semibold text-sm text-gray-900 mb-1">Güvenli</h4>
+                <p className="text-xs text-gray-600">Şifreli veri saklama</p>
               </div>
             </div>
 
@@ -121,7 +109,7 @@ export default async function PatientsPage() {
       {/* Upgrade Banner */}
       {profile?.subscription_tier === 'free' &&
         activePatients.length >= (profile?.patient_limit || 3) && (
-          <div className="mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-2xl p-8 text-white shadow-xl">
+          <div className="mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white shadow-xl">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-3">

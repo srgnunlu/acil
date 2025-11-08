@@ -144,9 +144,9 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      active: 'bg-green-500 text-white dark:bg-green-600',
-      discharged: 'bg-gray-500 text-white dark:bg-gray-600',
-      consultation: 'bg-yellow-500 text-white dark:bg-yellow-600',
+      active: 'bg-green-500 text-white',
+      discharged: 'bg-gray-500 text-white',
+      consultation: 'bg-yellow-500 text-white',
     }
     const labels = {
       active: 'Aktif',
@@ -177,15 +177,15 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
 
       {/* Bulk Actions Bar */}
       {selectedPatients.size > 0 && (
-        <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 animate-in slide-in-from-top-5 fade-in">
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 animate-in slide-in-from-top-5 fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              <span className="text-sm font-medium text-blue-900">
                 {selectedPatients.size} hasta seçildi
               </span>
               <button
                 onClick={() => setSelectedPatients(new Set())}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
               >
                 Seçimi Temizle
               </button>
@@ -220,8 +220,8 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
           </div>
 
           {loading && (
-            <div className="mt-2 text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-blue-700 dark:border-blue-300 border-t-transparent rounded-full animate-spin" />
+            <div className="mt-2 text-sm text-blue-700 flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
               İşlem yapılıyor...
             </div>
           )}
@@ -238,12 +238,12 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
               selectedPatients.size === filteredPatients.length && filteredPatients.length > 0
             }
             onChange={toggleAll}
-            className="w-4 h-4 text-blue-600 border-gray-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-offset-0"
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-offset-0"
             aria-label="Tümünü seç"
           />
           <label
             htmlFor="select-all"
-            className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+            className="text-sm font-medium text-gray-700 cursor-pointer select-none"
           >
             Tümünü Seç ({filteredPatients.length} hasta)
           </label>
@@ -252,12 +252,10 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
 
       {/* Empty State */}
       {filteredPatients.length === 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
           <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Hasta bulunamadı
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Hasta bulunamadı</h3>
+          <p className="text-gray-600 mb-6">
             Arama kriterlerinize uygun hasta bulunamadı. Farklı filtreler deneyin.
           </p>
           <button
@@ -283,7 +281,7 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
         {filteredPatients.map((patient) => (
           <div
             key={patient.id}
-            className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm border dark:border-slate-700 p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+            className={`bg-white rounded-2xl shadow-sm border p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
               selectedPatients.has(patient.id)
                 ? 'ring-2 ring-blue-500 border-blue-500'
                 : 'border-gray-200'
@@ -295,7 +293,7 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
                 checked={selectedPatients.has(patient.id)}
                 onChange={() => togglePatient(patient.id)}
                 onClick={(e) => e.stopPropagation()}
-                className="mt-1 w-5 h-5 text-blue-600 border-gray-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-offset-0 transition-transform hover:scale-110"
+                className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-offset-0 transition-transform hover:scale-110"
                 aria-label={`${patient.name} seç`}
               />
 
@@ -304,10 +302,10 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
                 className="flex-1 flex flex-col sm:flex-row justify-between items-start gap-4 group"
               >
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
                     {patient.name}
                   </h3>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
                     {patient.age && (
                       <span className="flex items-center gap-1">{patient.age} yaş</span>
                     )}

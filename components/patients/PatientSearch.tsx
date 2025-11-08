@@ -125,7 +125,7 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             filters.status.includes('active')
               ? 'bg-green-600 text-white'
-              : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Aktif
@@ -135,7 +135,7 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             filters.status.includes('consultation')
               ? 'bg-yellow-600 text-white'
-              : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Konsültasyon
@@ -145,7 +145,7 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
           className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             filters.status.includes('discharged')
               ? 'bg-gray-600 text-white'
-              : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Taburcu
@@ -203,13 +203,11 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
 
             {/* Sıralama */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sırala
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Sırala</label>
               <select
                 value={filters.sortBy}
                 onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
               >
                 <option value="created_at">Kayıt Tarihi</option>
                 <option value="name">İsim</option>
@@ -219,13 +217,11 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
 
             {/* Sıralama Yönü */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sıralama Yönü
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Sıralama Yönü</label>
               <select
                 value={filters.sortOrder}
                 onChange={(e) => handleFilterChange('sortOrder', e.target.value as 'asc' | 'desc')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-gray-900"
               >
                 <option value="desc">Azalan</option>
                 <option value="asc">Artan</option>
@@ -236,7 +232,7 @@ export function PatientSearch({ onFilterChange }: PatientSearchProps) {
           <div className="mt-6 flex justify-end gap-3">
             <button
               onClick={clearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
             >
               Filtreleri Temizle
             </button>

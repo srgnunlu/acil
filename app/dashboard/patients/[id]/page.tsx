@@ -117,7 +117,7 @@ export default async function PatientDetailPage({ params }: PageProps) {
       </div>
 
       {/* Enhanced Patient Header Card */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl shadow-lg border border-blue-100 dark:border-slate-600 p-6 mb-6">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl shadow-lg border border-blue-100 p-6 mb-6">
         <div className="flex items-start justify-between">
           {/* Left Section: Avatar & Info */}
           <div className="flex items-start space-x-4">
@@ -128,23 +128,23 @@ export default async function PatientDetailPage({ params }: PageProps) {
               </div>
               {/* Live Status Indicator */}
               {patient.status === 'active' && (
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white dark:border-slate-800 animate-pulse"></div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white animate-pulse"></div>
               )}
             </div>
 
             {/* Patient Info */}
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{patient.name}</h1>
+                <h1 className="text-3xl font-bold text-gray-900">{patient.name}</h1>
                 {getStatusBadge(patient.status)}
               </div>
 
               {/* Quick Info Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                 {/* Age & Gender */}
-                <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
+                <div className="flex items-center space-x-2 text-gray-700">
                   <svg
-                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                    className="w-5 h-5 text-blue-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -162,9 +162,9 @@ export default async function PatientDetailPage({ params }: PageProps) {
                 </div>
 
                 {/* Admission Date */}
-                <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
+                <div className="flex items-center space-x-2 text-gray-700">
                   <svg
-                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                    className="w-5 h-5 text-blue-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -177,7 +177,7 @@ export default async function PatientDetailPage({ params }: PageProps) {
                     />
                   </svg>
                   <div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Kayıt Tarihi</div>
+                    <div className="text-xs text-gray-500">Kayıt Tarihi</div>
                     <div className="font-medium">
                       {new Date(patient.created_at).toLocaleDateString('tr-TR')}
                     </div>
@@ -185,9 +185,9 @@ export default async function PatientDetailPage({ params }: PageProps) {
                 </div>
 
                 {/* Duration */}
-                <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
+                <div className="flex items-center space-x-2 text-gray-700">
                   <svg
-                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                    className="w-5 h-5 text-blue-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -200,15 +200,15 @@ export default async function PatientDetailPage({ params }: PageProps) {
                     />
                   </svg>
                   <div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Yatış Süresi</div>
+                    <div className="text-xs text-gray-500">Yatış Süresi</div>
                     <div className="font-medium">{getAdmissionDuration(patient.created_at)}</div>
                   </div>
                 </div>
 
                 {/* Data Count */}
-                <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
+                <div className="flex items-center space-x-2 text-gray-700">
                   <svg
-                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                    className="w-5 h-5 text-blue-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -221,7 +221,7 @@ export default async function PatientDetailPage({ params }: PageProps) {
                     />
                   </svg>
                   <div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Toplam Kayıt</div>
+                    <div className="text-xs text-gray-500">Toplam Kayıt</div>
                     <div className="font-medium">
                       {(patientData?.length || 0) + (tests?.length || 0)}
                     </div>
