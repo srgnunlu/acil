@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { PatientTest } from '@/types'
 import { AddTestForm } from '../forms/AddTestForm'
+import { AddLesionImageForm } from '../forms/AddLesionImageForm'
+import { LesionImageCard } from '../display/LesionImageCard'
 import { formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -16,6 +18,7 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
   const [selectedTestType, setSelectedTestType] = useState('')
 
   const testTypes = [
+    { id: 'lesion_image', label: 'Lezyon Görseli', icon: '🔍', description: 'Deri lezyonu analizi', special: true },
     { id: 'laboratory', label: 'Laboratuvar', icon: '🧪', description: 'Kan, idrar, biyokimya' },
     { id: 'ekg', label: 'EKG', icon: '❤️', description: 'Elektrokardiyografi' },
     { id: 'xray', label: 'Radyoloji', icon: '🔬', description: 'Grafi, BT, MR, USG' },
@@ -42,14 +45,23 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
                 setSelectedTestType(type.id)
                 setShowAddForm(true)
               }}
-              className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-lg transition-all text-left"
+              className={`border-2 rounded-xl p-6 hover:shadow-lg transition-all text-left ${
+                type.special
+                  ? 'bg-gradient-to-br from-purple-50 to-blue-50 border-purple-300 hover:border-purple-500'
+                  : 'bg-white border-gray-200 hover:border-blue-500'
+              }`}
             >
               <div className="text-3xl mb-2">{type.icon}</div>
               <h3 className="font-semibold text-gray-900 mb-1">
                 {type.label}
+                {type.special && (
+                  <span className="ml-2 text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                    AI
+                  </span>
+                )}
               </h3>
               <p className="text-sm text-gray-600">{type.description}</p>
-              <div className="mt-3 text-sm text-blue-600 font-medium">
+              <div className={`mt-3 text-sm font-medium ${type.special ? 'text-purple-600' : 'text-blue-600'}`}>
                 + Ekle
               </div>
             </button>
@@ -79,6 +91,25 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
               const typeTests = getTestsByType(type.id)
               if (typeTests.length === 0) return null
 
+              // Special display for lesion images
+              if (type.id === 'lesion_image') {
+                return (
+                  <div key={type.id} className="space-y-4">
+                    <h3 className="font-semibold text-gray-900 text-xl flex items-center">
+                      <span className="mr-2">{type.icon}</span>
+                      {type.label}
+                      <span className="ml-2 text-sm text-gray-500">
+                        ({typeTests.length})
+                      </span>
+                    </h3>
+                    {typeTests.map((test) => (
+                      <LesionImageCard key={test.id} test={test} />
+                    ))}
+                  </div>
+                )
+              }
+
+              // Regular display for other test types
               return (
                 <div
                   key={type.id}
@@ -161,14 +192,26 @@ export function TestsTab({ patientId, tests }: TestsTabProps) {
 
       {/* Add Test Form Modal */}
       {showAddForm && (
-        <AddTestForm
-          patientId={patientId}
-          testType={selectedTestType}
-          onClose={() => {
-            setShowAddForm(false)
-            setSelectedTestType('')
-          }}
-        />
+        <>
+          {selectedTestType === 'lesion_image' ? (
+            <AddLesionImageForm
+              patientId={patientId}
+              onClose={() => {
+                setShowAddForm(false)
+                setSelectedTestType('')
+              }}
+            />
+          ) : (
+            <AddTestForm
+              patientId={patientId}
+              testType={selectedTestType}
+              onClose={() => {
+                setShowAddForm(false)
+                setSelectedTestType('')
+              }}
+            />
+          )}
+        </>
       )}
     </div>
   )
