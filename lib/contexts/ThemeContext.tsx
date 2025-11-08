@@ -52,12 +52,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
   }
 
-  // Hydration'ı önlemek için mount edilene kadar children'ı render etme
-  if (!mounted) {
-    return <>{children}</>
-  }
-
-  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>
+  // Provider'ı her zaman render et, ama içeriği mount edilene kadar gizle
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  )
 }
 
 export function useTheme() {
