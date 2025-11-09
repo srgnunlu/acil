@@ -17,11 +17,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Hasta durum dağılımı
+    // Hasta durum dağılımı (category_id ile)
     const { data: patients } = await supabase
       .from('patients')
-      .select('id, status, admission_date')
+      .select('id, category_id, admission_date, workspace_id')
       .eq('user_id', user.id)
+
+    // Kategorileri al
+    const workspaceIds = [...new Set(patients?.map((p) => p.workspace_id).filter(Boolean) || [])]
+    const { data: categories } = await supabase
+      .from('patient_categories')
+      .select('id, slug')
+      .in('workspace_id', workspaceIds)
+      .in('slug', ['active', 'discharged', 'consultation'])
+      .is('deleted_at', null)
 
     const statusCounts = {
       active: 0,
@@ -30,8 +39,10 @@ export async function GET() {
     }
 
     patients?.forEach((patient) => {
-      if (patient.status in statusCounts) {
-        statusCounts[patient.status as keyof typeof statusCounts]++
+      if (!patient.category_id) return
+      const category = categories?.find((c) => c.id === patient.category_id)
+      if (category && category.slug in statusCounts) {
+        statusCounts[category.slug as keyof typeof statusCounts]++
       }
     })
 
@@ -39,10 +50,7 @@ export async function GET() {
     const { data: tests } = await supabase
       .from('tests')
       .select('test_type, patient_id')
-      .in(
-        'patient_id',
-        patients?.map((p) => p.id) || []
-      )
+      .in('patient_id', patients?.map((p) => p.id) || [])
 
     const testCounts = {
       laboratory: 0,
@@ -62,10 +70,7 @@ export async function GET() {
     const { data: patientData } = await supabase
       .from('patient_data')
       .select('data_type, patient_id')
-      .in(
-        'patient_id',
-        patients?.map((p) => p.id) || []
-      )
+      .in('patient_id', patients?.map((p) => p.id) || [])
 
     const dataCounts = {
       anamnesis: 0,
@@ -127,19 +132,13 @@ export async function GET() {
     const { count: aiAnalysisCount } = await supabase
       .from('ai_analyses')
       .select('*', { count: 'exact', head: true })
-      .in(
-        'patient_id',
-        patients?.map((p) => p.id) || []
-      )
+      .in('patient_id', patients?.map((p) => p.id) || [])
 
     // Chat mesaj sayıları
     const { count: chatMessageCount } = await supabase
       .from('chat_messages')
       .select('*', { count: 'exact', head: true })
-      .in(
-        'patient_id',
-        patients?.map((p) => p.id) || []
-      )
+      .in('patient_id', patients?.map((p) => p.id) || [])
 
     return NextResponse.json({
       statusCounts,
@@ -167,9 +166,6 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Analytics error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch analytics' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 })
   }
 }

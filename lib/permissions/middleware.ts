@@ -257,12 +257,13 @@ export async function requirePermission(
  * Require role middleware - throws if user doesn't have required role
  */
 export async function requireRole(
-  workspaceId: string,
-  requiredRoles: WorkspaceRole[]
+  id: string,
+  requiredRoles: WorkspaceRole[] | string[],
+  type: 'workspace' | 'organization' = 'workspace'
 ): Promise<{
   user: {
     id: string
-    role: WorkspaceRole
+    role: WorkspaceRole | string
     permissions: Permission[]
   }
 }> {
@@ -279,21 +280,46 @@ export async function requireRole(
       throw new Error('Kimlik doğrulama gerekli')
     }
 
-    // Get workspace membership
-    const { data: membership, error: memberError } = await supabase
-      .from('workspace_members')
-      .select('role, permissions')
-      .eq('workspace_id', workspaceId)
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let membership: any = null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let memberError: any = null
+
+    if (type === 'organization') {
+      // Get organization membership
+      const result = await supabase
+        .from('organization_members')
+        .select('role')
+        .eq('organization_id', id)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single()
+
+      membership = result.data
+      memberError = result.error
+    } else {
+      // Get workspace membership
+      const result = await supabase
+        .from('workspace_members')
+        .select('role, permissions')
+        .eq('workspace_id', id)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single()
+
+      membership = result.data
+      memberError = result.error
+    }
 
     if (memberError || !membership) {
-      throw new Error('Workspace üyeliği bulunamadı')
+      throw new Error(
+        type === 'organization' ? 'Organizasyon üyeliği bulunamadı' : 'Workspace üyeliği bulunamadı'
+      )
     }
 
     // Check if user has required role
-    const hasRequiredRole = requiredRoles.includes(membership.role as WorkspaceRole)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hasRequiredRole = requiredRoles.includes(membership.role as any)
 
     if (!hasRequiredRole) {
       throw new Error('Yeterli rol yok')
@@ -304,11 +330,11 @@ export async function requireRole(
     return {
       user: {
         id: user.id,
-        role: membership.role as WorkspaceRole,
-        permissions: [
-          ...(ROLE_PERMISSIONS[membership.role as WorkspaceRole] || []),
-          ...customPermissions,
-        ],
+        role: membership.role as WorkspaceRole | string,
+        permissions:
+          type === 'organization'
+            ? [] // Organization roles don't have permissions
+            : [...(ROLE_PERMISSIONS[membership.role as WorkspaceRole] || []), ...customPermissions],
       },
     }
   } catch (error) {
@@ -328,6 +354,28 @@ export async function requireRole(
  */
 export function forbiddenResponse(message = 'Bu işlem için yetkiniz bulunmamaktadır.') {
   return NextResponse.json({ error: message }, { status: 403 })
+}
+
+/**
+ * Require any of the specified permissions
+ */
+export async function requireAnyPermission(
+  workspaceId: string,
+  requiredPermissions: Permission[]
+): Promise<{
+  user: {
+    id: string
+    role: WorkspaceRole
+    permissions: Permission[]
+  }
+}> {
+  const result = await checkAnyPermission(workspaceId, requiredPermissions)
+
+  if (!result.allowed) {
+    throw new Error(result.error || 'Yeterli izin yok')
+  }
+
+  return { user: result.user! }
 }
 
 /**

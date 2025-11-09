@@ -3,6 +3,7 @@ import { AddPatientButton } from '@/components/patients/AddPatientButton'
 import { PatientListClient } from '@/components/patients/PatientListClient'
 import { Sparkles, TrendingUp, Shield } from 'lucide-react'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 
 export default async function PatientsPage() {
   const supabase = await createClient()
@@ -12,21 +13,30 @@ export default async function PatientsPage() {
 
   if (!user) return null
 
-  // Kullanıcının aktif workspace'ini bul
+  // Cookie'den current workspace ID'yi al (öncelikli)
+  const cookieStore = await cookies()
+  const cookieWorkspaceId = cookieStore.get('currentWorkspaceId')?.value
+
+  // Kullanıcının workspace'lerini al
   const { data: memberships, error: membershipError } = await supabase
     .from('workspace_members')
     .select('workspace_id, workspaces!inner(*)')
     .eq('user_id', user.id)
     .eq('status', 'active')
-    .limit(1)
-    .single()
 
   // Eğer workspace yoksa, setup sayfasına yönlendir
-  if (membershipError || !memberships || !memberships.workspace_id) {
+  if (membershipError || !memberships || memberships.length === 0) {
     redirect('/setup')
   }
 
-  const currentWorkspaceId = memberships.workspace_id
+  const workspaceIds = memberships.map((m) => m.workspace_id)
+
+  // Cookie'den gelen workspace ID'yi kullan, yoksa ilk workspace'i kullan
+  // Ama önce cookie'deki workspace'in kullanıcının üyesi olduğu workspace'lerden biri olduğunu kontrol et
+  const currentWorkspaceId =
+    cookieWorkspaceId && workspaceIds.includes(cookieWorkspaceId)
+      ? cookieWorkspaceId
+      : workspaceIds[0]
 
   // Hastaları workspace_id ile al
   const { data: patients, error: patientsError } = await supabase
@@ -51,8 +61,19 @@ export default async function PatientsPage() {
     console.error('Error fetching workspace:', workspaceError)
   }
 
+  // Active kategorileri bul
+  const { data: activeCategories } = await supabase
+    .from('patient_categories')
+    .select('id')
+    .eq('workspace_id', currentWorkspaceId)
+    .eq('slug', 'active')
+    .is('deleted_at', null)
+
+  const activeCategoryIds = (activeCategories || []).map((c) => c.id)
+  const activePatients =
+    patients?.filter((p) => p.category_id && activeCategoryIds.includes(p.category_id)) || []
+
   const patientLimit = workspace?.settings?.patient_limit || 50
-  const activePatients = patients?.filter((p) => p.status === 'active') || []
   const canAddPatient = activePatients.length < patientLimit
   const usagePercentage = (activePatients.length / patientLimit) * 100
 

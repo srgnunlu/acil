@@ -1,0 +1,34 @@
+{
+  // Terminal encoding ayarları - Türkçe karakter desteği için
+  "terminal.integrated.env.osx": {
+    "LANG": "tr_TR.UTF-8",
+    "LC_ALL": "tr_TR.UTF-8",
+    "LC_CTYPE": "UTF-8"
+  },
+  "terminal.integrated.env.linux": {
+    "LANG": "tr_TR.UTF-8",
+    "LC_ALL": "tr_TR.UTF-8",
+    "LC_CTYPE": "UTF-8"
+  },
+  "terminal.integrated.env.windows": {
+    "LANG": "tr_TR.UTF-8",
+    "LC_ALL": "tr_TR.UTF-8",
+    "LC_CTYPE": "UTF-8"
+  },
+  
+  // Terminal karakter encoding ayarları
+  "terminal.integrated.encoding": "utf8",
+  
+  // Terminal shell ayarları (macOS için csh)
+  "terminal.integrated.defaultProfile.osx": "csh",
+  
+  // Terminal font ayarları (Türkçe karakterleri destekleyen fontlar)
+  "terminal.integrated.fontFamily": "'MesloLGS NF', 'Monaco', 'Menlo', 'Courier New', monospace",
+  
+  // Terminal çıktı ayarları
+  "terminal.integrated.scrollback": 10000,
+  "terminal.integrated.cursorBlinking": true,
+  "terminal.integrated.cursorStyle": "line"
+}
+
+

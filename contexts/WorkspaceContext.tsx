@@ -15,13 +15,16 @@ interface WorkspaceContextType {
   // Organizations
   organizations: Organization[]
   setOrganizations: (orgs: Organization[]) => void
+  currentOrganization: Organization | null
+  setCurrentOrganization: (org: Organization | null) => void
 
   // Loading states
   isLoading: boolean
   setIsLoading: (loading: boolean) => void
 
   // Helper functions
-  switchWorkspace: (workspaceId: string) => void
+  switchWorkspace: (workspaceId: string) => Promise<void>
+  switchOrganization: (organizationId: string) => Promise<void>
   refreshWorkspaces: () => Promise<void>
 }
 
@@ -35,12 +38,42 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceWithDetails | null>(null)
   const [workspaces, setWorkspaces] = useState<WorkspaceWithDetails[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   // Load workspaces on mount
   useEffect(() => {
     loadWorkspaces()
   }, [])
+
+  // Load current organization from localStorage or current workspace
+  useEffect(() => {
+    if (organizations.length > 0 && !currentOrganization) {
+      const savedOrgId = localStorage.getItem('currentOrganizationId')
+
+      if (savedOrgId) {
+        const org = organizations.find((o) => o.id === savedOrgId)
+        if (org) {
+          setCurrentOrganization(org)
+          return
+        }
+      }
+
+      // If we have a current workspace, use its organization
+      if (currentWorkspace?.organization) {
+        const org = organizations.find((o) => o.id === currentWorkspace.organization?.id)
+        if (org) {
+          setCurrentOrganization(org)
+          return
+        }
+      }
+
+      // Default to first organization
+      if (organizations.length > 0) {
+        setCurrentOrganization(organizations[0])
+      }
+    }
+  }, [organizations, currentWorkspace, currentOrganization])
 
   // Load current workspace from localStorage
   useEffect(() => {
@@ -51,45 +84,110 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         const workspace = workspaces.find((w) => w.id === savedWorkspaceId)
         if (workspace) {
           setCurrentWorkspace(workspace)
+          // Update current organization based on workspace
+          if (workspace.organization) {
+            const org = organizations.find((o) => o.id === workspace.organization?.id)
+            if (org) {
+              setCurrentOrganization(org)
+            }
+          }
           return
         }
       }
 
       // Default to first workspace
       setCurrentWorkspace(workspaces[0])
+      // Update current organization based on workspace
+      if (workspaces[0]?.organization) {
+        const org = organizations.find((o) => o.id === workspaces[0].organization?.id)
+        if (org) {
+          setCurrentOrganization(org)
+        }
+      }
     }
-  }, [workspaces, currentWorkspace])
+  }, [workspaces, currentWorkspace, organizations])
 
-  // Save current workspace to localStorage
+  // Save current workspace to localStorage and cookie (for server components)
   useEffect(() => {
     if (currentWorkspace) {
       localStorage.setItem('currentWorkspaceId', currentWorkspace.id)
+      // Cookie set et (server component'ler için)
+      document.cookie = `currentWorkspaceId=${currentWorkspace.id}; path=/; max-age=86400; SameSite=Lax`
     }
   }, [currentWorkspace])
+
+  // Save current organization to localStorage and cookie (for server components)
+  // Organization değiştiğinde workspace'i de güncelle
+  useEffect(() => {
+    if (currentOrganization) {
+      localStorage.setItem('currentOrganizationId', currentOrganization.id)
+      // Cookie set et (server component'ler için)
+      document.cookie = `currentOrganizationId=${currentOrganization.id}; path=/; max-age=86400; SameSite=Lax`
+
+      // Organization'a ait workspaceleri bul
+      const orgWorkspaces = workspaces.filter((w) => w.organization_id === currentOrganization.id)
+
+      // Eğer current workspace bu organization'a ait değilse, ilk workspace'i seç
+      if (orgWorkspaces.length > 0) {
+        const isValidWorkspace =
+          currentWorkspace && orgWorkspaces.find((w) => w.id === currentWorkspace.id)
+
+        if (!isValidWorkspace) {
+          // İlk workspace'i seç
+          const firstWorkspace = orgWorkspaces[0]
+          setCurrentWorkspace(firstWorkspace)
+
+          // Cookie'yi de güncelle
+          try {
+            fetch('/api/workspace/set-current', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ workspaceId: firstWorkspace.id }),
+            }).catch(() => {
+              document.cookie = `currentWorkspaceId=${firstWorkspace.id}; path=/; max-age=86400; SameSite=Lax`
+            })
+          } catch {
+            document.cookie = `currentWorkspaceId=${firstWorkspace.id}; path=/; max-age=86400; SameSite=Lax`
+          }
+        }
+      } else if (currentWorkspace && !orgWorkspaces.find((w) => w.id === currentWorkspace.id)) {
+        // Organization'a ait workspace yoksa, current workspace'i temizle
+        setCurrentWorkspace(null)
+      }
+    }
+  }, [currentOrganization, workspaces, currentWorkspace])
 
   async function loadWorkspaces() {
     try {
       setIsLoading(true)
 
       // Fetch workspaces
-      const workspacesRes = await fetch('/api/workspaces')
+      const workspacesRes = await fetch('/api/workspaces', { cache: 'no-store' })
       if (!workspacesRes.ok) {
-        // Sessizce boş array set et
+        console.warn('[WorkspaceContext] Failed to fetch workspaces:', workspacesRes.status)
         setWorkspaces([])
       } else {
         const workspacesData = await workspacesRes.json()
         setWorkspaces(workspacesData.workspaces || [])
       }
 
-      // Fetch organizations
-      const orgsRes = await fetch('/api/organizations')
+      // Fetch organizations (with cache busting to get fresh data)
+      const orgsRes = await fetch('/api/organizations', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (!orgsRes.ok) {
+        console.warn('[WorkspaceContext] Failed to fetch organizations:', orgsRes.status)
         setOrganizations([])
       } else {
         const orgsData = await orgsRes.json()
+        console.log('[WorkspaceContext] Loaded organizations:', orgsData.organizations?.length || 0)
         setOrganizations(orgsData.organizations || [])
       }
-    } catch {
+    } catch (error) {
+      console.error('[WorkspaceContext] Error loading workspaces/organizations:', error)
       // Sessizce boş array'ler set et
       setWorkspaces([])
       setOrganizations([])
@@ -102,10 +200,82 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     await loadWorkspaces()
   }
 
-  function switchWorkspace(workspaceId: string) {
+  async function switchWorkspace(workspaceId: string) {
     const workspace = workspaces.find((w) => w.id === workspaceId)
     if (workspace) {
+      // Cookie'yi server-side set et (daha güvenilir)
+      try {
+        await fetch('/api/workspace/set-current', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workspaceId: workspace.id }),
+        })
+      } catch (error) {
+        console.warn(
+          '[WorkspaceContext] Failed to set workspace cookie via API, using client-side:',
+          error
+        )
+        // Fallback: client-side cookie set
+        document.cookie = `currentWorkspaceId=${workspace.id}; path=/; max-age=86400; SameSite=Lax`
+      }
+
       setCurrentWorkspace(workspace)
+
+      // Update current organization based on workspace
+      if (workspace.organization) {
+        const org = organizations.find((o) => o.id === workspace.organization?.id)
+        if (org) {
+          // Organization cookie'sini de set et
+          try {
+            await fetch('/api/workspace/set-current', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ organizationId: org.id }),
+            })
+          } catch {
+            document.cookie = `currentOrganizationId=${org.id}; path=/; max-age=86400; SameSite=Lax`
+          }
+          setCurrentOrganization(org)
+        }
+      }
+    }
+  }
+
+  async function switchOrganization(organizationId: string) {
+    const org = organizations.find((o) => o.id === organizationId)
+    if (org) {
+      // Organization cookie'sini server-side set et
+      try {
+        await fetch('/api/workspace/set-current', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ organizationId: org.id }),
+        })
+      } catch (error) {
+        console.warn(
+          '[WorkspaceContext] Failed to set organization cookie via API, using client-side:',
+          error
+        )
+        document.cookie = `currentOrganizationId=${org.id}; path=/; max-age=86400; SameSite=Lax`
+      }
+
+      setCurrentOrganization(org)
+
+      // Switch to first workspace in this organization
+      const orgWorkspaces = workspaces.filter((w) => w.organization?.id === organizationId)
+      if (orgWorkspaces.length > 0) {
+        // Workspace cookie'sini de set et
+        try {
+          await fetch('/api/workspace/set-current', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workspaceId: orgWorkspaces[0].id }),
+          })
+        } catch {
+          document.cookie = `currentWorkspaceId=${orgWorkspaces[0].id}; path=/; max-age=86400; SameSite=Lax`
+        }
+        setCurrentWorkspace(orgWorkspaces[0])
+      }
     }
   }
 
@@ -116,9 +286,12 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     setWorkspaces,
     organizations,
     setOrganizations,
+    currentOrganization,
+    setCurrentOrganization,
     isLoading,
     setIsLoading,
     switchWorkspace,
+    switchOrganization,
     refreshWorkspaces,
   }
 

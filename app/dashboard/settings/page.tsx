@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { Building2, Briefcase } from 'lucide-react'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -119,6 +121,44 @@ export default async function SettingsPage() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Organization & Workspace Management */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Organizasyon ve Workspace Yönetimi
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link
+            href="/dashboard/organizations"
+            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+              <Building2 className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-gray-900 group-hover:text-blue-600">
+                Organizasyonlar
+              </h3>
+              <p className="text-sm text-gray-600">Organizasyonlarınızı yönetin</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/dashboard/workspace/settings"
+            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+              <Briefcase className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-gray-900 group-hover:text-indigo-600">
+                Workspace Ayarları
+              </h3>
+              <p className="text-sm text-gray-600">Workspace üyeleri ve davetler</p>
+            </div>
+          </Link>
         </div>
       </div>
 

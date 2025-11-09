@@ -19,20 +19,43 @@ export default async function PatientDetailPage({ params }: PageProps) {
 
   if (!user) return null
 
-  // Kullanıcının aktif workspace'ini bul
-  const { data: membership, error: membershipError } = await supabase
-    .from('workspace_members')
+  // Kullanıcının aktif workspace'ini bul (WorkspaceContext'ten almak yerine direkt sorgu)
+  // Önce hastanın workspace'ini bul, sonra kullanıcının o workspace'te üye olup olmadığını kontrol et
+  const { data: patientCheck, error: patientCheckError } = await supabase
+    .from('patients')
     .select('workspace_id')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .limit(1)
+    .eq('id', id)
+    .is('deleted_at', null)
     .single()
 
-  if (membershipError || !membership) {
+  if (patientCheckError || !patientCheck) {
+    console.error('[PatientDetailPage] Error checking patient:', {
+      code: patientCheckError?.code,
+      message: patientCheckError?.message,
+      details: patientCheckError?.details,
+    })
     notFound()
   }
 
-  // Hastayı al (workspace kontrolü ile)
+  // Kullanıcının bu workspace'te üye olup olmadığını kontrol et
+  const { data: membership, error: membershipError } = await supabase
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('workspace_id', patientCheck.workspace_id)
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .single()
+
+  if (membershipError || !membership) {
+    console.error('[PatientDetailPage] User is not a member of patient workspace:', {
+      workspaceId: patientCheck.workspace_id,
+      userId: user.id,
+      error: membershipError,
+    })
+    notFound()
+  }
+
+  // Hastayı al (category join'i olmadan önce deneyelim)
   const { data: patient, error } = await supabase
     .from('patients')
     .select('*')
@@ -42,9 +65,43 @@ export default async function PatientDetailPage({ params }: PageProps) {
     .single()
 
   if (error || !patient) {
-    console.error('Error fetching patient:', error)
+    console.error('[PatientDetailPage] Error fetching patient:', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      patientId: id,
+      workspaceId: membership.workspace_id,
+    })
     notFound()
   }
+
+  // Category bilgisini ayrı bir query ile çek (RLS policy sorunlarını önlemek için)
+  let category = null
+  if (patient.category_id) {
+    try {
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('patient_categories')
+        .select('slug, name, color')
+        .eq('id', patient.category_id)
+        .eq('workspace_id', membership.workspace_id)
+        .single()
+
+      if (!categoryError && categoryData) {
+        category = categoryData
+      } else if (categoryError) {
+        console.warn(
+          '[PatientDetailPage] Category fetch error (non-critical):',
+          categoryError.message
+        )
+      }
+    } catch (categoryErr) {
+      console.warn('[PatientDetailPage] Category fetch exception (non-critical):', categoryErr)
+    }
+  }
+
+  // Category slug'ını al
+  const categorySlug = (category as { slug?: string })?.slug || 'active'
 
   // Hasta verilerini al
   const { data: patientData } = await supabase
@@ -67,7 +124,7 @@ export default async function PatientDetailPage({ params }: PageProps) {
     .eq('patient_id', id)
     .order('created_at', { ascending: false })
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (slug: string) => {
     const badges = {
       active: 'bg-green-100 text-green-800',
       discharged: 'bg-gray-100 text-gray-800',
@@ -81,10 +138,10 @@ export default async function PatientDetailPage({ params }: PageProps) {
     return (
       <span
         className={`px-3 py-1 rounded-full text-xs font-medium ${
-          badges[status as keyof typeof badges]
+          badges[slug as keyof typeof badges] || badges.active
         }`}
       >
-        {labels[status as keyof typeof labels]}
+        {labels[slug as keyof typeof labels] || slug}
       </span>
     )
   }
@@ -142,7 +199,7 @@ export default async function PatientDetailPage({ params }: PageProps) {
                 {getInitials(patient.name)}
               </div>
               {/* Live Status Indicator */}
-              {patient.status === 'active' && (
+              {categorySlug === 'active' && (
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white animate-pulse"></div>
               )}
             </div>
@@ -151,7 +208,7 @@ export default async function PatientDetailPage({ params }: PageProps) {
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
                 <h1 className="text-3xl font-bold text-gray-900">{patient.name}</h1>
-                {getStatusBadge(patient.status)}
+                {getStatusBadge(categorySlug)}
               </div>
 
               {/* Quick Info Grid */}

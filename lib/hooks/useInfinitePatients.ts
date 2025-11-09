@@ -12,7 +12,7 @@ interface PatientsResponse {
 interface FetchPatientsParams {
   page: number
   limit?: number
-  status?: string
+  category_id?: string
   search?: string
 }
 
@@ -20,6 +20,7 @@ interface FetchPatientsParams {
  * Infinite scroll için hasta listesi hook'u
  */
 export function useInfinitePatients(params: Omit<FetchPatientsParams, 'page'> = {}) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const queryClient = useQueryClient()
 
   return useInfiniteQuery<PatientsResponse, Error>({
@@ -41,8 +42,8 @@ export function useInfinitePatients(params: Omit<FetchPatientsParams, 'page'> = 
 async function fetchPatients({
   page,
   limit = 20,
-  status,
-  search
+  category_id,
+  search,
 }: FetchPatientsParams): Promise<PatientsResponse> {
   const supabase = createClient()
   const offset = page * limit
@@ -54,14 +55,14 @@ async function fetchPatients({
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
-  // Status filtresi
-  if (status && status !== 'all') {
-    query = query.eq('status', status)
+  // Category filtresi
+  if (category_id) {
+    query = query.eq('category_id', category_id)
   }
 
   // Arama filtresi
   if (search) {
-    query = query.or(`name.ilike.%${search}%,notes.ilike.%${search}%`)
+    query = query.or(`name.ilike.%${search}%`)
   }
 
   const { data: patients, error, count } = await query
@@ -116,6 +117,7 @@ export function usePatientOptimisticUpdates() {
   const addPatient = (newPatient: Patient) => {
     queryClient.setQueryData(
       [...queryKeys.patients.infinite(), {}],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (oldData: any) => {
         if (!oldData) return oldData
 
@@ -136,11 +138,13 @@ export function usePatientOptimisticUpdates() {
   const updatePatient = (patientId: string, updates: Partial<Patient>) => {
     queryClient.setQueriesData(
       { queryKey: queryKeys.patients.infinite() },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (oldData: any) => {
         if (!oldData) return oldData
 
         return {
           ...oldData,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           pages: oldData.pages.map((page: any) => ({
             ...page,
             patients: page.patients.map((patient: Patient) =>
@@ -155,11 +159,13 @@ export function usePatientOptimisticUpdates() {
   const removePatient = (patientId: string) => {
     queryClient.setQueriesData(
       { queryKey: queryKeys.patients.infinite() },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (oldData: any) => {
         if (!oldData) return oldData
 
         return {
           ...oldData,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           pages: oldData.pages.map((page: any) => ({
             ...page,
             patients: page.patients.filter((patient: Patient) => patient.id !== patientId),

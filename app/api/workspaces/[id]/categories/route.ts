@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CreateCategoryInput, UpdateCategoryInput } from '@/types'
+import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/permissions/middleware'
 
 // GET /api/workspaces/[id]/categories - Get patient categories
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,18 +19,63 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check workspace access
-    const { data: access } = await supabase
-      .from('workspace_members')
-      .select('id')
-      .eq('workspace_id', id)
-      .eq('user_id', user.id)
-      .eq('status', 'active')
+    console.log('[GET /api/workspaces/[id]/categories] Fetching categories:', {
+      workspaceId: id,
+      userId: user.id,
+    })
+
+    // Check workspace access - organization membership veya workspace membership
+    // Önce workspace'in organization_id'sini al
+    const { data: workspace, error: workspaceError } = await supabase
+      .from('workspaces')
+      .select('organization_id')
+      .eq('id', id)
       .single()
 
-    if (!access) {
+    if (workspaceError || !workspace) {
+      console.error('[GET /api/workspaces/[id]/categories] Workspace not found')
+      return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
+    }
+
+    // Organization membership kontrolü
+    let hasAccess = false
+    if (workspace.organization_id) {
+      const { data: orgMember } = await supabase
+        .from('organization_members')
+        .select('id')
+        .eq('organization_id', workspace.organization_id)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single()
+
+      if (orgMember) {
+        hasAccess = true
+        console.log('[GET /api/workspaces/[id]/categories] Access via organization membership')
+      }
+    }
+
+    // Workspace membership kontrolü (eğer organization membership yoksa)
+    if (!hasAccess) {
+      const { data: workspaceMember } = await supabase
+        .from('workspace_members')
+        .select('id')
+        .eq('workspace_id', id)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single()
+
+      if (workspaceMember) {
+        hasAccess = true
+        console.log('[GET /api/workspaces/[id]/categories] Access via workspace membership')
+      }
+    }
+
+    if (!hasAccess) {
+      console.warn('[GET /api/workspaces/[id]/categories] No workspace access found')
       return NextResponse.json({ error: 'Forbidden - Workspace access required' }, { status: 403 })
     }
+
+    console.log('[GET /api/workspaces/[id]/categories] Access confirmed, fetching categories')
 
     // Get all categories
     const { data: categories, error } = await supabase
@@ -40,9 +86,33 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .order('sort_order', { ascending: true })
 
     if (error) {
-      console.error('Error fetching categories:', error)
-      return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 })
+      console.error('[GET /api/workspaces/[id]/categories] Error fetching categories:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      })
+
+      // RLS policy hatası olabilir
+      if (error.code === '42501' || error.message?.includes('policy')) {
+        console.error(
+          '[GET /api/workspaces/[id]/categories] RLS policy error for patient_categories'
+        )
+      }
+
+      return NextResponse.json(
+        {
+          error: 'Failed to fetch categories',
+          details: error.message,
+        },
+        { status: 500 }
+      )
     }
+
+    console.log(
+      '[GET /api/workspaces/[id]/categories] Categories fetched:',
+      categories?.length || 0
+    )
 
     // Get patient count for each category
     const categoriesWithCounts = await Promise.all(
@@ -80,21 +150,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
-    // Check if user has permission (admin or senior_doctor)
-    const { data: membership } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', id)
-      .eq('user_id', user.id)
-      .in('role', ['owner', 'admin', 'senior_doctor'])
-      .eq('status', 'active')
-      .single()
-
-    if (!membership) {
-      return NextResponse.json({ error: 'Forbidden - Admin or senior doctor access required' }, { status: 403 })
+    // Check if user has permission using middleware
+    try {
+      await requireRole(id, ['owner', 'admin', 'senior_doctor'])
+    } catch (error) {
+      return forbiddenResponse(
+        error instanceof Error
+          ? error.message
+          : 'Bu işlem için admin veya senior doctor yetkisi gerekli'
+      )
     }
 
     const body = (await request.json()) as CreateCategoryInput
@@ -146,7 +213,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (createError) {
       console.error('Error creating category:', createError)
       if (createError.code === '23505') {
-        return NextResponse.json({ error: 'Category slug already exists in this workspace' }, { status: 409 })
+        return NextResponse.json(
+          { error: 'Category slug already exists in this workspace' },
+          { status: 409 }
+        )
       }
       return NextResponse.json({ error: 'Failed to create category' }, { status: 500 })
     }
@@ -166,7 +236,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const categoryId = searchParams.get('category_id')
 
     if (!categoryId) {
-      return NextResponse.json({ error: 'category_id query parameter is required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'category_id query parameter is required' },
+        { status: 400 }
+      )
     }
 
     const supabase = await createClient()
@@ -178,21 +251,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
-    // Check if user has permission
-    const { data: membership } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', id)
-      .eq('user_id', user.id)
-      .in('role', ['owner', 'admin', 'senior_doctor'])
-      .eq('status', 'active')
-      .single()
-
-    if (!membership) {
-      return NextResponse.json({ error: 'Forbidden - Admin or senior doctor access required' }, { status: 403 })
+    // Check if user has permission using middleware
+    try {
+      await requireRole(id, ['owner', 'admin', 'senior_doctor'])
+    } catch (error) {
+      return forbiddenResponse(
+        error instanceof Error
+          ? error.message
+          : 'Bu işlem için admin veya senior doctor yetkisi gerekli'
+      )
     }
 
     // Check if category is system category
@@ -211,7 +281,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // If setting as default, unset other defaults
     if (body.is_default) {
-      await supabase.from('patient_categories').update({ is_default: false }).eq('workspace_id', id).is('deleted_at', null)
+      await supabase
+        .from('patient_categories')
+        .update({ is_default: false })
+        .eq('workspace_id', id)
+        .is('deleted_at', null)
     }
 
     // Build update object
@@ -246,14 +320,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 // DELETE /api/workspaces/[id]/categories - Soft delete category (by query param ?category_id=xxx)
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params
     const { searchParams } = new URL(request.url)
     const categoryId = searchParams.get('category_id')
 
     if (!categoryId) {
-      return NextResponse.json({ error: 'category_id query parameter is required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'category_id query parameter is required' },
+        { status: 400 }
+      )
     }
 
     const supabase = await createClient()
@@ -265,21 +345,18 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
-    // Check if user has permission
-    const { data: membership } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', id)
-      .eq('user_id', user.id)
-      .in('role', ['owner', 'admin', 'senior_doctor'])
-      .eq('status', 'active')
-      .single()
-
-    if (!membership) {
-      return NextResponse.json({ error: 'Forbidden - Admin or senior doctor access required' }, { status: 403 })
+    // Check if user has permission using middleware
+    try {
+      await requireRole(id, ['owner', 'admin', 'senior_doctor'])
+    } catch (error) {
+      return forbiddenResponse(
+        error instanceof Error
+          ? error.message
+          : 'Bu işlem için admin veya senior doctor yetkisi gerekli'
+      )
     }
 
     // Check if category is system category

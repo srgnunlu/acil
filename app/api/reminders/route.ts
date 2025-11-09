@@ -13,37 +13,49 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Kullanıcının bildirimlerini al
+    // Kullanıcının bildirimlerini al (RLS döngüsünü önlemek için JOIN yapmıyoruz)
     const { data: reminders, error } = await supabase
       .from('reminders')
-      .select(`
-        *,
-        patients (
-          id,
-          name
-        )
-      `)
+      .select('*')
       .eq('user_id', user.id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'sent'])
       .order('scheduled_time', { ascending: true })
 
     if (error) throw error
 
+    // Patient bilgilerini ayrı olarak al (RLS döngüsü önlemek için)
+    let enrichedReminders = reminders || []
+    if (enrichedReminders.length > 0) {
+      const patientIds = [...new Set(enrichedReminders.map((r) => r.patient_id).filter(Boolean))]
+
+      if (patientIds.length > 0) {
+        const { data: patients } = await supabase
+          .from('patients')
+          .select('id, name')
+          .in('id', patientIds)
+
+        // Reminder'lara patient bilgilerini ekle
+        enrichedReminders = enrichedReminders.map((reminder) => ({
+          ...reminder,
+          patients: patients?.find((p) => p.id === reminder.patient_id) || null,
+        }))
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      reminders: reminders || [],
+      reminders: enrichedReminders,
     })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Get reminders error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Bildirimler alınamadı' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || 'Bildirimler alınamadı' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { patientId, reminderType, scheduledTime, message } = await request.json()
 
     if (!patientId || !reminderType || !scheduledTime) {
@@ -63,16 +75,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Hastanın kullanıcıya ait olduğunu kontrol et
+    // Hastanın kullanıcının workspace'inde olduğunu kontrol et
     const { data: patient } = await supabase
       .from('patients')
-      .select('id')
+      .select('id, workspace_id')
       .eq('id', patientId)
-      .eq('user_id', user.id)
       .single()
 
     if (!patient) {
       return NextResponse.json({ error: 'Hasta bulunamadı' }, { status: 404 })
+    }
+
+    // Kullanıcının bu workspace'te üye olduğunu kontrol et
+    const { data: membership } = await supabase
+      .from('workspace_members')
+      .select('id')
+      .eq('workspace_id', patient.workspace_id)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single()
+
+    if (!membership) {
+      return NextResponse.json({ error: "Bu workspace'e erişim yetkiniz yok" }, { status: 403 })
     }
 
     // Hatırlatma oluştur
@@ -94,6 +118,7 @@ export async function POST(request: Request) {
       success: true,
       reminder,
     })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Create reminder error:', error)
     return NextResponse.json(
@@ -108,10 +133,7 @@ export async function PATCH(request: Request) {
     const { reminderId, status } = await request.json()
 
     if (!reminderId || !status) {
-      return NextResponse.json(
-        { error: 'Reminder ID ve status gerekli' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Reminder ID ve status gerekli' }, { status: 400 })
     }
 
     const supabase = await createClient()
@@ -139,6 +161,7 @@ export async function PATCH(request: Request) {
       success: true,
       reminder,
     })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Update reminder error:', error)
     return NextResponse.json(

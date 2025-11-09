@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { format, subDays } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -14,11 +15,9 @@ import {
   Brain,
   Calendar,
   Clock,
-  AlertCircle,
   Plus,
   BarChart3,
   BookOpen,
-  Info
 } from 'lucide-react'
 
 export default async function DashboardHome() {
@@ -31,60 +30,125 @@ export default async function DashboardHome() {
     redirect('/login')
   }
 
-  // Hastaları al
+  // Cookie'den current workspace ID ve organization ID'yi al
+  const cookieStore = await cookies()
+  const currentWorkspaceId = cookieStore.get('currentWorkspaceId')?.value
+  const currentOrganizationId = cookieStore.get('currentOrganizationId')?.value
+
+  // Kullanıcının workspace membership'lerini al
+  const { data: memberships } = await supabase
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+
+  const workspaceMemberIds = (memberships || []).map((m) => m.workspace_id)
+
+  // Organization membership'lerini al
+  let organizationWorkspaceIds: string[] = []
+  if (currentOrganizationId) {
+    const { data: orgWorkspaces } = await supabase
+      .from('workspaces')
+      .select('id')
+      .eq('organization_id', currentOrganizationId)
+      .is('deleted_at', null)
+
+    organizationWorkspaceIds = (orgWorkspaces || []).map((w) => w.id)
+  }
+
+  // Tüm erişilebilir workspace ID'lerini birleştir (workspace membership + organization membership)
+  const allAccessibleWorkspaceIds = [
+    ...new Set([...workspaceMemberIds, ...organizationWorkspaceIds]),
+  ]
+
+  // Eğer current workspace ID varsa ve kullanıcının erişimi varsa, sadece o workspace'i kullan
+  const targetWorkspaceIds =
+    currentWorkspaceId && allAccessibleWorkspaceIds.includes(currentWorkspaceId)
+      ? [currentWorkspaceId]
+      : allAccessibleWorkspaceIds.length > 0
+        ? allAccessibleWorkspaceIds
+        : ['00000000-0000-0000-0000-000000000000']
+
+  // Hastaları al (workspace-based - sadece current workspace'teki hastalar)
   const { data: patients } = await supabase
     .from('patients')
-    .select('*')
-    .eq('user_id', user.id)
+    .select('*, category:patient_categories(slug)')
+    .in('workspace_id', targetWorkspaceIds)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
-  const activePatients = patients?.filter((p) => p.status === 'active') || []
+  // Active kategorileri bul (sadece current workspace için)
+  const { data: activeCategories } = await supabase
+    .from('patient_categories')
+    .select('id')
+    .in('workspace_id', targetWorkspaceIds)
+    .eq('slug', 'active')
+    .is('deleted_at', null)
+
+  const activeCategoryIds = (activeCategories || []).map((c) => c.id)
+  const activePatients =
+    patients?.filter((p) => p.category_id && activeCategoryIds.includes(p.category_id)) || []
   const recentPatients = patients?.slice(0, 5) || []
 
   // Bugünkü hastalar (son 24 saat)
   const yesterday = subDays(new Date(), 1).toISOString()
-  const todayPatients = patients?.filter(
-    (p) => new Date(p.created_at) > new Date(yesterday)
-  ) || []
+  const todayPatients = patients?.filter((p) => new Date(p.created_at) > new Date(yesterday)) || []
 
-  // Hatırlatmaları al
-  const { data: reminders } = await supabase
-    .from('reminders')
-    .select('*, patients(name)')
-    .eq('user_id', user.id)
-    .in('status', ['pending', 'sent'])
-    .order('scheduled_time', { ascending: true })
-    .limit(5)
+  // Patient ID'lerini al (workspace'e göre filtrelenmiş)
+  const patientIds = patients?.map((p) => p.id) || []
 
-  // AI analiz sayısı
+  // Hatırlatmaları al (sadece current workspace'teki hastalar için)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let enrichedReminders: any[] = []
+  if (patientIds.length > 0) {
+    const { data: reminders } = await supabase
+      .from('reminders')
+      .select('*')
+      .eq('user_id', user.id)
+      .in('patient_id', patientIds)
+      .in('status', ['pending', 'sent'])
+      .order('scheduled_time', { ascending: true })
+      .limit(5)
+
+    // Patient bilgilerini ayrı olarak al (RLS döngüsü önlemek için)
+    if (reminders && reminders.length > 0) {
+      const reminderPatientIds = [...new Set(reminders.map((r) => r.patient_id).filter(Boolean))]
+
+      if (reminderPatientIds.length > 0) {
+        const { data: reminderPatients } = await supabase
+          .from('patients')
+          .select('id, name')
+          .in('id', reminderPatientIds)
+
+        // Reminder'lara patient bilgilerini ekle
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        enrichedReminders = reminders.map((reminder: any) => ({
+          ...reminder,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          patients: reminderPatients?.find((p: any) => p.id === reminder.patient_id) || null,
+        }))
+      }
+    }
+  }
+
+  // AI analiz sayısı (sadece current workspace'teki hastalar için)
   const { count: aiAnalysisCount } = await supabase
     .from('ai_analyses')
     .select('*', { count: 'exact', head: true })
-    .in(
-      'patient_id',
-      patients?.map((p) => p.id) || []
-    )
+    .in('patient_id', patientIds)
 
-  // Test sayısı
+  // Test sayısı (sadece current workspace'teki hastalar için)
   const { count: testCount } = await supabase
     .from('tests')
     .select('*', { count: 'exact', head: true })
-    .in(
-      'patient_id',
-      patients?.map((p) => p.id) || []
-    )
-
+    .in('patient_id', patientIds)
 
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-8 text-white">
-        <h1 className="text-3xl font-bold mb-2">
-          Hoş geldiniz, Dr. 👋
-        </h1>
-        <p className="text-blue-100">
-          Bugün {todayPatients.length} yeni hasta kaydı yapıldı
-        </p>
+        <h1 className="text-3xl font-bold mb-2">Hoş geldiniz, Dr. 👋</h1>
+        <p className="text-blue-100">Bugün {todayPatients.length} yeni hasta kaydı yapıldı</p>
       </div>
 
       {/* Quick Stats Grid */}
@@ -124,7 +188,7 @@ export default async function DashboardHome() {
             <p className="text-3xl font-bold text-purple-600">{aiAnalysisCount || 0}</p>
             <p className="text-sm text-gray-500 mt-1">
               {patients?.length && patients.length > 0
-                ? `${((aiAnalysisCount || 0) / patients.length * 100).toFixed(0)}% kullanım`
+                ? `${(((aiAnalysisCount || 0) / patients.length) * 100).toFixed(0)}% kullanım`
                 : 'Henüz analiz yok'}
             </p>
           </Link>
@@ -143,17 +207,20 @@ export default async function DashboardHome() {
       {/* Two Column Layout */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Recent Patients */}
-        <Card variant="default" header={
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Son Hastalar</h2>
-            <Link
-              href="/dashboard/patients"
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Tümünü Gör →
-            </Link>
-          </div>
-        }>
+        <Card
+          variant="default"
+          header={
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Son Hastalar</h2>
+              <Link
+                href="/dashboard/patients"
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Tümünü Gör →
+              </Link>
+            </div>
+          }
+        >
           {recentPatients.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -172,7 +239,9 @@ export default async function DashboardHome() {
                         <Users className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">{patient.name}</p>
+                        <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                          {patient.name}
+                        </p>
                         <p className="text-sm text-gray-600">
                           {patient.age && `${patient.age} yaş`}
                           {patient.gender && ` • ${patient.gender}`}
@@ -180,7 +249,11 @@ export default async function DashboardHome() {
                       </div>
                     </div>
                   </Link>
-                  <PatientStatusBadge status={patient.status as any} compact />
+                  <PatientStatusBadge
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    status={((patient.category as { slug?: string })?.slug as any) || 'active'}
+                    compact
+                  />
                 </div>
               ))}
             </div>
@@ -188,20 +261,27 @@ export default async function DashboardHome() {
         </Card>
 
         {/* Upcoming Reminders */}
-        <Card variant="default" header={
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Yaklaşan Hatırlatmalar</h2>
-            <ActivityBadge isActive={!!(reminders && reminders.length > 0)} label="Aktif Hatırlatmalar" />
-          </div>
-        }>
-          {!reminders || reminders.length === 0 ? (
+        <Card
+          variant="default"
+          header={
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Yaklaşan Hatırlatmalar</h2>
+              <ActivityBadge
+                isActive={!!(enrichedReminders && enrichedReminders.length > 0)}
+                label="Aktif Hatırlatmalar"
+              />
+            </div>
+          }
+        >
+          {!enrichedReminders || enrichedReminders.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <p>Henüz hatırlatma yok</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {reminders.map((reminder: any) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {enrichedReminders.map((reminder: any) => (
                 <div
                   key={reminder.id}
                   className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border-l-4 border-l-blue-400"
@@ -222,11 +302,9 @@ export default async function DashboardHome() {
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Calendar className="h-3 w-3" />
                       <span>
-                        {format(
-                          new Date(reminder.scheduled_time),
-                          'dd MMM yyyy, HH:mm',
-                          { locale: tr }
-                        )}
+                        {format(new Date(reminder.scheduled_time), 'dd MMM yyyy, HH:mm', {
+                          locale: tr,
+                        })}
                       </span>
                     </div>
                   </div>
@@ -241,57 +319,54 @@ export default async function DashboardHome() {
       <WorkspaceCategoryPanel />
 
       {/* Quick Actions */}
-      <Card variant="default" header={
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">Hızlı İşlemler</h2>
-          <Button variant="ghost" size="sm" rightIcon={<BarChart3 className="h-4 w-4" />}>
-            Tümünü Gör
-          </Button>
-        </div>
-      }>
+      <Card
+        variant="default"
+        header={
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">Hızlı İşlemler</h2>
+            <Button variant="ghost" size="sm" rightIcon={<BarChart3 className="h-4 w-4" />}>
+              Tümünü Gör
+            </Button>
+          </div>
+        }
+      >
         <div className="grid md:grid-cols-3 gap-4">
           <Link href="/dashboard/patients">
-            <Button 
-              variant="outline" 
-              size="lg" 
+            <Button
+              variant="outline"
+              size="lg"
               leftIcon={<Plus className="h-5 w-5" />}
               className="h-full flex-col items-center justify-center text-center group hover:border-blue-500 hover:bg-blue-50 w-full"
             >
               <div className="text-2xl mb-2 group-hover:scale-110 transition">➕</div>
               <p className="font-medium text-gray-900">Yeni Hasta Ekle</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Hasta kaydı oluştur ve takibe başla
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Hasta kaydı oluştur ve takibe başla</p>
             </Button>
           </Link>
 
           <Link href="/dashboard/statistics">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
               leftIcon={<BarChart3 className="h-5 w-5" />}
               className="h-full flex-col items-center justify-center text-center group hover:border-green-500 hover:bg-green-50 w-full"
             >
               <div className="text-2xl mb-2 group-hover:scale-110 transition">📈</div>
               <p className="font-medium text-gray-900">İstatistikleri Görüntüle</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Grafikler ve detaylı analizler
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Grafikler ve detaylı analizler</p>
             </Button>
           </Link>
 
           <Link href="/dashboard/guidelines">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
               leftIcon={<BookOpen className="h-5 w-5" />}
               className="h-full flex-col items-center justify-center text-center group hover:border-purple-500 hover:bg-purple-50 w-full"
             >
               <div className="text-2xl mb-2 group-hover:scale-110 transition">📚</div>
               <p className="font-medium text-gray-900">Rehberlere Bak</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Acil tıp protokolleri ve kılavuzlar
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Acil tıp protokolleri ve kılavuzlar</p>
             </Button>
           </Link>
         </div>
@@ -314,13 +389,11 @@ export default async function DashboardHome() {
             />
           </svg>
           <div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">
-              AI Destekli Hasta Takibi
-            </h4>
+            <h4 className="text-lg font-semibold text-gray-900 mb-2">AI Destekli Hasta Takibi</h4>
             <p className="text-gray-700 leading-relaxed">
-              ACIL sistemi, hasta verilerinizi analiz ederek ayırıcı tanı önerileri,
-              test tavsiyeleri ve tedavi algoritmaları sunar. Her hasta için detaylı
-              AI analizleri ve görsel değerlendirmeler yapabilirsiniz.
+              ACIL sistemi, hasta verilerinizi analiz ederek ayırıcı tanı önerileri, test
+              tavsiyeleri ve tedavi algoritmaları sunar. Her hasta için detaylı AI analizleri ve
+              görsel değerlendirmeler yapabilirsiniz.
             </p>
           </div>
         </div>

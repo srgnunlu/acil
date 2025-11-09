@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { UpdateWorkspaceInput } from '@/types'
+import { requireRole, forbiddenResponse } from '@/lib/permissions/middleware'
 
 // GET /api/workspaces/[id] - Get workspace by ID with details
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -103,18 +104,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user has admin access
-    const { data: membership } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', id)
-      .eq('user_id', user.id)
-      .in('role', ['owner', 'admin'])
-      .eq('status', 'active')
-      .single()
-
-    if (!membership) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+    // Check if user has admin access using middleware
+    try {
+      await requireRole(id, ['owner', 'admin'])
+    } catch (error) {
+      return forbiddenResponse(
+        error instanceof Error ? error.message : 'Bu işlem için admin yetkisi gerekli'
+      )
     }
 
     const body = (await request.json()) as UpdateWorkspaceInput
@@ -150,7 +146,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 // DELETE /api/workspaces/[id] - Soft delete workspace
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params
     const supabase = await createClient()
@@ -165,18 +164,13 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is owner
-    const { data: membership } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', id)
-      .eq('user_id', user.id)
-      .eq('role', 'owner')
-      .eq('status', 'active')
-      .single()
-
-    if (!membership) {
-      return NextResponse.json({ error: 'Forbidden - Owner access required' }, { status: 403 })
+    // Check if user is owner using middleware
+    try {
+      await requireRole(id, ['owner'])
+    } catch (error) {
+      return forbiddenResponse(
+        error instanceof Error ? error.message : 'Bu işlem için owner yetkisi gerekli'
+      )
     }
 
     // Soft delete workspace

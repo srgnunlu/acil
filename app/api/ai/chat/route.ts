@@ -38,12 +38,23 @@ export async function POST(request: Request) {
 
     const { patientId, message, sessionId } = validation.data
 
-    // Hastanın kullanıcıya ait olduğunu kontrol et
+    // Workspace erişim kontrolü
+    const { requirePatientWorkspaceAccess } = await import('@/lib/permissions/workspace-helpers')
+    const accessResult = await requirePatientWorkspaceAccess(supabase, user.id, patientId)
+    if (!accessResult.hasAccess) {
+      return NextResponse.json(
+        { error: accessResult.error || 'Hasta bulunamadı veya erişim yetkiniz yok' },
+        { status: 404 }
+      )
+    }
+
+    // Hastayı al (workspace kontrolü ile)
     const { data: patient, error: patientError } = await supabase
       .from('patients')
       .select('*')
       .eq('id', patientId)
-      .eq('user_id', user.id)
+      .eq('workspace_id', accessResult.workspaceId!)
+      .is('deleted_at', null)
       .single()
 
     if (patientError || !patient) {

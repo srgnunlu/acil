@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { requirePatientWorkspaceAccess } from '@/lib/permissions/workspace-helpers'
 
 interface Params {
   id: string
@@ -18,12 +19,22 @@ export async function GET(request: Request, context: { params: Promise<Params> }
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Hasta bilgilerini al
+    // Workspace erişim kontrolü
+    const accessResult = await requirePatientWorkspaceAccess(supabase, user.id, id)
+    if (!accessResult.hasAccess) {
+      return NextResponse.json(
+        { error: accessResult.error || 'Hasta bulunamadı veya erişim yetkiniz yok' },
+        { status: 404 }
+      )
+    }
+
+    // Hasta bilgilerini al (category bilgisiyle)
     const { data: patient, error: patientError } = await supabase
       .from('patients')
-      .select('*')
+      .select('*, category:patient_categories(slug, name)')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('workspace_id', accessResult.workspaceId!)
+      .is('deleted_at', null)
       .single()
 
     if (patientError || !patient) {
@@ -77,7 +88,7 @@ export async function GET(request: Request, context: { params: Promise<Params> }
         name: patient.name,
         age: patient.age,
         gender: patient.gender,
-        status: patient.status,
+        category: (patient.category as { slug?: string; name?: string })?.name || 'Bilinmiyor',
         admission_date: patient.created_at,
         last_updated: patient.updated_at,
       },

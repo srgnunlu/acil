@@ -7,10 +7,7 @@ type Params = {
   id: string
 }
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<Params> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<Params> }) {
   try {
     const supabase = await createClient()
     const params = await context.params
@@ -27,12 +24,23 @@ export async function GET(
 
     const patientId = params.id
 
-    // Hasta bilgilerini al
+    // Workspace erişim kontrolü
+    const { requirePatientWorkspaceAccess } = await import('@/lib/permissions/workspace-helpers')
+    const accessResult = await requirePatientWorkspaceAccess(supabase, user.id, patientId)
+    if (!accessResult.hasAccess) {
+      return NextResponse.json(
+        { error: accessResult.error || 'Patient not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    // Hasta bilgilerini al (category bilgisiyle)
     const { data: patient, error: patientError } = await supabase
       .from('patients')
-      .select('*')
+      .select('*, category:patient_categories(slug, name)')
       .eq('id', patientId)
-      .eq('user_id', user.id)
+      .eq('workspace_id', accessResult.workspaceId!)
+      .is('deleted_at', null)
       .single()
 
     if (patientError || !patient) {
@@ -74,7 +82,7 @@ export async function GET(
         name: patient.name,
         age: patient.age,
         gender: patient.gender,
-        status: patient.status,
+        category: (patient.category as { slug?: string; name?: string })?.name || 'Bilinmiyor',
         admission_date: patient.admission_date,
       },
       data: {
@@ -92,9 +100,7 @@ export async function GET(
     }
 
     // PDF oluştur
-    const stream = await renderToStream(
-      PatientReportDocument({ data: reportData })
-    )
+    const stream = await renderToStream(PatientReportDocument({ data: reportData }))
 
     // Stream'i Response'a dönüştür
     const chunks: Uint8Array[] = []
@@ -118,19 +124,11 @@ export async function GET(
 
       stream.on('error', (error) => {
         console.error('PDF generation error:', error)
-        reject(
-          NextResponse.json(
-            { error: 'Failed to generate PDF' },
-            { status: 500 }
-          )
-        )
+        reject(NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 }))
       })
     })
   } catch (error) {
     console.error('Export PDF error:', error)
-    return NextResponse.json(
-      { error: 'Failed to export patient data' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to export patient data' }, { status: 500 })
   }
 }

@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { UpdateMemberInput } from '@/types'
+import type { UpdateMemberInput, Permission } from '@/types'
+import { getAllPermissions } from '@/lib/permissions'
+import { requireRole, forbiddenResponse, unauthorizedResponse } from '@/lib/permissions/middleware'
 
 // PUT /api/workspaces/[id]/members/[memberId] - Update member
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; memberId: string }> }
+) {
+  return handleUpdateMember(request, params)
+}
+
+// PATCH /api/workspaces/[id]/members/[memberId] - Update member (alias for PUT)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; memberId: string }> }
+) {
+  return handleUpdateMember(request, params)
+}
+
+async function handleUpdateMember(
+  request: NextRequest,
+  params: Promise<{ id: string; memberId: string }>
 ) {
   try {
     const { id, memberId } = await params
@@ -18,29 +35,47 @@ export async function PUT(
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
-    // Check if user has admin access
-    const { data: adminCheck } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', id)
-      .eq('user_id', user.id)
-      .in('role', ['owner', 'admin'])
-      .eq('status', 'active')
-      .single()
-
-    if (!adminCheck) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+    // Check if user has admin access using middleware
+    try {
+      await requireRole(id, ['owner', 'admin'])
+    } catch (error) {
+      return forbiddenResponse(
+        error instanceof Error ? error.message : 'Bu işlem için admin yetkisi gerekli'
+      )
     }
 
     const body = (await request.json()) as UpdateMemberInput
 
+    // Validate permissions if provided
+    if (body.permissions !== undefined) {
+      if (!Array.isArray(body.permissions)) {
+        return NextResponse.json({ error: 'Permissions must be an array' }, { status: 400 })
+      }
+
+      // Validate each permission
+      const validPermissions = getAllPermissions()
+      const invalidPermissions = body.permissions.filter(
+        (p) => !validPermissions.includes(p as Permission)
+      )
+
+      if (invalidPermissions.length > 0) {
+        return NextResponse.json(
+          { error: `Invalid permissions: ${invalidPermissions.join(', ')}` },
+          { status: 400 }
+        )
+      }
+    }
+
     // Build update object
-    const updates: Partial<UpdateMemberInput> = {}
+    const updates: Record<string, unknown> = {}
     if (body.role !== undefined) updates.role = body.role
-    if (body.permissions !== undefined) updates.permissions = body.permissions
+    if (body.permissions !== undefined) {
+      // Ensure permissions is stored as JSONB array
+      updates.permissions = Array.isArray(body.permissions) ? body.permissions : []
+    }
     if (body.status !== undefined) updates.status = body.status
 
     // Update member
@@ -59,7 +94,7 @@ export async function PUT(
 
     return NextResponse.json({ member })
   } catch (error) {
-    console.error('Error in PUT /api/workspaces/[id]/members/[memberId]:', error)
+    console.error('Error in update member:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -80,21 +115,16 @@ export async function DELETE(
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
-    // Check if user has admin access
-    const { data: adminCheck } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', id)
-      .eq('user_id', user.id)
-      .in('role', ['owner', 'admin'])
-      .eq('status', 'active')
-      .single()
-
-    if (!adminCheck) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+    // Check if user has admin access using middleware
+    try {
+      await requireRole(id, ['owner', 'admin'])
+    } catch (error) {
+      return forbiddenResponse(
+        error instanceof Error ? error.message : 'Bu işlem için admin yetkisi gerekli'
+      )
     }
 
     // Get member to check if they're the last owner
@@ -119,7 +149,11 @@ export async function DELETE(
     }
 
     // Delete member (hard delete or set status to inactive)
-    const { error: deleteError } = await supabase.from('workspace_members').delete().eq('id', memberId).eq('workspace_id', id)
+    const { error: deleteError } = await supabase
+      .from('workspace_members')
+      .delete()
+      .eq('id', memberId)
+      .eq('workspace_id', id)
 
     if (deleteError) {
       console.error('Error removing member:', deleteError)

@@ -24,52 +24,71 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const organizationId = searchParams.get('organization_id')
 
-    // Step 1: Get workspace IDs where user is an active member
-    console.log('[/api/workspaces] Step 1: Fetching workspace_members...')
+    // Step 1: Get organization IDs where user is a member
+    console.log('[/api/workspaces] Step 1: Fetching organization_members...')
+    const { data: orgMemberships, error: orgMemberError } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+
+    if (orgMemberError) {
+      console.error('[/api/workspaces] Error fetching organization memberships:', {
+        error: orgMemberError,
+        code: orgMemberError.code,
+        message: orgMemberError.message,
+        details: orgMemberError.details,
+        hint: orgMemberError.hint,
+      })
+      return NextResponse.json(
+        {
+          error: 'Failed to fetch organization memberships',
+          details: orgMemberError.message,
+          code: orgMemberError.code,
+        },
+        { status: 500 }
+      )
+    }
+
+    const orgIds = orgMemberships?.map((m) => m.organization_id).filter(Boolean) || []
+
+    if (orgIds.length === 0) {
+      console.log(
+        '[/api/workspaces] No organization memberships found for user, returning empty array'
+      )
+      return NextResponse.json({ workspaces: [] })
+    }
+
+    console.log('[/api/workspaces] User is member of organizations:', orgIds)
+
+    // Step 2: Get workspace memberships for role mapping
+    console.log('[/api/workspaces] Step 2: Fetching workspace_members for role mapping...')
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: memberships, error: memberError } = await supabase
       .from('workspace_members')
       .select('workspace_id, role')
       .eq('user_id', user.id)
       .eq('status', 'active')
 
-    console.log('[/api/workspaces] Memberships query result:', {
-      count: memberships?.length || 0,
-      memberships,
-      error: memberError,
-    })
+    const roleMap = new Map(memberships?.map((m) => [m.workspace_id, m.role]) || [])
 
-    if (memberError) {
-      console.error('[/api/workspaces] Error fetching memberships:', memberError)
-      return NextResponse.json(
-        {
-          error: 'Failed to fetch memberships',
-          details: memberError.message,
-          code: memberError.code,
-          hint: memberError.hint,
-        },
-        { status: 500 }
-      )
-    }
+    console.log('[/api/workspaces] Step 3: Fetching workspaces for organizations:', orgIds)
 
-    if (!memberships || memberships.length === 0) {
-      console.log('[/api/workspaces] No memberships found for user, returning empty array')
-      return NextResponse.json({ workspaces: [] })
-    }
-
-    const workspaceIds = memberships.map((m) => m.workspace_id)
-    const roleMap = new Map(memberships.map((m) => [m.workspace_id, m.role]))
-
-    console.log('[/api/workspaces] Step 2: Fetching workspaces for IDs:', workspaceIds)
-
-    // Step 2: Get workspaces with organization data
+    // Step 3: Get workspaces from user's organizations (RLS will filter)
+    // Organization'a üye olan kullanıcılar o organization'ın tüm workspace'lerini görebilir
+    // NOT: Organization join'i RLS sorunlarına neden olabilir, bu yüzden ayrı çekiyoruz
     let workspacesQuery = supabase
       .from('workspaces')
-      .select('*, organization:organizations(*)')
-      .in('id', workspaceIds)
+      .select('*')
+      .in('organization_id', orgIds)
       .is('deleted_at', null)
 
     // Filter by organization if provided
     if (organizationId) {
+      // Verify user is member of this organization
+      if (!orgIds.includes(organizationId)) {
+        return NextResponse.json({ error: 'Bu organizasyona erişim yetkiniz yok' }, { status: 403 })
+      }
       workspacesQuery = workspacesQuery.eq('organization_id', organizationId)
     }
 
@@ -77,13 +96,45 @@ export async function GET(request: NextRequest) {
       ascending: false,
     })
 
+    // Step 4: Get organizations separately (RLS sorunlarını önlemek için)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const organizationsMap = new Map<string, any>()
+    if (workspaces && workspaces.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const uniqueOrgIds = [
+        ...new Set(workspaces.map((w: any) => w.organization_id).filter(Boolean)),
+      ]
+      if (uniqueOrgIds.length > 0) {
+        const { data: organizations, error: orgsError } = await supabase
+          .from('organizations')
+          .select('*')
+          .in('id', uniqueOrgIds)
+
+        if (orgsError) {
+          console.warn('[/api/workspaces] Warning: Failed to fetch organizations:', orgsError)
+          // Devam et, organization bilgisi olmadan da workspace'leri döndürebiliriz
+        } else if (organizations) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          organizations.forEach((org: any) => {
+            organizationsMap.set(org.id, org)
+          })
+        }
+      }
+    }
+
     console.log('[/api/workspaces] Workspaces query result:', {
       count: workspaces?.length || 0,
       error: workspacesError,
     })
 
     if (workspacesError) {
-      console.error('[/api/workspaces] Error fetching workspaces:', workspacesError)
+      console.error('[/api/workspaces] Error fetching workspaces:', {
+        error: workspacesError,
+        code: workspacesError.code,
+        message: workspacesError.message,
+        details: workspacesError.details,
+        hint: workspacesError.hint,
+      })
       return NextResponse.json(
         {
           error: 'Failed to fetch workspaces',
@@ -95,8 +146,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 3: Get stats for each workspace
+    if (!workspaces || workspaces.length === 0) {
+      console.log('[/api/workspaces] No workspaces found, returning empty array')
+      return NextResponse.json({ workspaces: [] })
+    }
+
     const workspacesWithStats = await Promise.all(
-      (workspaces || []).map(async (workspace) => {
+      workspaces.map(async (workspace) => {
         // Get member count
         const { count: memberCount } = await supabase
           .from('workspace_members')
@@ -120,6 +176,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ...workspace,
+          organization: organizationsMap.get(workspace.organization_id) || null,
           member_count: memberCount || 0,
           patient_count: patientCount || 0,
           category_count: categoryCount || 0,
@@ -130,8 +187,18 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ workspaces: workspacesWithStats })
   } catch (error) {
-    console.error('Error in GET /api/workspaces:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error in GET /api/workspaces:', {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -154,39 +221,30 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!body.organization_id || !body.name || !body.slug) {
-      return NextResponse.json({ error: 'Organization ID, name and slug are required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Organization ID, name and slug are required' },
+        { status: 400 }
+      )
     }
 
-    // Check if user has access to create workspace in this organization
-    // (user must be admin in another workspace of same organization)
-    const { data: existingMembership } = await supabase
-      .from('workspace_members')
-      .select(
-        `
-        role,
-        workspaces!inner(organization_id)
-      `
-      )
+    // Check if user is member of organization and has admin/owner role
+    const { data: orgMembership } = await supabase
+      .from('organization_members')
+      .select('role')
+      .eq('organization_id', body.organization_id)
       .eq('user_id', user.id)
-      .eq('workspaces.organization_id', body.organization_id)
-      .in('role', ['owner', 'admin'])
       .eq('status', 'active')
-      .limit(1)
+      .single()
 
-    // If user doesn't have admin role in org, allow only if it's their first workspace
-    if (!existingMembership || existingMembership.length === 0) {
-      // Check if this is first workspace in organization
-      const { count } = await supabase
-        .from('workspaces')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', body.organization_id)
-
-      if (count && count > 0) {
-        return NextResponse.json(
-          { error: 'Forbidden - Only organization admins can create workspaces' },
-          { status: 403 }
-        )
-      }
+    // User must be organization admin/owner to create workspace
+    if (!orgMembership || !['owner', 'admin'].includes(orgMembership.role)) {
+      return NextResponse.json(
+        {
+          error:
+            'Bu organizasyonda workspace oluşturmak için admin veya owner yetkisine sahip olmalısınız',
+        },
+        { status: 403 }
+      )
     }
 
     // Create workspace

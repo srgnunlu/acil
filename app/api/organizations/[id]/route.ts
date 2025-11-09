@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { UpdateOrganizationInput } from '@/types'
+import { requireRole, forbiddenResponse } from '@/lib/permissions/middleware'
 
 // GET /api/organizations/[id] - Get organization by ID
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -72,17 +73,25 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Check if user has admin access to this organization
-    const { data: access } = await supabase
+    // Find a workspace in this organization where user is admin/owner
+    const { data: workspace } = await supabase
       .from('workspaces')
-      .select('id, workspace_members!inner(role)')
+      .select('id')
       .eq('organization_id', id)
-      .eq('workspace_members.user_id', user.id)
-      .in('workspace_members.role', ['owner', 'admin'])
-      .eq('workspace_members.status', 'active')
       .limit(1)
+      .single()
 
-    if (!access || access.length === 0) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+    if (!workspace) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    }
+
+    // Check permission using middleware
+    try {
+      await requireRole(workspace.id, ['owner', 'admin'])
+    } catch (error) {
+      return forbiddenResponse(
+        error instanceof Error ? error.message : 'Bu işlem için admin yetkisi gerekli'
+      )
     }
 
     const body = (await request.json()) as UpdateOrganizationInput
@@ -96,7 +105,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.contact_phone !== undefined) updates.contact_phone = body.contact_phone
     if (body.address !== undefined) updates.address = body.address
     if (body.subscription_tier !== undefined) updates.subscription_tier = body.subscription_tier
-    if (body.subscription_status !== undefined) updates.subscription_status = body.subscription_status
+    if (body.subscription_status !== undefined)
+      updates.subscription_status = body.subscription_status
     if (body.max_users !== undefined) updates.max_users = body.max_users
     if (body.max_workspaces !== undefined) updates.max_workspaces = body.max_workspaces
     if (body.max_patients_per_workspace !== undefined)
@@ -124,7 +134,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 // DELETE /api/organizations/[id] - Soft delete organization
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params
     const supabase = await createClient()
@@ -140,17 +153,25 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     // Check if user is owner of this organization
-    const { data: access } = await supabase
+    // Find a workspace in this organization where user is owner
+    const { data: workspace } = await supabase
       .from('workspaces')
-      .select('id, workspace_members!inner(role)')
+      .select('id')
       .eq('organization_id', id)
-      .eq('workspace_members.user_id', user.id)
-      .eq('workspace_members.role', 'owner')
-      .eq('workspace_members.status', 'active')
       .limit(1)
+      .single()
 
-    if (!access || access.length === 0) {
-      return NextResponse.json({ error: 'Forbidden - Owner access required' }, { status: 403 })
+    if (!workspace) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    }
+
+    // Check permission using middleware - must be owner
+    try {
+      await requireRole(workspace.id, ['owner'])
+    } catch (error) {
+      return forbiddenResponse(
+        error instanceof Error ? error.message : 'Bu işlem için owner yetkisi gerekli'
+      )
     }
 
     // Soft delete organization (CASCADE will soft delete workspaces)

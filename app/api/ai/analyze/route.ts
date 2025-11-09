@@ -2,11 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { analyzePatient } from '@/lib/ai/openai'
 import { buildPatientContext } from '@/lib/patients/context-builder'
 import { NextResponse } from 'next/server'
-import {
-  checkRateLimit,
-  rateLimitResponse,
-  getClientIdentifier,
-} from '@/lib/middleware/rate-limit'
+import { checkRateLimit, rateLimitResponse, getClientIdentifier } from '@/lib/middleware/rate-limit'
 import { aiAnalysisRequestSchema } from '@/lib/validation/schemas'
 
 export async function POST(request: Request) {
@@ -43,6 +39,16 @@ export async function POST(request: Request) {
 
     const { patientId, analysisType } = validation.data
 
+    // Workspace erişim kontrolü
+    const { requirePatientWorkspaceAccess } = await import('@/lib/permissions/workspace-helpers')
+    const accessResult = await requirePatientWorkspaceAccess(supabase, user.id, patientId)
+    if (!accessResult.hasAccess) {
+      return NextResponse.json(
+        { error: accessResult.error || 'Hasta bulunamadı veya erişim yetkiniz yok' },
+        { status: 404 }
+      )
+    }
+
     // Build patient context using shared utility (eliminates duplicate code)
     const result = await buildPatientContext(supabase, patientId, user.id)
 
@@ -50,7 +56,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Hasta bulunamadı' }, { status: 404 })
     }
 
-    const { context, patient } = result
+    // Workspace kontrolü - hasta kullanıcının workspace'inde olmalı
+    if (result.patient.workspace_id !== accessResult.workspaceId) {
+      return NextResponse.json(
+        { error: 'Hasta bulunamadı veya erişim yetkiniz yok' },
+        { status: 404 }
+      )
+    }
+
+    const { context } = result
 
     // AI analizi yap
     const aiResponse = await analyzePatient(context, analysisType)
@@ -77,6 +91,7 @@ export async function POST(request: Request) {
       success: true,
       analysis: savedAnalysis,
     })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('AI analiz hatası:', error)
     return NextResponse.json(

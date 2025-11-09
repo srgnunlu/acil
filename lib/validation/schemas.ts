@@ -7,7 +7,7 @@ export const createPatientSchema = z.object({
   name: z.string().min(2, 'İsim en az 2 karakter olmalı').max(100, 'İsim çok uzun'),
   age: z.number().int().positive().min(0).max(150).optional().nullable(),
   gender: z.enum(['Erkek', 'Kadın', 'Diğer']).optional().nullable(),
-  status: z.enum(['active', 'discharged', 'consultation']).default('active'),
+  category_id: z.string().uuid('Geçersiz kategori ID').optional().nullable(),
 })
 
 export const updatePatientSchema = createPatientSchema.partial()

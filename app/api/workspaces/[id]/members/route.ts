@@ -60,9 +60,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (membersWithProfiles.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const userIds: any[] = membersWithProfiles.map((m: any) => m.user_id)
+
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, title, specialty')
+        .select('id, user_id, full_name, avatar_url, title, specialty')
         .in('user_id', userIds)
 
       // Merge profiles with members
