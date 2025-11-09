@@ -6,11 +6,12 @@ import { tr } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { PatientStatusBadge, UrgencyBadge, ActivityBadge } from '@/components/ui/badge'
-import { 
-  Users, 
-  Activity, 
-  TrendingUp, 
-  Brain, 
+import { WorkspaceCategoryPanel } from '@/components/dashboard/WorkspaceCategoryPanel'
+import {
+  Users,
+  Activity,
+  TrendingUp,
+  Brain,
   Calendar,
   Clock,
   AlertCircle,
@@ -235,6 +236,9 @@ export default async function DashboardHome() {
           )}
         </Card>
       </div>
+
+      {/* Workspace Category Panel */}
+      <WorkspaceCategoryPanel />
 
       {/* Quick Actions */}
       <Card variant="default" header={

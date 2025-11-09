@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { X, UserPlus, Loader2 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
+import type { PatientCategory } from '@/types'
 
 interface AddPatientButtonProps {
   canAddPatient: boolean
@@ -21,17 +23,52 @@ export function AddPatientButton({
 }: AddPatientButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [categories, setCategories] = useState<PatientCategory[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
   const router = useRouter()
   const { showToast } = useToast()
+  const currentWorkspace = useCurrentWorkspace()
+
+  // Load categories when workspace changes or modal opens
+  useEffect(() => {
+    if (isOpen && currentWorkspace?.id) {
+      loadCategories()
+    }
+  }, [isOpen, currentWorkspace?.id])
+
+  const loadCategories = async () => {
+    if (!currentWorkspace?.id) return
+
+    setLoadingCategories(true)
+    try {
+      const response = await fetch(`/api/workspaces/${currentWorkspace.id}/categories`)
+      if (!response.ok) throw new Error('Failed to load categories')
+
+      const data = await response.json()
+      setCategories(data.categories || [])
+    } catch (error) {
+      console.error('Error loading categories:', error)
+      showToast('Kategoriler yüklenemedi', 'error')
+    } finally {
+      setLoadingCategories(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+
+    if (!currentWorkspace) {
+      showToast('Lütfen bir workspace seçin', 'error')
+      return
+    }
+
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
     const name = formData.get('name') as string
     const age = formData.get('age') as string
     const gender = formData.get('gender') as string
+    const categoryId = formData.get('category_id') as string
 
     try {
       const supabase = createClient()
@@ -47,10 +84,15 @@ export function AddPatientButton({
         .from('patients')
         .insert({
           user_id: user.id,
+          workspace_id: currentWorkspace.id,
+          organization_id: currentWorkspace.organization_id,
+          category_id: categoryId || null,
           name,
           age: age ? parseInt(age) : null,
           gender: gender || null,
           status: 'active',
+          workflow_state: 'intake',
+          admission_date: new Date().toISOString(),
         })
         .select()
         .single()
@@ -130,6 +172,24 @@ export function AddPatientButton({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Workspace info */}
+              {currentWorkspace && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium">Workspace:</span>{' '}
+                    <span className="text-blue-700">{currentWorkspace.name}</span>
+                  </p>
+                </div>
+              )}
+
+              {!currentWorkspace && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ Lütfen sol üstten bir workspace seçin
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   Hasta Adı Soyadı <span className="text-red-500">*</span>
@@ -145,6 +205,29 @@ export function AddPatientButton({
                   disabled={loading}
                 />
               </div>
+
+              {/* Category selection */}
+              {currentWorkspace && (
+                <div>
+                  <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-2">
+                    Kategori
+                  </label>
+                  <select
+                    id="category_id"
+                    name="category_id"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900 transition-colors"
+                    disabled={loading || loadingCategories}
+                  >
+                    <option value="">Kategori seçiniz (opsiyonel)</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.icon} {category.name}
+                        {category.is_system && ' (Sistem)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
