@@ -36,7 +36,10 @@ export async function GET() {
     // Extract unique organization IDs
     const orgIds = [
       ...new Set(
-        memberships.map((m) => (m.workspaces as { organization_id: string }).organization_id)
+        memberships.map((m) => {
+          const workspace = m.workspaces as unknown as { organization_id: string }
+          return workspace.organization_id
+        })
       ),
     ]
 
