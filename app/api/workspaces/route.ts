@@ -21,38 +21,47 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const organizationId = searchParams.get('organization_id')
 
-    // Build query
-    let query = supabase
+    // Step 1: Get workspace IDs where user is an active member
+    const { data: memberships, error: memberError } = await supabase
+      .from('workspace_members')
+      .select('workspace_id, role')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+
+    if (memberError) {
+      console.error('Error fetching memberships:', memberError)
+      return NextResponse.json({ error: 'Failed to fetch memberships' }, { status: 500 })
+    }
+
+    if (!memberships || memberships.length === 0) {
+      return NextResponse.json({ workspaces: [] })
+    }
+
+    const workspaceIds = memberships.map((m) => m.workspace_id)
+    const roleMap = new Map(memberships.map((m) => [m.workspace_id, m.role]))
+
+    // Step 2: Get workspaces with organization data
+    let workspacesQuery = supabase
       .from('workspaces')
-      .select(
-        `
-        *,
-        organization:organizations(*),
-        workspace_members!inner(
-          id,
-          user_id,
-          role,
-          status
-        )
-      `
-      )
-      .eq('workspace_members.user_id', user.id)
-      .eq('workspace_members.status', 'active')
+      .select('*, organization:organizations(*)')
+      .in('id', workspaceIds)
       .is('deleted_at', null)
 
     // Filter by organization if provided
     if (organizationId) {
-      query = query.eq('organization_id', organizationId)
+      workspacesQuery = workspacesQuery.eq('organization_id', organizationId)
     }
 
-    const { data: workspaces, error } = await query.order('created_at', { ascending: false })
+    const { data: workspaces, error: workspacesError } = await workspacesQuery.order('created_at', {
+      ascending: false,
+    })
 
-    if (error) {
-      console.error('Error fetching workspaces:', error)
+    if (workspacesError) {
+      console.error('Error fetching workspaces:', workspacesError)
       return NextResponse.json({ error: 'Failed to fetch workspaces' }, { status: 500 })
     }
 
-    // Get stats for each workspace
+    // Step 3: Get stats for each workspace
     const workspacesWithStats = await Promise.all(
       (workspaces || []).map(async (workspace) => {
         // Get member count
@@ -76,17 +85,12 @@ export async function GET(request: NextRequest) {
           .eq('workspace_id', workspace.id)
           .is('deleted_at', null)
 
-        // Get user's role
-        const userMember = Array.isArray(workspace.workspace_members)
-          ? workspace.workspace_members.find((m: { user_id: string }) => m.user_id === user.id)
-          : null
-
         return {
           ...workspace,
           member_count: memberCount || 0,
           patient_count: patientCount || 0,
           category_count: categoryCount || 0,
-          user_role: userMember?.role || null,
+          user_role: roleMap.get(workspace.id) || null,
         }
       })
     )
