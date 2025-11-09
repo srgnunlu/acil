@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import type { UpdateWorkspaceInput } from '@/types'
 
 // GET /api/workspaces/[id] - Get workspace by ID with details
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
@@ -153,7 +153,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {

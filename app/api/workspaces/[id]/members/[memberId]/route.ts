@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import type { UpdateMemberInput } from '@/types'
 
 // PUT /api/workspaces/[id]/members/[memberId] - Update member
@@ -9,7 +9,7 @@ export async function PUT(
 ) {
   try {
     const { id, memberId } = await params
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
@@ -71,7 +71,7 @@ export async function DELETE(
 ) {
   try {
     const { id, memberId } = await params
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
