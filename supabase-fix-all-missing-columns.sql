@@ -5,20 +5,24 @@
 -- Bu dosyayı supabase-migration-phase1-data-migration.sql ÖNCE çalıştırın
 -- ============================================
 
-RAISE NOTICE '============================================';
-RAISE NOTICE 'STARTING COMPREHENSIVE FIX';
-RAISE NOTICE '============================================';
-RAISE NOTICE '';
-
--- ============================================
--- BÖLÜM 1: ORGANIZATIONS TABLE
--- ============================================
-
-RAISE NOTICE '1️⃣  Fixing ORGANIZATIONS table...';
-
--- Type
 DO $$
+DECLARE
+    org_cols INTEGER;
+    profile_cols INTEGER;
+    patient_cols INTEGER;
 BEGIN
+    RAISE NOTICE '============================================';
+    RAISE NOTICE 'STARTING COMPREHENSIVE FIX';
+    RAISE NOTICE '============================================';
+    RAISE NOTICE '';
+
+    -- ============================================
+    -- BÖLÜM 1: ORGANIZATIONS TABLE
+    -- ============================================
+
+    RAISE NOTICE '1️⃣  Fixing ORGANIZATIONS table...';
+
+    -- Type
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'type'
@@ -28,11 +32,8 @@ BEGIN
         CHECK (type IN ('hospital', 'clinic', 'health_center', 'private_practice'));
         RAISE NOTICE '   ✅ type column added';
     END IF;
-END $$;
 
--- Logo URL
-DO $$
-BEGIN
+    -- Logo URL
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'logo_url'
@@ -40,11 +41,8 @@ BEGIN
         ALTER TABLE organizations ADD COLUMN logo_url TEXT;
         RAISE NOTICE '   ✅ logo_url column added';
     END IF;
-END $$;
 
--- Settings
-DO $$
-BEGIN
+    -- Settings
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'settings'
@@ -58,11 +56,8 @@ BEGIN
         }'::jsonb;
         RAISE NOTICE '   ✅ settings column added';
     END IF;
-END $$;
 
--- Subscription fields
-DO $$
-BEGIN
+    -- Subscription tier
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'subscription_tier'
@@ -72,10 +67,8 @@ BEGIN
         CHECK (subscription_tier IN ('free', 'pro', 'enterprise'));
         RAISE NOTICE '   ✅ subscription_tier column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Subscription status
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'subscription_status'
@@ -85,10 +78,8 @@ BEGIN
         CHECK (subscription_status IN ('active', 'inactive', 'trial', 'cancelled'));
         RAISE NOTICE '   ✅ subscription_status column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Trial ends at
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'trial_ends_at'
@@ -96,11 +87,8 @@ BEGIN
         ALTER TABLE organizations ADD COLUMN trial_ends_at TIMESTAMPTZ;
         RAISE NOTICE '   ✅ trial_ends_at column added';
     END IF;
-END $$;
 
--- Limits
-DO $$
-BEGIN
+    -- Max users
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'max_users'
@@ -108,10 +96,8 @@ BEGIN
         ALTER TABLE organizations ADD COLUMN max_users INTEGER DEFAULT 10;
         RAISE NOTICE '   ✅ max_users column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Max workspaces
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'max_workspaces'
@@ -119,10 +105,8 @@ BEGIN
         ALTER TABLE organizations ADD COLUMN max_workspaces INTEGER DEFAULT 3;
         RAISE NOTICE '   ✅ max_workspaces column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Max patients per workspace
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'max_patients_per_workspace'
@@ -130,11 +114,8 @@ BEGIN
         ALTER TABLE organizations ADD COLUMN max_patients_per_workspace INTEGER DEFAULT 50;
         RAISE NOTICE '   ✅ max_patients_per_workspace column added';
     END IF;
-END $$;
 
--- Contact info
-DO $$
-BEGIN
+    -- Contact email
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'contact_email'
@@ -142,10 +123,8 @@ BEGIN
         ALTER TABLE organizations ADD COLUMN contact_email TEXT;
         RAISE NOTICE '   ✅ contact_email column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Contact phone
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'contact_phone'
@@ -153,10 +132,8 @@ BEGIN
         ALTER TABLE organizations ADD COLUMN contact_phone TEXT;
         RAISE NOTICE '   ✅ contact_phone column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Address
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'organizations' AND column_name = 'address'
@@ -164,19 +141,17 @@ BEGIN
         ALTER TABLE organizations ADD COLUMN address TEXT;
         RAISE NOTICE '   ✅ address column added';
     END IF;
-END $$;
 
-RAISE NOTICE '   ✅ Organizations table fixed';
-RAISE NOTICE '';
+    RAISE NOTICE '   ✅ Organizations table fixed';
+    RAISE NOTICE '';
 
--- ============================================
--- BÖLÜM 2: PROFILES TABLE
--- ============================================
+    -- ============================================
+    -- BÖLÜM 2: PROFILES TABLE
+    -- ============================================
 
-RAISE NOTICE '2️⃣  Fixing PROFILES table...';
+    RAISE NOTICE '2️⃣  Fixing PROFILES table...';
 
-DO $$
-BEGIN
+    -- Current organization ID
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'profiles' AND column_name = 'current_organization_id'
@@ -185,10 +160,8 @@ BEGIN
         ADD COLUMN current_organization_id UUID REFERENCES organizations(id);
         RAISE NOTICE '   ✅ current_organization_id column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Avatar URL
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'profiles' AND column_name = 'avatar_url'
@@ -196,10 +169,8 @@ BEGIN
         ALTER TABLE profiles ADD COLUMN avatar_url TEXT;
         RAISE NOTICE '   ✅ avatar_url column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Title
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'profiles' AND column_name = 'title'
@@ -207,10 +178,8 @@ BEGIN
         ALTER TABLE profiles ADD COLUMN title TEXT;
         RAISE NOTICE '   ✅ title column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Phone
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'profiles' AND column_name = 'phone'
@@ -218,10 +187,8 @@ BEGIN
         ALTER TABLE profiles ADD COLUMN phone TEXT;
         RAISE NOTICE '   ✅ phone column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Notification preferences
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'profiles' AND column_name = 'notification_preferences'
@@ -239,10 +206,8 @@ BEGIN
         }'::jsonb;
         RAISE NOTICE '   ✅ notification_preferences column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Last seen at
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'profiles' AND column_name = 'last_seen_at'
@@ -250,31 +215,26 @@ BEGIN
         ALTER TABLE profiles ADD COLUMN last_seen_at TIMESTAMPTZ;
         RAISE NOTICE '   ✅ last_seen_at column added';
     END IF;
-END $$;
 
--- Index
-DO $$
-BEGIN
+    -- Index
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE tablename = 'profiles' AND indexname = 'idx_profiles_org'
     ) THEN
         CREATE INDEX idx_profiles_org ON profiles(current_organization_id);
-        RAISE NOTICE '   ✅ Index created';
+        RAISE NOTICE '   ✅ Index idx_profiles_org created';
     END IF;
-END $$;
 
-RAISE NOTICE '   ✅ Profiles table fixed';
-RAISE NOTICE '';
+    RAISE NOTICE '   ✅ Profiles table fixed';
+    RAISE NOTICE '';
 
--- ============================================
--- BÖLÜM 3: PATIENTS TABLE
--- ============================================
+    -- ============================================
+    -- BÖLÜM 3: PATIENTS TABLE
+    -- ============================================
 
-RAISE NOTICE '3️⃣  Fixing PATIENTS table...';
+    RAISE NOTICE '3️⃣  Fixing PATIENTS table...';
 
-DO $$
-BEGIN
+    -- Workspace ID
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'patients' AND column_name = 'workspace_id'
@@ -283,10 +243,8 @@ BEGIN
         ADD COLUMN workspace_id UUID REFERENCES workspaces(id);
         RAISE NOTICE '   ✅ workspace_id column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Organization ID
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'patients' AND column_name = 'organization_id'
@@ -295,10 +253,8 @@ BEGIN
         ADD COLUMN organization_id UUID REFERENCES organizations(id);
         RAISE NOTICE '   ✅ organization_id column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Category ID
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'patients' AND column_name = 'category_id'
@@ -307,10 +263,8 @@ BEGIN
         ADD COLUMN category_id UUID REFERENCES patient_categories(id);
         RAISE NOTICE '   ✅ category_id column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Assigned to
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'patients' AND column_name = 'assigned_to'
@@ -319,10 +273,8 @@ BEGIN
         ADD COLUMN assigned_to UUID REFERENCES auth.users(id);
         RAISE NOTICE '   ✅ assigned_to column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Admission date
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'patients' AND column_name = 'admission_date'
@@ -330,10 +282,8 @@ BEGIN
         ALTER TABLE patients ADD COLUMN admission_date TIMESTAMPTZ;
         RAISE NOTICE '   ✅ admission_date column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Discharge date
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'patients' AND column_name = 'discharge_date'
@@ -341,10 +291,8 @@ BEGIN
         ALTER TABLE patients ADD COLUMN discharge_date TIMESTAMPTZ;
         RAISE NOTICE '   ✅ discharge_date column added';
     END IF;
-END $$;
 
-DO $$
-BEGIN
+    -- Workflow state
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'patients' AND column_name = 'workflow_state'
@@ -357,11 +305,8 @@ BEGIN
         ));
         RAISE NOTICE '   ✅ workflow_state column added';
     END IF;
-END $$;
 
--- Indexes for patients
-DO $$
-BEGIN
+    -- Indexes for patients
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE tablename = 'patients' AND indexname = 'idx_patients_workspace'
@@ -369,10 +314,7 @@ BEGIN
         CREATE INDEX idx_patients_workspace ON patients(workspace_id) WHERE deleted_at IS NULL;
         RAISE NOTICE '   ✅ idx_patients_workspace created';
     END IF;
-END $$;
 
-DO $$
-BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE tablename = 'patients' AND indexname = 'idx_patients_organization'
@@ -380,10 +322,7 @@ BEGIN
         CREATE INDEX idx_patients_organization ON patients(organization_id) WHERE deleted_at IS NULL;
         RAISE NOTICE '   ✅ idx_patients_organization created';
     END IF;
-END $$;
 
-DO $$
-BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE tablename = 'patients' AND indexname = 'idx_patients_category'
@@ -391,10 +330,7 @@ BEGIN
         CREATE INDEX idx_patients_category ON patients(category_id) WHERE deleted_at IS NULL;
         RAISE NOTICE '   ✅ idx_patients_category created';
     END IF;
-END $$;
 
-DO $$
-BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE tablename = 'patients' AND indexname = 'idx_patients_assigned'
@@ -402,10 +338,7 @@ BEGIN
         CREATE INDEX idx_patients_assigned ON patients(assigned_to) WHERE deleted_at IS NULL;
         RAISE NOTICE '   ✅ idx_patients_assigned created';
     END IF;
-END $$;
 
-DO $$
-BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE tablename = 'patients' AND indexname = 'idx_patients_workflow'
@@ -413,10 +346,7 @@ BEGIN
         CREATE INDEX idx_patients_workflow ON patients(workflow_state) WHERE deleted_at IS NULL;
         RAISE NOTICE '   ✅ idx_patients_workflow created';
     END IF;
-END $$;
 
-DO $$
-BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE tablename = 'patients' AND indexname = 'idx_patients_admission'
@@ -424,21 +354,14 @@ BEGIN
         CREATE INDEX idx_patients_admission ON patients(admission_date DESC) WHERE deleted_at IS NULL;
         RAISE NOTICE '   ✅ idx_patients_admission created';
     END IF;
-END $$;
 
-RAISE NOTICE '   ✅ Patients table fixed';
-RAISE NOTICE '';
+    RAISE NOTICE '   ✅ Patients table fixed';
+    RAISE NOTICE '';
 
--- ============================================
--- VERIFICATION SUMMARY
--- ============================================
+    -- ============================================
+    -- VERIFICATION SUMMARY
+    -- ============================================
 
-DO $$
-DECLARE
-    org_cols INTEGER;
-    profile_cols INTEGER;
-    patient_cols INTEGER;
-BEGIN
     SELECT COUNT(*) INTO org_cols
     FROM information_schema.columns
     WHERE table_name = 'organizations';
