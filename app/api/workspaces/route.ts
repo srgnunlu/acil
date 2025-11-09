@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import type { CreateWorkspaceInput } from '@/types'
 
 // GET /api/workspaces - Get user's workspaces
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 // POST /api/workspaces - Create new workspace
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {

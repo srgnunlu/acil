@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import type { CreateCategoryInput, UpdateCategoryInput } from '@/types'
 
 // GET /api/workspaces/[id]/categories - Get patient categories
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
@@ -169,7 +169,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'category_id query parameter is required' }, { status: 400 })
     }
 
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
@@ -256,7 +256,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'category_id query parameter is required' }, { status: 400 })
     }
 
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {

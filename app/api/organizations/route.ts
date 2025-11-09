@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import type { Organization, CreateOrganizationInput } from '@/types'
 
 // GET /api/organizations - Get user's organizations
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 // POST /api/organizations - Create new organization
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Get authenticated user
     const {
