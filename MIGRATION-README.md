@@ -8,7 +8,7 @@ Migration dosyalarını **aşağıdaki sırayla** çalıştırmalısınız:
 
 ## 📝 Adım 1: Multi-Tenant Altyapısı Kur
 
-**Dosya:** `supabase-migration-phase1-multi-tenant.sql`
+**Dosya:** `supabase-migration-phase1-multi-tenant-FIXED.sql` ⭐ **BU DOSYAYI KULLANIN**
 
 **Ne Yapar:**
 - ✅ Organizations tablosunu oluşturur (tüm kolonlarıyla)
