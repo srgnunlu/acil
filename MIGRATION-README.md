@@ -26,7 +26,12 @@ Migration dosyalarını **aşağıdaki sırayla** çalıştırmalısınız:
 2. Dosya içeriğini yapıştır
 3. Run tuşuna bas
 
-**Not:** Bu dosya `IF NOT EXISTS` kullanır, yani zaten var olan tablolar için hata vermez.
+**Güvenlik Özellikleri:**
+- ✅ `CREATE TABLE IF NOT EXISTS` kullanır - Tablo varsa hata vermez
+- ✅ `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` kullanır - Kolon varsa hata vermez
+- ✅ **YENİ:** Tablo zaten varsa, eksik kolonları otomatik ekler!
+
+**Önemli:** Bu dosya artık mevcut tablolarla uyumlu çalışır. Organizations tablosu eksik kolonlarla bile olsa, tüm gerekli kolonları ekler.
 
 ---
 
@@ -55,11 +60,14 @@ Migration dosyalarını **aşağıdaki sırayla** çalıştırmalısınız:
 ### ~~supabase-fix-profiles-columns.sql~~
 ### ~~supabase-fix-all-missing-columns.sql~~
 
-**Bu dosyalara GEREK YOK!**
+**Bu dosyalara ARTIK GEREK YOK!**
 
-Bu dosyalar sadece eksik kolonları ekler, ama siz **tüm tabloları** oluşturmanız gerekiyor.
+**Güncelleme (2025-11-09):** `supabase-migration-phase1-multi-tenant.sql` dosyası artık:
+- ✅ Tabloları oluşturur (yoksa)
+- ✅ Eksik kolonları ekler (tablo varsa)
+- ✅ Her durumda güvenli çalışır
 
-`supabase-migration-phase1-multi-tenant.sql` dosyası zaten tüm tabloları ve kolonları doğru şekilde oluşturur.
+Fix dosyaları yalnızca geçici bir çözümdü. Güncellenmiş multi-tenant migration dosyası artık tüm senaryoları kapsıyor.
 
 ---
 

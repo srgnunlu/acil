@@ -51,6 +51,85 @@ CREATE TABLE IF NOT EXISTS organizations (
   deleted_at TIMESTAMPTZ
 );
 
+-- Eğer tablo zaten varsa, eksik kolonları ekle
+DO $$
+BEGIN
+    -- type kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='type') THEN
+        ALTER TABLE organizations ADD COLUMN type TEXT DEFAULT 'clinic' CHECK (type IN ('hospital', 'clinic', 'health_center', 'private_practice'));
+    END IF;
+
+    -- logo_url kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='logo_url') THEN
+        ALTER TABLE organizations ADD COLUMN logo_url TEXT;
+    END IF;
+
+    -- settings kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='settings') THEN
+        ALTER TABLE organizations ADD COLUMN settings JSONB DEFAULT '{"timezone": "Europe/Istanbul", "language": "tr", "date_format": "DD/MM/YYYY", "time_format": "24h"}'::jsonb;
+    END IF;
+
+    -- subscription_tier kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='subscription_tier') THEN
+        ALTER TABLE organizations ADD COLUMN subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro', 'enterprise'));
+    END IF;
+
+    -- subscription_status kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='subscription_status') THEN
+        ALTER TABLE organizations ADD COLUMN subscription_status TEXT DEFAULT 'active' CHECK (subscription_status IN ('active', 'inactive', 'trial', 'cancelled'));
+    END IF;
+
+    -- trial_ends_at kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='trial_ends_at') THEN
+        ALTER TABLE organizations ADD COLUMN trial_ends_at TIMESTAMPTZ;
+    END IF;
+
+    -- max_users kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='max_users') THEN
+        ALTER TABLE organizations ADD COLUMN max_users INTEGER DEFAULT 10;
+    END IF;
+
+    -- max_workspaces kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='max_workspaces') THEN
+        ALTER TABLE organizations ADD COLUMN max_workspaces INTEGER DEFAULT 3;
+    END IF;
+
+    -- max_patients_per_workspace kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='max_patients_per_workspace') THEN
+        ALTER TABLE organizations ADD COLUMN max_patients_per_workspace INTEGER DEFAULT 50;
+    END IF;
+
+    -- contact_email kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='contact_email') THEN
+        ALTER TABLE organizations ADD COLUMN contact_email TEXT;
+    END IF;
+
+    -- contact_phone kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='contact_phone') THEN
+        ALTER TABLE organizations ADD COLUMN contact_phone TEXT;
+    END IF;
+
+    -- address kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='address') THEN
+        ALTER TABLE organizations ADD COLUMN address TEXT;
+    END IF;
+
+    -- deleted_at kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='deleted_at') THEN
+        ALTER TABLE organizations ADD COLUMN deleted_at TIMESTAMPTZ;
+    END IF;
+
+    -- created_at kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='created_at') THEN
+        ALTER TABLE organizations ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW();
+    END IF;
+
+    -- updated_at kolonu
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='organizations' AND column_name='updated_at') THEN
+        ALTER TABLE organizations ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW();
+    END IF;
+END $$;
+
 -- Organizations için indeksler
 CREATE INDEX IF NOT EXISTS idx_org_slug ON organizations(slug);
 CREATE INDEX IF NOT EXISTS idx_org_active ON organizations(id) WHERE deleted_at IS NULL;
