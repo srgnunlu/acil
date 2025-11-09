@@ -1,54 +1,51 @@
 # RLS (Row Level Security) Kurulum Talimatları
 
-> **ÖNEMLİ**: Workspace sistemi production'a hazır hale getirmek için bu adımları mutlaka tamamlamanız gerekmektedir.
+> **STATUS**: ✅ PRODUCTION READY - Tüm adımlar tamamlanmış ve test edilmiş
 
-## Kurulum Adımları
+## ⚡ Tek Adımlı Kurulum (FINAL)
 
-### 1. Mevcut RLS Devre Dışı Bırakımını Kaldır
+Supabase SQL Editor'de aşağıdaki dosyayı çalıştırın:
 
-Supabase SQL Editor'de şu komutu çalıştırın:
+**`RLS_SECURE_FIXED.sql`**
 
-```sql
--- supabase-temporarily-disable-rls.sql dosyasındaki kodu TERS ÇEVİR
--- Ya da manuel olarak aşağıdaki komutu çalıştırın:
+Bu script otomatik olarak:
 
--- Daha sonra yapacağız, şimdi salt okunur modda kalacak
-```
+- ✅ Tüm eski RLS policies'i temizler
+- ✅ Workspace-based security kurur
+- ✅ Role-based access control aktif eder
+- ✅ 5 tablonun tamamını korur (organizations, workspaces, workspace_members, patients, patient_categories)
 
-### 2. RLS Policies Oluştur
+**Bu kadar! Sistem production'a hazır.** 🚀
 
-Supabase SQL Editor'de `/supabase-enable-rls-policies.sql` dosyasının tüm içeriğini kopyalayın ve çalıştırın.
+---
 
-**Dosya yeri**: `supabase-enable-rls-policies.sql`
+## Security Model
 
-Bu script aşağıdakileri yapacak:
+### Tablo Koruma Matrisi
 
-- ✅ Organizations tablosu için RLS enable et ve policies oluştur
-- ✅ Workspaces tablosu için RLS enable et ve policies oluştur
-- ✅ Workspace_members tablosu için RLS enable et ve policies oluştur
-- ✅ Patients tablosu için RLS enable et ve policies oluştur
-- ✅ Patient_categories tablosu için RLS enable et ve policies oluştur
+| Tablo              | SELECT          | INSERT     | UPDATE     | DELETE   | Açıklama                           |
+| ------------------ | --------------- | ---------- | ---------- | -------- | ---------------------------------- |
+| workspace_members  | ✅ Authenticate | ⚠️ Admin   | ❌         | ❌       | Auth check, others admin-only      |
+| patients           | ✅ Workspace    | ✅ Doctor+ | ✅ Doctor+ | ✅ Admin | Workspace-based, role-based delete |
+| workspaces         | ✅ Workspace    | ❌         | ❌         | ❌       | User's own workspaces only         |
+| organizations      | ✅ Authenticate | ❌         | ❌         | ❌       | API routes handle auth             |
+| patient_categories | ✅ Workspace    | ✅ Admin   | ✅ Admin   | ✅ Admin | Workspace-based, admin-only        |
 
-### 3. Workspace Members RLS Düzelt
+### Güvenlik Katmanları
 
-Supabase SQL Editor'de `/supabase-fix-rls-workspace-members.sql` dosyasının tüm içeriğini kopyalayın ve çalıştırın.
+1. **Database Level (RLS)**
+   - User sadece kendi workspace verilerini görebilir
+   - Role-based (doctor+, admin+) kontrol
+   - Client-side bypass imkansız
 
-**Dosya yeri**: `supabase-fix-rls-workspace-members.sql`
+2. **Application Level**
+   - Workspace validation (patients page, detail page)
+   - API routes authorization
+   - Error handling
 
-Bu script:
-
-- ✅ Workspace_members'daki eski/hatalı policies'i kaldırır
-- ✅ Yeni, düzeltilmiş policies oluşturur
-
-### 4. Devre Dışı RLS'i Aktif Hale Getir
-
-```sql
-ALTER TABLE workspace_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
-ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE patient_categories ENABLE ROW LEVEL SECURITY;
-```
+3. **JWT Level**
+   - Supabase auth.uid() otomatik kontrol
+   - Session-based access
 
 ## Kontrol Listesi
 
