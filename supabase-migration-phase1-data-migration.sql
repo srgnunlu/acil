@@ -14,9 +14,9 @@
 DO $$
 DECLARE
   user_record RECORD;
-  org_id UUID;
-  workspace_id UUID;
-  default_category_id UUID;
+  v_org_id UUID;
+  v_workspace_id UUID;
+  v_default_category_id UUID;
 BEGIN
   -- Her benzersiz user için işlem yap
   FOR user_record IN
@@ -31,11 +31,11 @@ BEGIN
     RAISE NOTICE 'Processing user: % (ID: %)', user_record.full_name, user_record.user_id;
 
     -- 1. Default organization oluştur (eğer yoksa)
-    SELECT id INTO org_id
+    SELECT id INTO v_org_id
     FROM organizations
     WHERE slug = 'org-' || user_record.user_id::text;
 
-    IF org_id IS NULL THEN
+    IF v_org_id IS NULL THEN
       INSERT INTO organizations (
         name,
         slug,
@@ -54,27 +54,27 @@ BEGIN
         10,
         3,
         50
-      ) RETURNING id INTO org_id;
+      ) RETURNING id INTO v_org_id;
 
-      RAISE NOTICE '  ✅ Organization created: %', org_id;
+      RAISE NOTICE '  ✅ Organization created: %', v_org_id;
     ELSE
-      RAISE NOTICE '  ℹ️  Organization already exists: %', org_id;
+      RAISE NOTICE '  ℹ️  Organization already exists: %', v_org_id;
     END IF;
 
     -- 2. Profiles tablosunda current_organization_id güncelle
     UPDATE profiles
-    SET current_organization_id = org_id
+    SET current_organization_id = v_org_id
     WHERE user_id = user_record.user_id;
 
     RAISE NOTICE '  ✅ Profile updated with organization';
 
     -- 3. Default workspace oluştur (eğer yoksa)
-    SELECT id INTO workspace_id
-    FROM workspaces
-    WHERE organization_id = org_id
-      AND slug = 'default';
+    SELECT w.id INTO v_workspace_id
+    FROM workspaces w
+    WHERE w.organization_id = v_org_id
+      AND w.slug = 'default';
 
-    IF workspace_id IS NULL THEN
+    IF v_workspace_id IS NULL THEN
       INSERT INTO workspaces (
         organization_id,
         name,
@@ -86,7 +86,7 @@ BEGIN
         is_active,
         created_by
       ) VALUES (
-        org_id,
+        v_org_id,
         CASE
           WHEN user_record.specialty = 'Acil Tıp' THEN 'Acil Servis'
           WHEN user_record.specialty = 'Kardiyoloji' THEN 'Kardiyoloji Servisi'
@@ -108,51 +108,51 @@ BEGIN
         END,
         true,
         user_record.user_id
-      ) RETURNING id INTO workspace_id;
+      ) RETURNING id INTO v_workspace_id;
 
-      RAISE NOTICE '  ✅ Workspace created: %', workspace_id;
+      RAISE NOTICE '  ✅ Workspace created: %', v_workspace_id;
 
       -- Not: handle_new_workspace trigger otomatik olarak:
       -- - Default kategorileri oluşturur
       -- - Workspace owner'ını workspace_members'a ekler
     ELSE
-      RAISE NOTICE '  ℹ️  Workspace already exists: %', workspace_id;
+      RAISE NOTICE '  ℹ️  Workspace already exists: %', v_workspace_id;
     END IF;
 
     -- 4. Default kategoriyi bul (workspace için)
-    SELECT id INTO default_category_id
-    FROM patient_categories
-    WHERE workspace_id = workspace_id
-      AND is_default = true
+    SELECT pc.id INTO v_default_category_id
+    FROM patient_categories pc
+    WHERE pc.workspace_id = v_workspace_id
+      AND pc.is_default = true
     LIMIT 1;
 
-    IF default_category_id IS NULL THEN
+    IF v_default_category_id IS NULL THEN
       -- Eğer yoksa, ilk kategoriyi seç
-      SELECT id INTO default_category_id
-      FROM patient_categories
-      WHERE workspace_id = workspace_id
-      ORDER BY sort_order
+      SELECT pc.id INTO v_default_category_id
+      FROM patient_categories pc
+      WHERE pc.workspace_id = v_workspace_id
+      ORDER BY pc.sort_order
       LIMIT 1;
     END IF;
 
-    RAISE NOTICE '  ✅ Default category: %', default_category_id;
+    RAISE NOTICE '  ✅ Default category: %', v_default_category_id;
 
     -- 5. Kullanıcının hastalarını yeni workspace'e taşı
-    UPDATE patients
+    UPDATE patients p
     SET
-      workspace_id = workspace_id,
-      organization_id = org_id,
-      category_id = default_category_id,
+      workspace_id = v_workspace_id,
+      organization_id = v_org_id,
+      category_id = v_default_category_id,
       assigned_to = user_record.user_id,
-      admission_date = COALESCE(admission_date, created_at),
+      admission_date = COALESCE(p.admission_date, p.created_at),
       workflow_state = CASE
-        WHEN status = 'active' THEN 'treatment'
-        WHEN status = 'discharged' THEN 'discharged'
-        WHEN status = 'consultation' THEN 'assessment'
+        WHEN p.status = 'active' THEN 'treatment'
+        WHEN p.status = 'discharged' THEN 'discharged'
+        WHEN p.status = 'consultation' THEN 'assessment'
         ELSE 'admission'
       END
-    WHERE user_id = user_record.user_id
-      AND workspace_id IS NULL; -- Sadece henüz taşınmamış hastaları
+    WHERE p.user_id = user_record.user_id
+      AND p.workspace_id IS NULL; -- Sadece henüz taşınmamış hastaları
 
     RAISE NOTICE '  ✅ Patients migrated to workspace';
 
@@ -165,7 +165,7 @@ BEGIN
       p.assigned_to,
       true
     FROM patients p
-    WHERE p.workspace_id = workspace_id
+    WHERE p.workspace_id = v_workspace_id
       AND p.assigned_to IS NOT NULL
     ON CONFLICT (patient_id, user_id, assignment_type) DO NOTHING;
 
