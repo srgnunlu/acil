@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
-import { ChevronDown, Check, Building2, Loader2 } from 'lucide-react'
+import { ChevronDown, Check, Building2, Loader2, Settings } from 'lucide-react'
+import Link from 'next/link'
 
 export function WorkspaceSwitcher() {
   const { currentWorkspace, workspaces, switchWorkspace, isLoading } = useWorkspace()
@@ -97,6 +98,23 @@ export function WorkspaceSwitcher() {
             {/* No Workspaces */}
             {workspaces.length === 0 && (
               <div className="p-4 text-center text-sm text-gray-500">Workspace bulunamadı</div>
+            )}
+
+            {/* Workspace Settings Link */}
+            {currentWorkspace && (
+              <>
+                <div className="border-t my-1" />
+                <div className="p-2">
+                  <Link
+                    href="/dashboard/workspace/settings"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>Workspace Ayarları</span>
+                  </Link>
+                </div>
+              </>
             )}
           </div>
         </>
