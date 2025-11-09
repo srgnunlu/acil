@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { AddPatientButton } from '@/components/patients/AddPatientButton'
-import { PatientListWithBulk } from '@/components/patients/PatientListWithBulk'
+import { PatientListClient } from '@/components/patients/PatientListClient'
 import { Sparkles, TrendingUp, Shield } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
@@ -130,7 +130,7 @@ export default async function PatientsPage() {
           </div>
         </div>
       ) : (
-        <PatientListWithBulk patients={patients} />
+        <PatientListClient initialPatients={patients || []} />
       )}
 
       {/* Upgrade Banner */}

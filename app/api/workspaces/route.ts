@@ -14,31 +14,52 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.error('[/api/workspaces] Auth error:', authError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    console.log('[/api/workspaces] User authenticated:', { id: user.id, email: user.email })
 
     // Get query params
     const { searchParams } = new URL(request.url)
     const organizationId = searchParams.get('organization_id')
 
     // Step 1: Get workspace IDs where user is an active member
+    console.log('[/api/workspaces] Step 1: Fetching workspace_members...')
     const { data: memberships, error: memberError } = await supabase
       .from('workspace_members')
       .select('workspace_id, role')
       .eq('user_id', user.id)
       .eq('status', 'active')
 
+    console.log('[/api/workspaces] Memberships query result:', {
+      count: memberships?.length || 0,
+      memberships,
+      error: memberError,
+    })
+
     if (memberError) {
-      console.error('Error fetching memberships:', memberError)
-      return NextResponse.json({ error: 'Failed to fetch memberships' }, { status: 500 })
+      console.error('[/api/workspaces] Error fetching memberships:', memberError)
+      return NextResponse.json(
+        {
+          error: 'Failed to fetch memberships',
+          details: memberError.message,
+          code: memberError.code,
+          hint: memberError.hint,
+        },
+        { status: 500 }
+      )
     }
 
     if (!memberships || memberships.length === 0) {
+      console.log('[/api/workspaces] No memberships found for user, returning empty array')
       return NextResponse.json({ workspaces: [] })
     }
 
     const workspaceIds = memberships.map((m) => m.workspace_id)
     const roleMap = new Map(memberships.map((m) => [m.workspace_id, m.role]))
+
+    console.log('[/api/workspaces] Step 2: Fetching workspaces for IDs:', workspaceIds)
 
     // Step 2: Get workspaces with organization data
     let workspacesQuery = supabase
@@ -56,9 +77,21 @@ export async function GET(request: NextRequest) {
       ascending: false,
     })
 
+    console.log('[/api/workspaces] Workspaces query result:', {
+      count: workspaces?.length || 0,
+      error: workspacesError,
+    })
+
     if (workspacesError) {
-      console.error('Error fetching workspaces:', workspacesError)
-      return NextResponse.json({ error: 'Failed to fetch workspaces' }, { status: 500 })
+      console.error('[/api/workspaces] Error fetching workspaces:', workspacesError)
+      return NextResponse.json(
+        {
+          error: 'Failed to fetch workspaces',
+          details: workspacesError.message,
+          code: workspacesError.code,
+        },
+        { status: 500 }
+      )
     }
 
     // Step 3: Get stats for each workspace
