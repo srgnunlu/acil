@@ -43,9 +43,23 @@ export function AddPatientButton({
         throw new Error('Kullanıcı oturumu bulunamadı')
       }
 
+      // Kullanıcının aktif workspace'ini bul
+      const { data: membership, error: membershipError } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .single()
+
+      if (membershipError || !membership) {
+        throw new Error('Aktif workspace bulunamadı. Lütfen sayfayı yenileyin.')
+      }
+
       const { data, error } = await supabase
         .from('patients')
         .insert({
+          workspace_id: membership.workspace_id,
           user_id: user.id,
           name,
           age: age ? parseInt(age) : null,

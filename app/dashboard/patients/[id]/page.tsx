@@ -19,15 +19,30 @@ export default async function PatientDetailPage({ params }: PageProps) {
 
   if (!user) return null
 
-  // Hastayı al
+  // Kullanıcının aktif workspace'ini bul
+  const { data: membership, error: membershipError } = await supabase
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .limit(1)
+    .single()
+
+  if (membershipError || !membership) {
+    notFound()
+  }
+
+  // Hastayı al (workspace kontrolü ile)
   const { data: patient, error } = await supabase
     .from('patients')
     .select('*')
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('workspace_id', membership.workspace_id)
+    .is('deleted_at', null)
     .single()
 
   if (error || !patient) {
+    console.error('Error fetching patient:', error)
     notFound()
   }
 

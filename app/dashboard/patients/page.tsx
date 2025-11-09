@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AddPatientButton } from '@/components/patients/AddPatientButton'
 import { PatientListWithBulk } from '@/components/patients/PatientListWithBulk'
 import { Sparkles, TrendingUp, Shield } from 'lucide-react'
+import { redirect } from 'next/navigation'
 
 export default async function PatientsPage() {
   const supabase = await createClient()
@@ -11,23 +12,49 @@ export default async function PatientsPage() {
 
   if (!user) return null
 
-  // Hastaları al
-  const { data: patients } = await supabase
-    .from('patients')
-    .select('*')
+  // Kullanıcının aktif workspace'ini bul
+  const { data: memberships, error: membershipError } = await supabase
+    .from('workspace_members')
+    .select('workspace_id, workspaces!inner(*)')
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-
-  // Profil bilgilerini al
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .limit(1)
     .single()
 
+  // Eğer workspace yoksa, setup sayfasına yönlendir
+  if (membershipError || !memberships || !memberships.workspace_id) {
+    redirect('/setup')
+  }
+
+  const currentWorkspaceId = memberships.workspace_id
+
+  // Hastaları workspace_id ile al
+  const { data: patients, error: patientsError } = await supabase
+    .from('patients')
+    .select('*')
+    .eq('workspace_id', currentWorkspaceId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+
+  if (patientsError) {
+    console.error('Error fetching patients:', patientsError)
+  }
+
+  // Workspace ayarlarını al
+  const { data: workspace, error: workspaceError } = await supabase
+    .from('workspaces')
+    .select('*, organization:organizations(*)')
+    .eq('id', currentWorkspaceId)
+    .single()
+
+  if (workspaceError) {
+    console.error('Error fetching workspace:', workspaceError)
+  }
+
+  const patientLimit = workspace?.settings?.patient_limit || 50
   const activePatients = patients?.filter((p) => p.status === 'active') || []
-  const canAddPatient = activePatients.length < (profile?.patient_limit || 3)
-  const usagePercentage = (activePatients.length / (profile?.patient_limit || 3)) * 100
+  const canAddPatient = activePatients.length < patientLimit
+  const usagePercentage = (activePatients.length / patientLimit) * 100
 
   return (
     <div>
@@ -38,15 +65,15 @@ export default async function PatientsPage() {
             <span className="font-semibold text-gray-900">{activePatients.length}</span>
             aktif hasta
             <span className="text-gray-400">•</span>
-            <span className="text-sm">{profile?.patient_limit || 3} hasta limiti</span>
+            <span className="text-sm">{patientLimit} hasta limiti</span>
           </p>
         </div>
 
         <AddPatientButton
           canAddPatient={canAddPatient}
           currentCount={activePatients.length}
-          limit={profile?.patient_limit || 3}
-          tier={profile?.subscription_tier || 'free'}
+          limit={patientLimit}
+          tier={workspace?.organization?.subscription_tier || 'free'}
         />
       </div>
 
@@ -57,7 +84,7 @@ export default async function PatientsPage() {
           <div className="flex-1">
             <h4 className="font-semibold text-yellow-900 mb-1">Hasta limitinize yaklaşıyorsunuz</h4>
             <p className="text-sm text-yellow-800">
-              {activePatients.length}/{profile?.patient_limit || 3} hasta slotu kullanılıyor (
+              {activePatients.length}/{patientLimit} hasta slotu kullanılıyor (
               {Math.round(usagePercentage)}%)
             </p>
           </div>
@@ -97,8 +124,8 @@ export default async function PatientsPage() {
             <AddPatientButton
               canAddPatient={canAddPatient}
               currentCount={activePatients.length}
-              limit={profile?.patient_limit || 3}
-              tier={profile?.subscription_tier || 'free'}
+              limit={patientLimit}
+              tier={workspace?.organization?.subscription_tier || 'free'}
             />
           </div>
         </div>
@@ -107,8 +134,8 @@ export default async function PatientsPage() {
       )}
 
       {/* Upgrade Banner */}
-      {profile?.subscription_tier === 'free' &&
-        activePatients.length >= (profile?.patient_limit || 3) && (
+      {workspace?.organization?.subscription_tier === 'free' &&
+        activePatients.length >= patientLimit && (
           <div className="mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white shadow-xl">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div className="flex-1">

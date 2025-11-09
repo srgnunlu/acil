@@ -50,7 +50,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
                   ACIL
                 </Link>
 
-                {/* Workspace Switcher */}
                 <WorkspaceSwitcher />
 
                 <DashboardNav />

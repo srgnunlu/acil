@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { Organization, CreateOrganizationInput } from '@/types'
+import type { CreateOrganizationInput } from '@/types'
 
 // GET /api/organizations - Get user's organizations
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
 
@@ -17,22 +17,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get organizations user has access to (through workspaces)
+    // Step 1: Get workspace IDs where user is an active member
+    const { data: memberships, error: memberError } = await supabase
+      .from('workspace_members')
+      .select('workspace_id, workspaces!inner(organization_id)')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+
+    if (memberError) {
+      console.error('Error fetching memberships:', memberError)
+      return NextResponse.json({ error: 'Failed to fetch memberships' }, { status: 500 })
+    }
+
+    if (!memberships || memberships.length === 0) {
+      return NextResponse.json({ organizations: [] })
+    }
+
+    // Extract unique organization IDs
+    const orgIds = [
+      ...new Set(
+        memberships.map((m) => (m.workspaces as { organization_id: string }).organization_id)
+      ),
+    ]
+
+    // Step 2: Get organizations
     const { data: organizations, error } = await supabase
       .from('organizations')
-      .select(
-        `
-        *,
-        workspaces!inner (
-          id,
-          workspace_members!inner (
-            user_id
-          )
-        )
-      `
-      )
-      .eq('workspaces.workspace_members.user_id', user.id)
-      .eq('workspaces.workspace_members.status', 'active')
+      .select('*')
+      .in('id', orgIds)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
@@ -41,10 +53,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 })
     }
 
-    // Remove workspace details from response (we only needed them for filtering)
-    const cleanedOrgs = organizations?.map(({ workspaces, ...org }) => org) || []
-
-    return NextResponse.json({ organizations: cleanedOrgs })
+    return NextResponse.json({ organizations: organizations || [] })
   } catch (error) {
     console.error('Error in GET /api/organizations:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -106,7 +115,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user's profile to set current organization
-    await supabase.from('profiles').update({ current_organization_id: organization.id }).eq('user_id', user.id)
+    await supabase
+      .from('profiles')
+      .update({ current_organization_id: organization.id })
+      .eq('user_id', user.id)
 
     return NextResponse.json({ organization }, { status: 201 })
   } catch (error) {

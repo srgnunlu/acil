@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import type { Workspace, WorkspaceWithDetails, Organization } from '@/types'
+import type { WorkspaceWithDetails, Organization } from '@/types'
 
 interface WorkspaceContextType {
   // Current workspace
@@ -73,19 +73,26 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
       // Fetch workspaces
       const workspacesRes = await fetch('/api/workspaces')
-      if (!workspacesRes.ok) throw new Error('Failed to fetch workspaces')
-
-      const workspacesData = await workspacesRes.json()
-      setWorkspaces(workspacesData.workspaces || [])
+      if (!workspacesRes.ok) {
+        // Sessizce boş array set et
+        setWorkspaces([])
+      } else {
+        const workspacesData = await workspacesRes.json()
+        setWorkspaces(workspacesData.workspaces || [])
+      }
 
       // Fetch organizations
       const orgsRes = await fetch('/api/organizations')
-      if (!orgsRes.ok) throw new Error('Failed to fetch organizations')
-
-      const orgsData = await orgsRes.json()
-      setOrganizations(orgsData.organizations || [])
-    } catch (error) {
-      console.error('Error loading workspaces:', error)
+      if (!orgsRes.ok) {
+        setOrganizations([])
+      } else {
+        const orgsData = await orgsRes.json()
+        setOrganizations(orgsData.organizations || [])
+      }
+    } catch {
+      // Sessizce boş array'ler set et
+      setWorkspaces([])
+      setOrganizations([])
     } finally {
       setIsLoading(false)
     }
@@ -147,8 +154,21 @@ export function useWorkspacePermission() {
 
     // Import role permissions (will be defined in types)
     const rolePermissions: Record<string, string[]> = {
-      owner: ['patients.create', 'patients.read', 'patients.update', 'patients.delete', 'workspace.manage', 'users.invite'],
-      admin: ['patients.create', 'patients.read', 'patients.update', 'patients.delete', 'users.invite'],
+      owner: [
+        'patients.create',
+        'patients.read',
+        'patients.update',
+        'patients.delete',
+        'workspace.manage',
+        'users.invite',
+      ],
+      admin: [
+        'patients.create',
+        'patients.read',
+        'patients.update',
+        'patients.delete',
+        'users.invite',
+      ],
       senior_doctor: ['patients.create', 'patients.read', 'patients.update', 'patients.delete'],
       doctor: ['patients.create', 'patients.read', 'patients.update'],
       resident: ['patients.create', 'patients.read', 'patients.update'],
