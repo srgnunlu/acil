@@ -18,7 +18,10 @@ import type { WorkspaceRole, Permission } from '@/types/multi-tenant.types'
 export const AbilityContext = createContext<AppAbility | undefined>(undefined)
 
 // Create the Can component for conditional rendering
-export const Can = createContextualCan(AbilityContext.Consumer)
+// AbilityContext.Consumer is typed as the context consumer
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const CanComponent = createContextualCan(AbilityContext as any)
+export const Can = CanComponent
 
 // ============================================
 // PROVIDER
@@ -64,6 +67,7 @@ export function useAbility(): AppAbility {
  */
 export function usePermission(action: string, subject: string): boolean {
   const ability = useAbility()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ability.can(action as any, subject as any)
 }
 
@@ -72,6 +76,7 @@ export function usePermission(action: string, subject: string): boolean {
  */
 export function usePermissions(permissions: Array<[string, string]>): boolean {
   const ability = useAbility()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return permissions.every(([action, subject]) => ability.can(action as any, subject as any))
 }
 
@@ -80,5 +85,6 @@ export function usePermissions(permissions: Array<[string, string]>): boolean {
  */
 export function useAnyPermission(permissions: Array<[string, string]>): boolean {
   const ability = useAbility()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return permissions.some(([action, subject]) => ability.can(action as any, subject as any))
 }

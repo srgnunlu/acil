@@ -35,13 +35,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('workspace_invitations')
-      .select(
-        `
-        *,
-        workspace:workspaces(id, name, slug, type, color, icon),
-        inviter:profiles!workspace_invitations_invited_by_fkey(id, full_name, avatar_url, title)
-      `
-      )
+      .select('*')
       .order('created_at', { ascending: false })
 
     if (myInvitations) {
@@ -102,17 +96,59 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Enrich invitations with workspace and inviter data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let enrichedInvitations: any[] = invitations || []
+    if (enrichedInvitations.length > 0) {
+      // Fetch workspaces
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const workspaceIds: any[] = [
+        ...new Set(enrichedInvitations.map((i: any) => i.workspace_id).filter(Boolean)),
+      ]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let workspaces: any[] = []
+      if (workspaceIds.length > 0) {
+        const { data: workspacesData } = await supabase
+          .from('workspaces')
+          .select('id, name, slug, type, color, icon')
+          .in('id', workspaceIds)
+        workspaces = workspacesData || []
+      }
+
+      // Fetch inviter profiles
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const inviterIds: any[] = [
+        ...new Set(enrichedInvitations.map((i: any) => i.invited_by).filter(Boolean)),
+      ]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let profiles: any[] = []
+      if (inviterIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, id, full_name, avatar_url, title')
+          .in('user_id', inviterIds)
+        profiles = profilesData || []
+      }
+
+      // Merge data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      enrichedInvitations = enrichedInvitations.map((invitation: any) => ({
+        ...invitation,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        workspace: workspaces?.find((w: any) => w.id === invitation.workspace_id) || null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        inviter: profiles?.find((p: any) => p.user_id === invitation.invited_by) || null,
+      }))
+    }
+
     return NextResponse.json({
       success: true,
-      invitations: invitations || [],
-      total: invitations?.length || 0,
+      invitations: enrichedInvitations,
+      total: enrichedInvitations.length,
     })
   } catch (error) {
     console.error('Invitations API error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Bir hata oluştu' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Bir hata oluştu' }, { status: 500 })
   }
 }
 
@@ -125,7 +161,14 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const body: CreateInvitationInput = await request.json()
 
-    const { workspace_id, email, role, custom_permissions = [], message, expires_in_days = 7 } = body
+    const {
+      workspace_id,
+      email,
+      role,
+      custom_permissions = [],
+      message,
+      expires_in_days = 7,
+    } = body
 
     // Validate input
     if (!workspace_id || !email || !role) {
@@ -138,10 +181,7 @@ export async function POST(request: NextRequest) {
     // Validate email format
     const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$/
     if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { success: false, error: 'Geçersiz email formatı' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: 'Geçersiz email formatı' }, { status: 400 })
     }
 
     // Check if user has permission to invite (owner/admin only)
@@ -236,9 +276,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Create invitation error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Bir hata oluştu' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Bir hata oluştu' }, { status: 500 })
   }
 }

@@ -11,7 +11,7 @@ interface Patient {
   name: string
   age: number | null
   gender: string | null
-  status: string
+  status?: string
   created_at: string
 }
 
@@ -67,7 +67,7 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
 
     // Durum filtresi
     if (filters.status.length > 0) {
-      result = result.filter((p) => filters.status.includes(p.status))
+      result = result.filter((p) => p.status && filters.status.includes(p.status))
     }
 
     // Cinsiyet filtresi
@@ -142,30 +142,34 @@ export function PatientListWithBulk({ patients }: PatientListWithBulkProps) {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | undefined) => {
     const badges = {
       active: 'bg-green-500 text-white',
       discharged: 'bg-gray-500 text-white',
       consultation: 'bg-yellow-500 text-white',
+      default: 'bg-gray-400 text-white',
     }
     const labels = {
       active: 'Aktif',
       discharged: 'Taburcu',
       consultation: 'Konsültasyon',
+      default: 'Bilinmiyor',
     }
     const icons = {
       active: <CheckCircle2 className="w-3 h-3" />,
       discharged: <UserCheck className="w-3 h-3" />,
       consultation: <Clock className="w-3 h-3" />,
+      default: null,
     }
+    const key = (status || 'default') as keyof typeof badges
     return (
       <span
         className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 ${
-          badges[status as keyof typeof badges]
+          badges[key]
         }`}
       >
-        {icons[status as keyof typeof icons]}
-        {labels[status as keyof typeof labels]}
+        {icons[key]}
+        {labels[key]}
       </span>
     )
   }

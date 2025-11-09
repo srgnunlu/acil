@@ -89,13 +89,19 @@ export function CategoryList() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-900">{category.name}</span>
                     {category.is_default && (
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">Varsayılan</span>
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                        Varsayılan
+                      </span>
                     )}
                     {category.is_system && (
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Sistem</span>
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                        Sistem
+                      </span>
                     )}
                   </div>
-                  {category.description && <p className="text-sm text-gray-500 mt-0.5">{category.description}</p>}
+                  {category.description && (
+                    <p className="text-sm text-gray-500 mt-0.5">{category.description}</p>
+                  )}
                   <p className="text-xs text-gray-400 mt-1">{category.patient_count || 0} hasta</p>
                 </div>
               </div>
@@ -118,7 +124,7 @@ export function CategoryList() {
                     }}
                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Sil"
-                    disabled={category.patient_count && category.patient_count > 0}
+                    disabled={!!(category.patient_count && category.patient_count > 0)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -132,7 +138,9 @@ export function CategoryList() {
           <div className="px-6 py-12 text-center">
             <Tag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">Henüz kategori yok</p>
-            <p className="text-sm text-gray-400 mt-1">Kategori eklemek için yukarıdaki butonu kullanın</p>
+            <p className="text-sm text-gray-400 mt-1">
+              Kategori eklemek için yukarıdaki butonu kullanın
+            </p>
           </div>
         )}
       </div>

@@ -96,9 +96,8 @@ export function AddPatientButton({
       const { data, error } = await supabase
         .from('patients')
         .insert({
-          workspace_id: membership.workspace_id,
-          user_id: user.id,
           workspace_id: currentWorkspace.id,
+          user_id: user.id,
           organization_id: currentWorkspace.organization_id,
           category_id: categoryId || null,
           name,
@@ -223,7 +222,10 @@ export function AddPatientButton({
               {/* Category selection */}
               {currentWorkspace && (
                 <div>
-                  <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="category_id"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Kategori
                   </label>
                   <select

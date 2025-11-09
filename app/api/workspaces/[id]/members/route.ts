@@ -11,10 +11,7 @@ import { forbiddenResponse, unauthorizedResponse } from '@/lib/permissions/middl
 // GET /api/workspaces/[id]/members
 // ============================================
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: workspaceId } = await params
     const supabase = await createClient()
@@ -39,24 +36,13 @@ export async function GET(
       .single()
 
     if (!membership) {
-      return forbiddenResponse('Bu workspace\'in üyesi değilsiniz')
+      return forbiddenResponse("Bu workspace'in üyesi değilsiniz")
     }
 
-    // Get all workspace members
+    // Get all workspace members (without profile relationship first)
     const { data: members, error } = await supabase
       .from('workspace_members')
-      .select(
-        `
-        *,
-        profile:profiles!workspace_members_user_id_fkey(
-          id,
-          full_name,
-          avatar_url,
-          title,
-          specialty
-        )
-      `
-      )
+      .select('*')
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
 
@@ -68,16 +54,33 @@ export async function GET(
       )
     }
 
+    // Fetch profiles separately if we have members
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let membersWithProfiles: any[] = members || []
+    if (membersWithProfiles.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const userIds: any[] = membersWithProfiles.map((m: any) => m.user_id)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, title, specialty')
+        .in('user_id', userIds)
+
+      // Merge profiles with members
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      membersWithProfiles = membersWithProfiles.map((member: any) => ({
+        ...member,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        profile: profiles?.find((p: any) => p.user_id === member.user_id) || null,
+      }))
+    }
+
     return NextResponse.json({
       success: true,
-      members: members || [],
-      total: members?.length || 0,
+      members: membersWithProfiles,
+      total: membersWithProfiles.length,
     })
   } catch (error) {
     console.error('Workspace members API error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Bir hata oluştu' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Bir hata oluştu' }, { status: 500 })
   }
 }
