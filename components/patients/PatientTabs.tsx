@@ -7,6 +7,7 @@ import { DataTab } from './tabs/DataTab'
 import { TestsTab } from './tabs/TestsTab'
 import { AIAnalysisTab } from './tabs/AIAnalysisTab'
 import { ChatTab } from './tabs/ChatTab'
+import { NotesTab } from './tabs/NotesTab'
 
 interface PatientTabsProps {
   patientId: string
@@ -14,9 +15,11 @@ interface PatientTabsProps {
   patientData: PatientData[]
   tests: PatientTest[]
   analyses: AIAnalysis[]
+  workspaceId?: string
+  currentUserId?: string
 }
 
-type TabType = 'overview' | 'data' | 'tests' | 'ai' | 'chat'
+type TabType = 'overview' | 'data' | 'tests' | 'ai' | 'chat' | 'notes'
 
 export function PatientTabs({
   patientId,
@@ -24,6 +27,8 @@ export function PatientTabs({
   patientData,
   tests,
   analyses,
+  workspaceId,
+  currentUserId,
 }: PatientTabsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
 
@@ -103,6 +108,21 @@ export function PatientTabs({
       ),
       count: null,
     },
+    {
+      id: 'notes' as TabType,
+      label: 'Notlar',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+          />
+        </svg>
+      ),
+      count: null,
+    },
   ]
 
   return (
@@ -169,6 +189,10 @@ export function PatientTabs({
         )}
 
         {activeTab === 'chat' && <ChatTab patientId={patientId} patientName={patientName} />}
+
+        {activeTab === 'notes' && workspaceId && currentUserId && (
+          <NotesTab patientId={patientId} workspaceId={workspaceId} currentUserId={currentUserId} />
+        )}
       </div>
     </div>
   )
