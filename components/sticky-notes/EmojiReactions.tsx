@@ -1,81 +1,95 @@
-'use client';
+'use client'
 
 /**
  * Emoji Reactions Component
  * Display and manage emoji reactions on sticky notes
  */
 
-import { useState, useRef, useEffect } from 'react';
-import { NoteReaction, POPULAR_REACTIONS } from '@/types/sticky-notes.types';
-import { Smile, Plus } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, memo, useCallback } from 'react'
+import { NoteReaction, POPULAR_REACTIONS } from '@/types/sticky-notes.types'
+import { Smile, Plus } from 'lucide-react'
 
 interface EmojiReactionsProps {
-  noteId: string;
-  reactions: NoteReaction[];
-  currentUserId: string;
-  onReaction?: (noteId: string, emoji: string) => void;
-  onRemoveReaction?: (noteId: string, emoji: string) => void;
+  noteId: string
+  reactions: NoteReaction[]
+  currentUserId: string
+  onReaction?: (noteId: string, emoji: string) => void
+  onRemoveReaction?: (noteId: string, emoji: string) => void
 }
 
-export default function EmojiReactions({
+function EmojiReactions({
   noteId,
   reactions,
   currentUserId,
   onReaction,
   onRemoveReaction,
 }: EmojiReactionsProps) {
-  const [showPicker, setShowPicker] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const [showPicker, setShowPicker] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
 
-  // Group reactions by emoji
-  const groupedReactions = reactions.reduce(
-    (acc, reaction) => {
-      if (!acc[reaction.emoji]) {
-        acc[reaction.emoji] = {
-          count: 0,
-          users: [],
-          userReacted: false,
-        };
-      }
-      acc[reaction.emoji].count++;
-      if (reaction.user_id === currentUserId) {
-        acc[reaction.emoji].userReacted = true;
-      }
-      return acc;
-    },
-    {} as Record<string, { count: number; users: any[]; userReacted: boolean }>
-  );
+  // Memoize grouped reactions to avoid recalculation
+  const groupedReactions = useMemo(
+    () =>
+      reactions.reduce(
+        (acc, reaction) => {
+          if (!acc[reaction.emoji]) {
+            acc[reaction.emoji] = {
+              count: 0,
+              users: [],
+              userReacted: false,
+            }
+          }
+          acc[reaction.emoji].count++
+          if (reaction.user_id === currentUserId) {
+            acc[reaction.emoji].userReacted = true
+          }
+          return acc
+        },
+        {} as Record<
+          string,
+          {
+            count: number
+            users: Array<{ id: string; full_name: string | null; avatar_url: string | null }>
+            userReacted: boolean
+          }
+        >
+      ),
+    [reactions, currentUserId]
+  )
+
+  const hasReactions = useMemo(() => Object.keys(groupedReactions).length > 0, [groupedReactions])
 
   // Close picker when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
-        setShowPicker(false);
+        setShowPicker(false)
       }
-    };
+    }
 
     if (showPicker) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showPicker]);
-
-  const handleReactionClick = (emoji: string) => {
-    const group = groupedReactions[emoji];
-
-    if (group?.userReacted) {
-      onRemoveReaction?.(noteId, emoji);
-    } else {
-      onReaction?.(noteId, emoji);
+      document.removeEventListener('mousedown', handleClickOutside)
     }
+  }, [showPicker])
 
-    setShowPicker(false);
-  };
+  const handleReactionClick = useCallback(
+    (emoji: string) => {
+      const group = groupedReactions[emoji]
 
-  const hasReactions = Object.keys(groupedReactions).length > 0;
+      if (group?.userReacted) {
+        onRemoveReaction?.(noteId, emoji)
+      } else {
+        onReaction?.(noteId, emoji)
+      }
+
+      setShowPicker(false)
+    },
+    [groupedReactions, noteId, onReaction, onRemoveReaction]
+  )
 
   return (
     <div className="emoji-reactions">
@@ -126,5 +140,18 @@ export default function EmojiReactions({
         </div>
       )}
     </div>
-  );
+  )
 }
+
+// Memoize component to prevent unnecessary re-renders
+export default memo(EmojiReactions, (prevProps, nextProps) => {
+  return (
+    prevProps.noteId === nextProps.noteId &&
+    prevProps.currentUserId === nextProps.currentUserId &&
+    prevProps.reactions.length === nextProps.reactions.length &&
+    prevProps.reactions.every(
+      (r, i) =>
+        r.emoji === nextProps.reactions[i]?.emoji && r.user_id === nextProps.reactions[i]?.user_id
+    )
+  )
+})

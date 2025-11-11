@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { PatientStatusBadge, UrgencyBadge, ActivityBadge } from '@/components/ui/badge'
 import { WorkspaceCategoryPanel } from '@/components/dashboard/WorkspaceCategoryPanel'
+import { WorkspaceNotesPanel } from '@/components/dashboard/WorkspaceNotesPanel'
 import {
   Users,
   Activity,
@@ -317,6 +318,21 @@ export default async function DashboardHome() {
 
       {/* Workspace Category Panel */}
       <WorkspaceCategoryPanel />
+
+      {/* Workspace Notes */}
+      {currentWorkspaceId && (
+        <Card
+          variant="default"
+          header={
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Workspace Notları</h2>
+              <span className="text-sm text-gray-500">Genel ekip notları ve iletişim</span>
+            </div>
+          }
+        >
+          <WorkspaceNotesPanel workspaceId={currentWorkspaceId} currentUserId={user.id} />
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card

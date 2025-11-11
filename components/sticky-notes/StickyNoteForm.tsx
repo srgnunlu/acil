@@ -1,33 +1,33 @@
-'use client';
+'use client'
 
 /**
  * Sticky Note Form Component
  * Form for creating/editing sticky notes with rich text and mentions
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react'
 import {
   NoteType,
   NOTE_TYPES,
   NOTE_TYPE_CONFIG,
   MentionSuggestion,
   CreateStickyNoteRequest,
-} from '@/types/sticky-notes.types';
-import RichTextEditor, { RichTextEditorHandle } from './RichTextEditor';
-import { X, Send } from 'lucide-react';
+} from '@/types/sticky-notes.types'
+import RichTextEditor, { RichTextEditorHandle } from './RichTextEditor'
+import { X, Send } from 'lucide-react'
 
 interface StickyNoteFormProps {
-  workspaceId: string;
-  patientId?: string | null;
-  parentId?: string | null;
-  workspaceMembers: MentionSuggestion[];
-  initialContent?: string;
-  initialNoteType?: NoteType;
-  onSubmit: (data: CreateStickyNoteRequest) => Promise<void>;
-  onCancel?: () => void;
-  submitButtonText?: string;
-  isReply?: boolean;
-  className?: string;
+  workspaceId: string
+  patientId?: string | null
+  parentId?: string | null
+  workspaceMembers: MentionSuggestion[]
+  initialContent?: string
+  initialNoteType?: NoteType
+  onSubmit: (data: CreateStickyNoteRequest) => Promise<void>
+  onCancel?: () => void
+  submitButtonText?: string
+  isReply?: boolean
+  className?: string
 }
 
 export default function StickyNoteForm({
@@ -43,46 +43,46 @@ export default function StickyNoteForm({
   isReply = false,
   className = '',
 }: StickyNoteFormProps) {
-  const [noteType, setNoteType] = useState<NoteType>(initialNoteType);
-  const [content, setContent] = useState(initialContent);
-  const [mentions, setMentions] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [noteType, setNoteType] = useState<NoteType>(initialNoteType)
+  const [content, setContent] = useState(initialContent)
+  const [mentions, setMentions] = useState<string[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const editorRef = useRef<RichTextEditorHandle>(null);
+  const editorRef = useRef<RichTextEditorHandle>(null)
 
   useEffect(() => {
     // Focus editor on mount if it's a reply form
     if (isReply) {
       setTimeout(() => {
-        editorRef.current?.focus();
-      }, 100);
+        editorRef.current?.focus()
+      }, 100)
     }
-  }, [isReply]);
+  }, [isReply])
 
   const handleContentChange = (newContent: string, newMentions: string[]) => {
-    setContent(newContent);
-    setMentions(newMentions);
-    setError(null);
-  };
+    setContent(newContent)
+    setMentions(newMentions)
+    setError(null)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     // Validation
-    const plainText = content.replace(/<[^>]*>/g, '').trim();
+    const plainText = content.replace(/<[^>]*>/g, '').trim()
     if (plainText.length === 0) {
-      setError('Not içeriği boş olamaz');
-      return;
+      setError('Not içeriği boş olamaz')
+      return
     }
 
     if (plainText.length > 5000) {
-      setError('Not içeriği 5000 karakterden uzun olamaz');
-      return;
+      setError('Not içeriği 5000 karakterden uzun olamaz')
+      return
     }
 
-    setIsSubmitting(true);
-    setError(null);
+    setIsSubmitting(true)
+    setError(null)
 
     try {
       await onSubmit({
@@ -93,22 +93,26 @@ export default function StickyNoteForm({
         color: NOTE_TYPE_CONFIG[noteType].color,
         parent_id: parentId,
         mentions,
-      });
+      })
 
       // Reset form
-      setContent('');
-      setMentions([]);
-      setNoteType(NOTE_TYPES.INFO);
-      editorRef.current?.clear();
-    } catch (err: any) {
-      setError(err.message || 'Not eklenirken bir hata oluştu');
+      setContent('')
+      setMentions([])
+      setNoteType(NOTE_TYPES.INFO)
+      editorRef.current?.clear()
+    } catch (err: unknown) {
+      const error = err as { message?: string }
+      setError(error.message || 'Not eklenirken bir hata oluştu')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   return (
-    <form onSubmit={handleSubmit} className={`sticky-note-form ${className}`}>
+    <form
+      onSubmit={handleSubmit}
+      className={`sticky-note-form ${isReply ? 'is-reply' : ''} ${className}`}
+    >
       {!isReply && (
         <div className="form-header">
           <h3>Yeni Not</h3>
@@ -124,7 +128,7 @@ export default function StickyNoteForm({
       {!isReply && (
         <div className="note-type-selector">
           {Object.values(NOTE_TYPES).map((type) => {
-            const config = NOTE_TYPE_CONFIG[type];
+            const config = NOTE_TYPE_CONFIG[type]
             return (
               <button
                 key={type}
@@ -139,7 +143,7 @@ export default function StickyNoteForm({
                 <span className="note-type-icon">{config.icon}</span>
                 <span className="note-type-label">{config.label}</span>
               </button>
-            );
+            )
           })}
         </div>
       )}
@@ -150,7 +154,11 @@ export default function StickyNoteForm({
           ref={editorRef}
           content={content}
           onChange={handleContentChange}
-          placeholder={isReply ? 'Yanıtınızı yazın, @ ile etiketleyin...' : 'Notunuzu yazın, @ ile birini etiketleyin...'}
+          placeholder={
+            isReply
+              ? 'Yanıtınızı yazın, @ ile etiketleyin...'
+              : 'Notunuzu yazın, @ ile birini etiketleyin...'
+          }
           workspaceMembers={workspaceMembers}
           disabled={isSubmitting}
           minHeight={isReply ? '80px' : '120px'}
@@ -171,12 +179,12 @@ export default function StickyNoteForm({
           <span className="mentions-label">Etiketlenenler:</span>
           <div className="mentions-list">
             {mentions.map((userId) => {
-              const member = workspaceMembers.find((m) => m.id === userId);
+              const member = workspaceMembers.find((m) => m.id === userId)
               return member ? (
                 <span key={userId} className="mention-tag">
                   {member.label}
                 </span>
-              ) : null;
+              ) : null
             })}
           </div>
         </div>
@@ -185,7 +193,12 @@ export default function StickyNoteForm({
       {/* Actions */}
       <div className="form-actions">
         {onCancel && (
-          <button type="button" onClick={onCancel} className="cancel-button" disabled={isSubmitting}>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="cancel-button"
+            disabled={isSubmitting}
+          >
             İptal
           </button>
         )}
@@ -201,5 +214,5 @@ export default function StickyNoteForm({
         </button>
       </div>
     </form>
-  );
+  )
 }

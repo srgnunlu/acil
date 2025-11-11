@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 /**
  * Sticky Notes Panel
@@ -6,23 +6,23 @@
  * Can be integrated into patient detail page
  */
 
-import { useState, useCallback } from 'react';
-import { useStickyNotes } from '@/lib/hooks/useStickyNotes';
-import { MentionSuggestion, CreateStickyNoteRequest } from '@/types/sticky-notes.types';
-import StickyNoteForm from './StickyNoteForm';
-import StickyNotesList from './StickyNotesList';
-import { MessageSquarePlus, RefreshCw } from 'lucide-react';
-import './StickyNotes.css';
+import { useState, useCallback } from 'react'
+import { useStickyNotes } from '@/lib/hooks/useStickyNotes'
+import { MentionSuggestion, CreateStickyNoteRequest } from '@/types/sticky-notes.types'
+import StickyNoteForm from './StickyNoteForm'
+import StickyNotesList from './StickyNotesList'
+import { MessageSquarePlus, RefreshCw, Plus } from 'lucide-react'
+import './StickyNotes.css'
 
 interface StickyNotesPanelProps {
-  workspaceId: string;
-  patientId?: string | null;
-  currentUserId: string;
-  workspaceMembers: MentionSuggestion[];
-  canEdit?: boolean;
-  canDelete?: boolean;
-  showAddButton?: boolean;
-  className?: string;
+  workspaceId: string
+  patientId?: string | null
+  currentUserId: string
+  workspaceMembers: MentionSuggestion[]
+  canEdit?: boolean
+  canDelete?: boolean
+  showAddButton?: boolean
+  className?: string
 }
 
 export default function StickyNotesPanel({
@@ -35,8 +35,8 @@ export default function StickyNotesPanel({
   showAddButton = true,
   className = '',
 }: StickyNotesPanelProps) {
-  const [showForm, setShowForm] = useState(false);
-  const [replyToNoteId, setReplyToNoteId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false)
+  const [replyToNoteId, setReplyToNoteId] = useState<string | null>(null)
 
   // Use sticky notes hook with real-time
   const {
@@ -57,65 +57,72 @@ export default function StickyNotesPanel({
     workspaceId,
     patientId,
     realtime: true,
-  });
+  })
 
   // Handle note submission
   const handleNoteSubmit = useCallback(
     async (data: CreateStickyNoteRequest) => {
-      await createNote(data);
-      setShowForm(false);
-      setReplyToNoteId(null);
+      await createNote(data)
+      setShowForm(false)
+      setReplyToNoteId(null)
     },
     [createNote]
-  );
+  )
 
   // Handle reply
   const handleReply = useCallback((noteId: string) => {
-    setReplyToNoteId(noteId);
-    setShowForm(true);
-  }, []);
+    setReplyToNoteId(noteId)
+    setShowForm(true)
+    // Scroll to form if it's a reply
+    setTimeout(() => {
+      const formElement = document.querySelector('.sticky-note-form.is-reply')
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }, 100)
+  }, [])
 
   // Handle delete
   const handleDelete = useCallback(
     async (noteId: string) => {
       if (window.confirm('Bu notu silmek istediğinizden emin misiniz?')) {
-        await deleteNote(noteId);
+        await deleteNote(noteId)
       }
     },
     [deleteNote]
-  );
+  )
 
   // Handle toggle pin
   const handleTogglePin = useCallback(
     async (noteId: string, isPinned: boolean) => {
-      await togglePin({ noteId, isPinned });
+      await togglePin({ noteId, isPinned })
     },
     [togglePin]
-  );
+  )
 
   // Handle toggle resolve
   const handleToggleResolve = useCallback(
     async (noteId: string, isResolved: boolean) => {
-      await toggleResolve({ noteId, isResolved });
+      await toggleResolve({ noteId, isResolved })
     },
     [toggleResolve]
-  );
+  )
 
   // Handle reaction
   const handleReaction = useCallback(
     async (noteId: string, emoji: string) => {
-      await addReaction({ noteId, emoji });
+      await addReaction({ noteId, emoji })
     },
     [addReaction]
-  );
+  )
 
   // Handle remove reaction
   const handleRemoveReaction = useCallback(
     async (noteId: string, emoji: string) => {
-      await removeReaction({ noteId, emoji });
+      await removeReaction({ noteId, emoji })
     },
     [removeReaction]
-  );
+  )
 
   return (
     <div className={`sticky-notes-panel ${className}`}>
@@ -140,14 +147,15 @@ export default function StickyNotesPanel({
               className="add-note-button"
               disabled={isCreating}
             >
-              {showForm ? 'İptal' : 'Yeni Not'}
+              <Plus size={18} />
+              <span>{showForm ? 'İptal' : 'Yeni Not'}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Add note form */}
-      {showForm && canEdit && (
+      {/* Add note form - only show at top if not a reply */}
+      {showForm && canEdit && !replyToNoteId && (
         <StickyNoteForm
           workspaceId={workspaceId}
           patientId={patientId}
@@ -155,10 +163,10 @@ export default function StickyNotesPanel({
           workspaceMembers={workspaceMembers}
           onSubmit={handleNoteSubmit}
           onCancel={() => {
-            setShowForm(false);
-            setReplyToNoteId(null);
+            setShowForm(false)
+            setReplyToNoteId(null)
           }}
-          isReply={!!replyToNoteId}
+          isReply={false}
         />
       )}
 
@@ -193,6 +201,22 @@ export default function StickyNotesPanel({
           canDelete={canDelete}
           showFilters={true}
           emptyMessage="Henüz not eklenmemiş. İlk notu siz ekleyin!"
+          replyFormComponent={(noteId) => (
+            <StickyNoteForm
+              workspaceId={workspaceId}
+              patientId={patientId}
+              parentId={noteId}
+              workspaceMembers={workspaceMembers}
+              onSubmit={handleNoteSubmit}
+              onCancel={() => {
+                setReplyToNoteId(null)
+                setShowForm(false)
+              }}
+              isReply={true}
+              className="is-reply"
+            />
+          )}
+          activeReplyId={replyToNoteId}
         />
       )}
 
@@ -203,5 +227,5 @@ export default function StickyNotesPanel({
         </div>
       )}
     </div>
-  );
+  )
 }

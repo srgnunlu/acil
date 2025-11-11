@@ -3,24 +3,20 @@
  * Real-time subscription for sticky notes using Supabase Realtime
  */
 
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import {
-  StickyNote,
-  StickyNoteWithDetails,
-  RealtimeStickyNoteEvent,
-} from '@/types/sticky-notes.types';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { useEffect, useState, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { StickyNote } from '@/types/sticky-notes.types'
+import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface UseRealtimeStickyNotesOptions {
-  workspaceId: string;
-  patientId?: string | null;
-  enabled?: boolean;
-  onNoteAdded?: (note: StickyNote) => void;
-  onNoteUpdated?: (note: StickyNote) => void;
-  onNoteDeleted?: (noteId: string) => void;
+  workspaceId: string
+  patientId?: string | null
+  enabled?: boolean
+  onNoteAdded?: (note: StickyNote) => void
+  onNoteUpdated?: (note: StickyNote) => void
+  onNoteDeleted?: (noteId: string) => void
 }
 
 export function useRealtimeStickyNotes({
@@ -31,21 +27,38 @@ export function useRealtimeStickyNotes({
   onNoteUpdated,
   onNoteDeleted,
 }: UseRealtimeStickyNotesOptions) {
-  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Store callbacks in refs to avoid re-subscribing when they change
+  const callbacksRef = useRef({
+    onNoteAdded,
+    onNoteUpdated,
+    onNoteDeleted,
+  })
+
+  // Update callbacks ref when they change
+  useEffect(() => {
+    callbacksRef.current = {
+      onNoteAdded,
+      onNoteUpdated,
+      onNoteDeleted,
+    }
+  }, [onNoteAdded, onNoteUpdated, onNoteDeleted])
 
   useEffect(() => {
     if (!enabled || !workspaceId) {
-      return;
+      return
     }
 
-    const supabase = createClient();
+    let isMounted = true
+    const supabase = createClient()
 
     // Create channel for this workspace
     const channelName = patientId
       ? `sticky-notes:workspace:${workspaceId}:patient:${patientId}`
-      : `sticky-notes:workspace:${workspaceId}`;
+      : `sticky-notes:workspace:${workspaceId}`
 
     const realtimeChannel = supabase
       .channel(channelName)
@@ -60,9 +73,13 @@ export function useRealtimeStickyNotes({
             : `workspace_id=eq.${workspaceId}`,
         },
         (payload) => {
-          console.log('Sticky note inserted:', payload);
-          const note = payload.new as StickyNote;
-          onNoteAdded?.(note);
+          if (!isMounted) return
+          try {
+            const note = payload.new as StickyNote
+            callbacksRef.current.onNoteAdded?.(note)
+          } catch {
+            // Silently ignore callback errors
+          }
         }
       )
       .on(
@@ -76,9 +93,13 @@ export function useRealtimeStickyNotes({
             : `workspace_id=eq.${workspaceId}`,
         },
         (payload) => {
-          console.log('Sticky note updated:', payload);
-          const note = payload.new as StickyNote;
-          onNoteUpdated?.(note);
+          if (!isMounted) return
+          try {
+            const note = payload.new as StickyNote
+            callbacksRef.current.onNoteUpdated?.(note)
+          } catch {
+            // Silently ignore callback errors
+          }
         }
       )
       .on(
@@ -92,39 +113,51 @@ export function useRealtimeStickyNotes({
             : `workspace_id=eq.${workspaceId}`,
         },
         (payload) => {
-          console.log('Sticky note deleted:', payload);
-          const note = payload.old as StickyNote;
-          onNoteDeleted?.(note.id);
+          if (!isMounted) return
+          try {
+            const note = payload.old as StickyNote
+            callbacksRef.current.onNoteDeleted?.(note.id)
+          } catch {
+            // Silently ignore callback errors
+          }
         }
       )
       .subscribe((status) => {
-        console.log('Sticky notes subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          setIsConnected(true);
-          setError(null);
-        } else if (status === 'CHANNEL_ERROR') {
-          setIsConnected(false);
-          setError('Failed to connect to realtime channel');
-        } else if (status === 'TIMED_OUT') {
-          setIsConnected(false);
-          setError('Connection timed out');
+        if (!isMounted) return
+        try {
+          if (status === 'SUBSCRIBED') {
+            setIsConnected(true)
+            setError(null)
+          } else if (status === 'CHANNEL_ERROR') {
+            setIsConnected(false)
+            setError('Failed to connect to realtime channel')
+          } else if (status === 'TIMED_OUT') {
+            setIsConnected(false)
+            setError('Connection timed out')
+          }
+        } catch (error) {
+          // Silently ignore state update errors
         }
-      });
+      })
 
-    setChannel(realtimeChannel);
+    setChannel(realtimeChannel)
 
     // Cleanup
     return () => {
-      console.log('Unsubscribing from sticky notes channel');
-      realtimeChannel.unsubscribe();
-      setChannel(null);
-      setIsConnected(false);
-    };
-  }, [workspaceId, patientId, enabled, onNoteAdded, onNoteUpdated, onNoteDeleted]);
+      isMounted = false
+      try {
+        realtimeChannel.unsubscribe()
+        setChannel(null)
+        setIsConnected(false)
+      } catch (error) {
+        // Silently ignore cleanup errors
+      }
+    }
+  }, [workspaceId, patientId, enabled]) // Removed callbacks from dependencies
 
   return {
     isConnected,
     error,
     channel,
-  };
+  }
 }

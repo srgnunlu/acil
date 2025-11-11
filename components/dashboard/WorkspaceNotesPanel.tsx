@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Notes Tab Component
- * Display sticky notes for a patient with workspace context
+ * Workspace Notes Panel
+ * Displays workspace-level sticky notes (not tied to any patient)
  */
 
 import { useEffect, useState } from 'react'
@@ -10,16 +10,15 @@ import StickyNotesPanel from '@/components/sticky-notes/StickyNotesPanel'
 import { MentionSuggestion } from '@/types/sticky-notes.types'
 import { createClient } from '@/lib/supabase/client'
 
-interface NotesTabProps {
-  patientId: string
+interface WorkspaceNotesPanelProps {
   workspaceId: string
   currentUserId: string
 }
 
-export function NotesTab({ patientId, workspaceId, currentUserId }: NotesTabProps) {
+export function WorkspaceNotesPanel({ workspaceId, currentUserId }: WorkspaceNotesPanelProps) {
   const [workspaceMembers, setWorkspaceMembers] = useState<MentionSuggestion[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [userRole, setUserRole] = useState<string>('')
+  const [userRole, setUserRole] = useState<string>('observer')
 
   useEffect(() => {
     const fetchWorkspaceMembers = async () => {
@@ -27,32 +26,41 @@ export function NotesTab({ patientId, workspaceId, currentUserId }: NotesTabProp
       const supabase = createClient()
 
       try {
-        // Fetch workspace members for mentions
+        // Get current user's role in workspace
+        const { data: membership } = await supabase
+          .from('workspace_members')
+          .select('role')
+          .eq('workspace_id', workspaceId)
+          .eq('user_id', currentUserId)
+          .eq('status', 'active')
+          .single()
+
+        if (membership) {
+          setUserRole(membership.role)
+        }
+
+        // Get all active workspace members
         const { data: members, error: membersError } = await supabase
           .from('workspace_members')
-          .select('user_id, role')
+          .select('user_id')
           .eq('workspace_id', workspaceId)
           .eq('status', 'active')
 
         if (membersError) {
           console.error('Error fetching workspace members:', membersError)
+          setIsLoading(false)
           return
         }
 
-        if (!members || members.length === 0) {
+        const userIds = (members || []).map((m) => m.user_id).filter(Boolean)
+
+        if (userIds.length === 0) {
           setWorkspaceMembers([])
           setIsLoading(false)
           return
         }
 
-        // Get current user's role
-        const currentUserMember = members.find((m) => m.user_id === currentUserId)
-        if (currentUserMember) {
-          setUserRole(currentUserMember.role)
-        }
-
-        // Fetch profiles for all user IDs - use user_id to match
-        const userIds = members.map((m) => m.user_id)
+        // Fetch profiles - use user_id to match
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('id, full_name, avatar_url, user_id')
@@ -60,25 +68,17 @@ export function NotesTab({ patientId, workspaceId, currentUserId }: NotesTabProp
 
         if (profilesError) {
           console.error('Error fetching profiles:', profilesError)
+          setIsLoading(false)
           return
         }
 
-        // Create a map of user_id to profile (use user_id, not id!)
-        const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]))
-
         // Transform to MentionSuggestion format
-        const suggestions: MentionSuggestion[] = members
-          .map((m) => {
-            const profile = profileMap.get(m.user_id)
-            if (!profile) return null
-            return {
-              id: profile.id,
-              label: profile.full_name || `Kullanıcı ${profile.id.slice(0, 8)}`,
-              email: undefined, // Email will be fetched from API if needed
-              avatar_url: profile.avatar_url,
-            }
-          })
-          .filter((s): s is MentionSuggestion => s !== null)
+        const suggestions: MentionSuggestion[] = (profiles || []).map((profile) => ({
+          id: profile.id,
+          label: profile.full_name || `Kullanıcı ${profile.id.slice(0, 8)}`,
+          email: undefined, // Email will be fetched from API if needed
+          avatar_url: profile.avatar_url,
+        }))
 
         setWorkspaceMembers(suggestions)
       } catch (error) {
@@ -88,7 +88,9 @@ export function NotesTab({ patientId, workspaceId, currentUserId }: NotesTabProp
       }
     }
 
-    fetchWorkspaceMembers()
+    if (workspaceId && currentUserId) {
+      fetchWorkspaceMembers()
+    }
   }, [workspaceId, currentUserId])
 
   // Determine permissions based on role
@@ -105,10 +107,10 @@ export function NotesTab({ patientId, workspaceId, currentUserId }: NotesTabProp
   }
 
   return (
-    <div className="notes-tab-container">
+    <div className="workspace-notes-panel">
       <StickyNotesPanel
         workspaceId={workspaceId}
-        patientId={patientId}
+        patientId={null}
         currentUserId={currentUserId}
         workspaceMembers={workspaceMembers}
         canEdit={canEdit}

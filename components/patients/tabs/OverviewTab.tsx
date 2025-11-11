@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PatientData, PatientTest, AIAnalysis, AIAnalysisResponse } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -13,6 +13,7 @@ interface OverviewTabProps {
 
 export function OverviewTab({ patientData, tests, analyses }: OverviewTabProps) {
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'data' | 'test' | 'analysis'>('all')
+  const [mounted] = useState(true)
 
   const latestAnalysis = analyses[0]
 
@@ -273,10 +274,12 @@ export function OverviewTab({ patientData, tests, analyses }: OverviewTabProps) 
 
                         {/* Timestamp */}
                         <span className="text-xs text-gray-500">
-                          {formatDistanceToNow(new Date(event.date), {
-                            addSuffix: true,
-                            locale: tr,
-                          })}
+                          {mounted
+                            ? formatDistanceToNow(new Date(event.date), {
+                                addSuffix: true,
+                                locale: tr,
+                              })
+                            : 'Yükleniyor...'}
                         </span>
 
                         {/* Event preview - only for analysis */}
@@ -320,10 +323,12 @@ export function OverviewTab({ patientData, tests, analyses }: OverviewTabProps) 
                   Son Vital Bulgular
                 </h3>
                 <span className="text-xs text-gray-500">
-                  {formatDistanceToNow(new Date(latestVitals.created_at), {
-                    addSuffix: true,
-                    locale: tr,
-                  })}
+                  {mounted
+                    ? formatDistanceToNow(new Date(latestVitals.created_at), {
+                        addSuffix: true,
+                        locale: tr,
+                      })
+                    : 'Yükleniyor...'}
                 </span>
               </div>
 
@@ -578,10 +583,12 @@ export function OverviewTab({ patientData, tests, analyses }: OverviewTabProps) 
                 {/* Timestamp and action */}
                 <div className="flex items-center justify-between pt-3 border-t border-green-200">
                   <p className="text-xs text-gray-500">
-                    {formatDistanceToNow(new Date(latestAnalysis.created_at), {
-                      addSuffix: true,
-                      locale: tr,
-                    })}
+                    {mounted
+                      ? formatDistanceToNow(new Date(latestAnalysis.created_at), {
+                          addSuffix: true,
+                          locale: tr,
+                        })
+                      : 'Yükleniyor...'}
                   </p>
                   <button className="text-xs text-green-700 hover:text-green-800 font-medium flex items-center">
                     <svg
