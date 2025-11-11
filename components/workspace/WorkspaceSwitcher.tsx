@@ -76,10 +76,10 @@ export function WorkspaceSwitcher() {
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 z-50" onClick={() => setIsOpen(false)} />
 
           {/* Menu */}
-          <div className="absolute top-full left-0 mt-2 w-full min-w-[280px] bg-white border rounded-lg shadow-lg z-20 max-h-[400px] overflow-y-auto">
+          <div className="absolute top-full left-0 mt-2 w-full min-w-[280px] bg-white border rounded-lg shadow-lg z-[60] max-h-[400px] overflow-y-auto">
             {/* Workspaces List - Sadece seçili organization'a ait workspaceler */}
             <div className="p-2">
               {filteredWorkspaces.map((workspace) => (

@@ -46,11 +46,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <DashboardAbilityProvider>
           <div className="min-h-screen bg-gray-50">
             {/* Header */}
-            <header className="bg-white border-b border-gray-200 sticky top-0 z-40 backdrop-blur-sm bg-white/95 overflow-x-hidden">
+            <header className="bg-white border-b border-gray-200 sticky top-0 z-40 backdrop-blur-sm bg-white/95">
               <div className="w-full max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16 gap-2 lg:gap-4 min-w-0">
                   {/* Left side */}
-                  <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0 min-w-0 flex-1 overflow-hidden">
+                  <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0 min-w-0 flex-1">
                     <Link
                       href="/dashboard"
                       className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent hover:from-blue-700 hover:to-indigo-700 transition-all flex-shrink-0"
@@ -59,11 +59,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
                     </Link>
 
                     {/* Organization ve Workspace switcher'ları - hidden on small screens */}
-                    <div className="hidden md:flex items-center gap-1.5 lg:gap-2 flex-shrink min-w-0 overflow-hidden">
-                      <div className="w-[120px] lg:w-[150px] min-w-0 flex-shrink">
+                    <div className="hidden md:flex items-center gap-1.5 lg:gap-2 flex-shrink min-w-0">
+                      <div className="w-[120px] lg:w-[150px] min-w-0 flex-shrink-0 overflow-visible">
                         <OrganizationSwitcher />
                       </div>
-                      <div className="w-[120px] lg:w-[150px] min-w-0 flex-shrink">
+                      <div className="w-[120px] lg:w-[150px] min-w-0 flex-shrink-0 overflow-visible">
                         <WorkspaceSwitcher />
                       </div>
                     </div>
