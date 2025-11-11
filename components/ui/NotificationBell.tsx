@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -46,18 +46,7 @@ export function NotificationBell() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
-    fetchAllNotifications()
-    // Her 30 saniyede bir güncelle
-    const interval = setInterval(fetchAllNotifications, 30000)
-    return () => clearInterval(interval)
-  }, [fetchAllNotifications])
-
-  const fetchAllNotifications = async () => {
-    await Promise.all([fetchReminders(), fetchMentions()])
-  }
-
-  const fetchReminders = async () => {
+  const fetchReminders = useCallback(async () => {
     try {
       const response = await fetch('/api/reminders')
       if (response.ok) {
@@ -67,9 +56,9 @@ export function NotificationBell() {
     } catch (error) {
       console.error('Fetch reminders error:', error)
     }
-  }
+  }, [])
 
-  const fetchMentions = async () => {
+  const fetchMentions = useCallback(async () => {
     try {
       const response = await fetch('/api/mentions/me?is_read=false&limit=10')
       if (response.ok) {
@@ -79,7 +68,18 @@ export function NotificationBell() {
     } catch (error) {
       console.error('Fetch mentions error:', error)
     }
-  }
+  }, [])
+
+  const fetchAllNotifications = useCallback(async () => {
+    await Promise.all([fetchReminders(), fetchMentions()])
+  }, [fetchReminders, fetchMentions])
+
+  useEffect(() => {
+    fetchAllNotifications()
+    // Her 30 saniyede bir güncelle
+    const interval = setInterval(fetchAllNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [fetchAllNotifications])
 
   const markMentionAsRead = async (mentionId: string, noteId: string) => {
     try {
