@@ -46,7 +46,7 @@ export interface UseRealtimeNotificationsReturn {
 export function useRealtimeNotifications({
   userId,
   enabled = true,
-  onNotification
+  onNotification,
 }: UseRealtimeNotificationsOptions): UseRealtimeNotificationsReturn {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
@@ -54,37 +54,46 @@ export function useRealtimeNotifications({
   const channelRef = useRef<RealtimeChannel | null>(null)
   const supabase = createClient()
 
+  // Store callback in ref to avoid re-subscribing on every render
+  const onNotificationRef = useRef(onNotification)
+
+  // Update callback ref when it changes
+  useEffect(() => {
+    onNotificationRef.current = onNotification
+  }, [onNotification])
+
   // Calculate unread count
   const unreadCount = notifications.filter((n) => !n.is_read).length
 
   /**
    * Mark notification as read
    */
-  const markAsRead = useCallback(async (notificationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({
-          is_read: true,
-          read_at: new Date().toISOString()
-        })
-        .eq('id', notificationId)
+  const markAsRead = useCallback(
+    async (notificationId: string) => {
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .update({
+            is_read: true,
+            read_at: new Date().toISOString(),
+          })
+          .eq('id', notificationId)
 
-      if (error) throw error
+        if (error) throw error
 
-      // Update local state
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === notificationId
-            ? { ...n, is_read: true, read_at: new Date().toISOString() }
-            : n
+        // Update local state
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notificationId ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
+          )
         )
-      )
-    } catch (err) {
-      console.error('[useRealtimeNotifications] Failed to mark as read:', err)
-      throw err
-    }
-  }, [supabase])
+      } catch (err) {
+        console.error('[useRealtimeNotifications] Failed to mark as read:', err)
+        throw err
+      }
+    },
+    [supabase]
+  )
 
   /**
    * Mark all notifications as read
@@ -95,7 +104,7 @@ export function useRealtimeNotifications({
         .from('notifications')
         .update({
           is_read: true,
-          read_at: new Date().toISOString()
+          read_at: new Date().toISOString(),
         })
         .eq('user_id', userId)
         .eq('is_read', false)
@@ -137,8 +146,11 @@ export function useRealtimeNotifications({
         if (error) throw error
 
         setNotifications((data as Notification[]) || [])
+        setError(null)
       } catch (err) {
         console.error('[useRealtimeNotifications] Failed to load:', err)
+        setError(err as Error)
+        setNotifications([]) // Set empty array on error
       }
     }
 
@@ -168,33 +180,45 @@ export function useRealtimeNotifications({
             event: 'INSERT',
             schema: 'public',
             table: 'notifications',
-            filter: `user_id=eq.${userId}`
+            filter: `user_id=eq.${userId}`,
           },
           (payload) => {
-            console.log('[useRealtimeNotifications] New notification:', payload.new)
+            try {
+              console.log('[useRealtimeNotifications] New notification:', payload.new)
 
-            const newNotification = payload.new as Notification
+              const newNotification = payload.new as Notification
 
-            // Add to state
-            setNotifications((prev) => [newNotification, ...prev])
+              // Add to state
+              setNotifications((prev) => [newNotification, ...prev])
 
-            // Call callback
-            if (onNotification) {
-              onNotification(newNotification)
-            }
+              // Call callback
+              if (onNotificationRef.current) {
+                try {
+                  onNotificationRef.current(newNotification)
+                } catch (callbackErr) {
+                  console.error('[useRealtimeNotifications] Callback error:', callbackErr)
+                }
+              }
 
-            // Show browser notification if supported and permission granted
-            if (
-              'Notification' in window &&
-              Notification.permission === 'granted' &&
-              newNotification.severity === 'critical'
-            ) {
-              new Notification(newNotification.title, {
-                body: newNotification.message || undefined,
-                icon: '/icon-192.png',
-                badge: '/icon-192.png',
-                tag: newNotification.id
-              })
+              // Show browser notification if supported and permission granted
+              if (
+                'Notification' in window &&
+                Notification.permission === 'granted' &&
+                newNotification.severity === 'critical'
+              ) {
+                try {
+                  new Notification(newNotification.title, {
+                    body: newNotification.message || undefined,
+                    icon: '/icon-192.png',
+                    badge: '/icon-192.png',
+                    tag: newNotification.id,
+                  })
+                } catch (notifErr) {
+                  console.warn('[useRealtimeNotifications] Browser notification error:', notifErr)
+                }
+              }
+            } catch (err) {
+              console.error('[useRealtimeNotifications] Error processing notification:', err)
             }
           }
         )
@@ -204,7 +228,7 @@ export function useRealtimeNotifications({
             event: 'UPDATE',
             schema: 'public',
             table: 'notifications',
-            filter: `user_id=eq.${userId}`
+            filter: `user_id=eq.${userId}`,
           },
           (payload) => {
             console.log('[useRealtimeNotifications] Notification updated:', payload.new)
@@ -212,9 +236,7 @@ export function useRealtimeNotifications({
             const updated = payload.new as Notification
 
             // Update in state
-            setNotifications((prev) =>
-              prev.map((n) => (n.id === updated.id ? updated : n))
-            )
+            setNotifications((prev) => prev.map((n) => (n.id === updated.id ? updated : n)))
           }
         )
         .subscribe((status) => {
@@ -246,7 +268,7 @@ export function useRealtimeNotifications({
         channelRef.current = null
       }
     }
-  }, [userId, enabled, onNotification, supabase])
+  }, [userId, enabled, supabase])
 
   return {
     notifications,
@@ -255,6 +277,6 @@ export function useRealtimeNotifications({
     error,
     markAsRead,
     markAllAsRead,
-    clearNotifications
+    clearNotifications,
   }
 }

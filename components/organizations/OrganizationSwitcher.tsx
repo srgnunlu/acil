@@ -20,17 +20,17 @@ export function OrganizationSwitcher() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg">
-        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-        <span className="text-sm text-gray-500">Yükleniyor...</span>
+      <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white border rounded-lg w-full max-w-full min-w-0 overflow-hidden">
+        <Loader2 className="w-3 h-3 animate-spin text-gray-400 flex-shrink-0" />
+        <span className="text-xs text-gray-500 truncate">Yükleniyor...</span>
       </div>
     )
   }
 
   if (!currentOrganization) {
     return (
-      <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <span className="text-sm text-yellow-700">Organizasyon bulunamadı</span>
+      <div className="px-2 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg w-full max-w-full min-w-0 overflow-hidden">
+        <span className="text-xs text-yellow-700 truncate">Organizasyon bulunamadı</span>
       </div>
     )
   }
@@ -38,49 +38,53 @@ export function OrganizationSwitcher() {
   // Only show switcher if user has multiple organizations
   if (organizations.length <= 1) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg">
+      <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white border rounded-lg w-full max-w-full min-w-0 overflow-hidden">
         {currentOrganization.logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={currentOrganization.logo_url}
             alt={currentOrganization.name}
-            className="w-6 h-6 rounded"
+            className="w-5 h-5 rounded flex-shrink-0"
           />
         ) : (
-          <Building2 className="w-5 h-5 text-gray-400" />
+          <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
         )}
-        <span className="text-sm font-medium text-gray-900">{currentOrganization.name}</span>
+        <span className="text-xs font-medium text-gray-900 truncate">
+          {currentOrganization.name}
+        </span>
       </div>
     )
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full max-w-full">
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg hover:bg-gray-50 transition-colors min-w-[200px]"
+        className="flex items-center gap-1.5 px-2 py-1.5 bg-white border rounded-lg hover:bg-gray-50 transition-colors w-full max-w-full min-w-0 overflow-hidden"
       >
-        <div className="flex items-center gap-2 flex-1">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
           {currentOrganization.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={currentOrganization.logo_url}
               alt={currentOrganization.name}
-              className="w-6 h-6 rounded"
+              className="w-5 h-5 rounded flex-shrink-0"
             />
           ) : (
-            <Building2 className="w-5 h-5 text-gray-400" />
+            <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
           )}
-          <div className="flex flex-col items-start">
-            <span className="text-sm font-medium text-gray-900">{currentOrganization.name}</span>
-            <span className="text-xs text-gray-500">
+          <div className="flex flex-col items-start min-w-0 flex-1 overflow-hidden">
+            <span className="text-xs font-medium text-gray-900 truncate w-full">
+              {currentOrganization.name}
+            </span>
+            <span className="text-[10px] text-gray-500 truncate w-full">
               {typeLabels[currentOrganization.type] || currentOrganization.type}
             </span>
           </div>
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 

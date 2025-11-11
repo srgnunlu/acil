@@ -29,21 +29,25 @@ export function UserMenu({
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="text-right hidden sm:block">
-        <p className="text-sm font-medium text-gray-900">{profile?.full_name || user.email}</p>
+    <div className="flex items-center gap-2 lg:gap-3">
+      <div className="text-right hidden lg:block">
+        <p className="text-sm font-medium text-gray-900 truncate max-w-[120px]">
+          {profile?.full_name || user.email}
+        </p>
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-500 whitespace-nowrap">
                 {patientCount}/{patientLimit} hasta
               </span>
               {profile?.subscription_tier === 'free' && (
-                <span className="text-xs text-blue-600 font-medium">(Ücretsiz)</span>
+                <span className="text-xs text-blue-600 font-medium whitespace-nowrap">
+                  (Ücretsiz)
+                </span>
               )}
             </div>
             {/* Progress bar */}
-            <div className="w-24 h-1 bg-gray-200 rounded-full overflow-hidden mt-1">
+            <div className="w-20 lg:w-24 h-1 bg-gray-200 rounded-full overflow-hidden mt-1">
               <div
                 className={`h-full ${getProgressColor()} transition-all duration-300`}
                 style={{ width: `${usagePercentage}%` }}
@@ -56,6 +60,13 @@ export function UserMenu({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile/Tablet view - just show name */}
+      <div className="text-right lg:hidden">
+        <p className="text-xs font-medium text-gray-900 truncate max-w-[80px]">
+          {profile?.full_name || user.email?.split('@')[0]}
+        </p>
       </div>
     </div>
   )

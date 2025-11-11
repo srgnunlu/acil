@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { PatientListWithBulk } from '@/components/patients/PatientListWithBulk'
 import { Loader2 } from 'lucide-react'
 import type { Patient } from '@/types'
+import { useRealtimePatients } from '@/lib/hooks/useRealtimePatients'
 
 interface PatientListClientProps {
   initialPatients: Patient[]
@@ -16,15 +16,26 @@ export function PatientListClient({ initialPatients }: PatientListClientProps) {
   const [patients, setPatients] = useState<Patient[]>(initialPatients)
   const [loading, setLoading] = useState(false)
   const currentWorkspace = useCurrentWorkspace()
-  const router = useRouter()
 
-  useEffect(() => {
-    if (currentWorkspace?.id) {
-      loadWorkspacePatients()
-    }
-  }, [currentWorkspace?.id])
+  // Real-time patient updates
+  useRealtimePatients({
+    workspaceId: currentWorkspace?.id || '',
+    enabled: !!currentWorkspace,
+    onInsert: (patient) => {
+      // Yeni hasta eklendiğinde listeye ekle
+      setPatients((prev) => [patient, ...prev])
+    },
+    onUpdate: (patient) => {
+      // Hasta güncellendiğinde listeyi güncelle
+      setPatients((prev) => prev.map((p) => (p.id === patient.id ? patient : p)))
+    },
+    onDelete: (patientId) => {
+      // Hasta silindiğinde listeden çıkar
+      setPatients((prev) => prev.filter((p) => p.id !== patientId))
+    },
+  })
 
-  const loadWorkspacePatients = async () => {
+  const loadWorkspacePatients = useCallback(async () => {
     if (!currentWorkspace?.id) return
 
     setLoading(true)
@@ -45,7 +56,13 @@ export function PatientListClient({ initialPatients }: PatientListClientProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentWorkspace?.id])
+
+  useEffect(() => {
+    if (currentWorkspace?.id) {
+      loadWorkspacePatients()
+    }
+  }, [currentWorkspace?.id, loadWorkspacePatients])
 
   if (loading) {
     return (

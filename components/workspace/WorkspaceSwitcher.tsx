@@ -19,9 +19,9 @@ export function WorkspaceSwitcher() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg">
-        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-        <span className="text-sm text-gray-500">Yükleniyor...</span>
+      <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white border rounded-lg w-full max-w-full min-w-0 overflow-hidden">
+        <Loader2 className="w-3 h-3 animate-spin text-gray-400 flex-shrink-0" />
+        <span className="text-xs text-gray-500 truncate">Yükleniyor...</span>
       </div>
     )
   }
@@ -29,16 +29,18 @@ export function WorkspaceSwitcher() {
   // Eğer seçili organization yoksa veya o organization'a ait workspace yoksa
   if (!currentOrganization) {
     return (
-      <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-        <span className="text-sm text-gray-500">Önce bir organizasyon seçin</span>
+      <div className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg w-full max-w-full min-w-0 overflow-hidden">
+        <span className="text-xs text-gray-500 truncate">Önce bir organizasyon seçin</span>
       </div>
     )
   }
 
   if (filteredWorkspaces.length === 0) {
     return (
-      <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <span className="text-sm text-yellow-700">Bu organizasyonda workspace bulunamadı</span>
+      <div className="px-2 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg w-full max-w-full min-w-0 overflow-hidden">
+        <span className="text-xs text-yellow-700 truncate">
+          Bu organizasyonda workspace bulunamadı
+        </span>
       </div>
     )
   }
@@ -50,21 +52,23 @@ export function WorkspaceSwitcher() {
       : filteredWorkspaces[0]
 
   return (
-    <div className="relative">
+    <div className="relative w-full max-w-full">
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg hover:bg-gray-50 transition-colors min-w-[200px]"
+        className="flex items-center gap-1.5 px-2 py-1.5 bg-white border rounded-lg hover:bg-gray-50 transition-colors w-full max-w-full min-w-0 overflow-hidden"
       >
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-2xl">{validCurrentWorkspace.icon}</span>
-          <div className="flex flex-col items-start">
-            <span className="text-sm font-medium text-gray-900">{validCurrentWorkspace.name}</span>
-            <span className="text-xs text-gray-500">Workspace</span>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
+          <span className="text-lg flex-shrink-0">{validCurrentWorkspace.icon}</span>
+          <div className="flex flex-col items-start min-w-0 flex-1 overflow-hidden">
+            <span className="text-xs font-medium text-gray-900 truncate w-full">
+              {validCurrentWorkspace.name}
+            </span>
+            <span className="text-[10px] text-gray-500">Workspace</span>
           </div>
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-3 h-3 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 

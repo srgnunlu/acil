@@ -196,3 +196,5 @@ END $$;
 -- FROM patients
 -- WHERE deleted_at IS NULL;
 
+
+

@@ -6,26 +6,15 @@
 
 'use client'
 
-import { useRealtimePresence } from '@/lib/hooks/useRealtimePresence'
+import { useRealtimeContext } from '@/contexts/RealtimeContext'
 
 export interface PresenceIndicatorProps {
-  workspaceId: string
-  userId: string
   patientId: string
   className?: string
 }
 
-export function PresenceIndicator({
-  workspaceId,
-  userId,
-  patientId,
-  className = ''
-}: PresenceIndicatorProps) {
-  const { getUsersViewingPatient } = useRealtimePresence({
-    workspaceId,
-    userId,
-    enabled: true
-  })
+export function PresenceIndicator({ patientId, className = '' }: PresenceIndicatorProps) {
+  const { getUsersViewingPatient } = useRealtimeContext()
 
   const viewers = getUsersViewingPatient(patientId)
 

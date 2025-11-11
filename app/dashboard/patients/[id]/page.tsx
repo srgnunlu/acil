@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { PatientTabs } from '@/components/patients/PatientTabs'
 import { ExportButton } from '@/components/patients/ExportButton'
 import { PatientActions } from '@/components/patients/PatientActions'
+import { PatientRealtime } from '@/components/patients/PatientRealtime'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -210,6 +211,9 @@ export default async function PatientDetailPage({ params }: PageProps) {
                 <h1 className="text-3xl font-bold text-gray-900">{patient.name}</h1>
                 {getStatusBadge(categorySlug)}
               </div>
+
+              {/* Presence Indicator */}
+              <PatientRealtime patientId={patient.id} />
 
               {/* Quick Info Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">

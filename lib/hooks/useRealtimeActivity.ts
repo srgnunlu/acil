@@ -31,13 +31,21 @@ export function useRealtimeActivity({
   workspaceId,
   enabled = true,
   limit = 50,
-  onActivity
+  onActivity,
 }: UseRealtimeActivityOptions): UseRealtimeActivityReturn {
   const [activities, setActivities] = useState<ActivityLogWithUser[]>([])
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
   const [error, setError] = useState<Error | null>(null)
   const channelRef = useRef<RealtimeChannel | null>(null)
   const supabase = createClient()
+
+  // Store callback in ref to avoid re-subscribing on every render
+  const onActivityRef = useRef(onActivity)
+
+  // Update callback ref when it changes
+  useEffect(() => {
+    onActivityRef.current = onActivity
+  }, [onActivity])
 
   const clearActivities = () => {
     setActivities([])
@@ -51,39 +59,60 @@ export function useRealtimeActivity({
 
     async function loadActivities() {
       try {
-        const { data, error } = await supabase
+        // First, get activities
+        const { data: activitiesData, error: activitiesError } = await supabase
           .from('activity_log')
-          .select(
-            `
-            *,
-            user:user_id (
-              full_name:profiles!inner(full_name),
-              avatar_url:profiles!inner(avatar_url),
-              title:profiles!inner(title)
-            )
-          `
-          )
+          .select('*')
           .eq('workspace_id', workspaceId)
           .order('created_at', { ascending: false })
           .limit(limit)
 
-        if (error) throw error
+        if (activitiesError) throw activitiesError
+
+        if (!activitiesData || activitiesData.length === 0) {
+          setActivities([])
+          return
+        }
+
+        // Get unique user IDs
+        const userIds = [
+          ...new Set(
+            activitiesData.map((a) => a.user_id).filter((id): id is string => id !== null)
+          ),
+        ]
+
+        // Fetch user profiles
+        const profilesMap = new Map<
+          string,
+          { full_name: string | null; avatar_url: string | null; title: string | null }
+        >()
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url, title')
+            .in('user_id', userIds)
+
+          if (profilesData) {
+            profilesData.forEach((profile) => {
+              profilesMap.set(profile.user_id, {
+                full_name: profile.full_name || null,
+                avatar_url: profile.avatar_url || null,
+                title: profile.title || null,
+              })
+            })
+          }
+        }
 
         // Transform data
-        const transformedData = (data || []).map((item) => ({
+        const transformedData = activitiesData.map((item) => ({
           ...item,
-          user: item.user
-            ? {
-                full_name: item.user.full_name || null,
-                avatar_url: item.user.avatar_url || null,
-                title: item.user.title || null
-              }
-            : null
+          user: item.user_id ? profilesMap.get(item.user_id) || null : null,
         })) as ActivityLogWithUser[]
 
         setActivities(transformedData)
       } catch (err) {
         console.error('[useRealtimeActivity] Failed to load:', err)
+        setError(err as Error)
       }
     }
 
@@ -113,36 +142,49 @@ export function useRealtimeActivity({
             event: 'INSERT',
             schema: 'public',
             table: 'activity_log',
-            filter: `workspace_id=eq.${workspaceId}`
+            filter: `workspace_id=eq.${workspaceId}`,
           },
           async (payload) => {
-            console.log('[useRealtimeActivity] New activity:', payload.new)
+            try {
+              console.log('[useRealtimeActivity] New activity:', payload.new)
 
-            const newActivity = payload.new as ActivityLog
+              const newActivity = payload.new as ActivityLog
 
-            // Fetch user info
-            let userInfo = null
-            if (newActivity.user_id) {
-              const { data } = await supabase
-                .from('profiles')
-                .select('full_name, avatar_url, title')
-                .eq('user_id', newActivity.user_id)
-                .single()
+              // Fetch user info
+              let userInfo = null
+              if (newActivity.user_id) {
+                try {
+                  const { data } = await supabase
+                    .from('profiles')
+                    .select('full_name, avatar_url, title')
+                    .eq('user_id', newActivity.user_id)
+                    .single()
 
-              userInfo = data || null
-            }
+                  userInfo = data || null
+                } catch (profileErr) {
+                  console.warn('[useRealtimeActivity] Failed to fetch user profile:', profileErr)
+                  // Continue without user info
+                }
+              }
 
-            const activityWithUser: ActivityLogWithUser = {
-              ...newActivity,
-              user: userInfo
-            }
+              const activityWithUser: ActivityLogWithUser = {
+                ...newActivity,
+                user: userInfo,
+              }
 
-            // Add to state (keep only last {limit} items)
-            setActivities((prev) => [activityWithUser, ...prev].slice(0, limit))
+              // Add to state (keep only last {limit} items)
+              setActivities((prev) => [activityWithUser, ...prev].slice(0, limit))
 
-            // Call callback
-            if (onActivity) {
-              onActivity(activityWithUser)
+              // Call callback
+              if (onActivityRef.current) {
+                try {
+                  onActivityRef.current(activityWithUser)
+                } catch (callbackErr) {
+                  console.error('[useRealtimeActivity] Callback error:', callbackErr)
+                }
+              }
+            } catch (err) {
+              console.error('[useRealtimeActivity] Error processing activity:', err)
             }
           }
         )
@@ -175,12 +217,12 @@ export function useRealtimeActivity({
         channelRef.current = null
       }
     }
-  }, [workspaceId, enabled, limit, onActivity, supabase])
+  }, [workspaceId, enabled, limit, supabase])
 
   return {
     activities,
     status,
     error,
-    clearActivities
+    clearActivities,
   }
 }

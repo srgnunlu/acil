@@ -9,7 +9,7 @@
 import { useRealtimeActivity } from '@/lib/hooks/useRealtimeActivity'
 import { formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
-import type { ActivityType } from '@/types/realtime.types'
+import { Activity } from 'lucide-react'
 
 export interface ActivityFeedProps {
   workspaceId: string
@@ -35,7 +35,7 @@ const activityIcons: Record<string, string> = {
   workspace_left: '🚪',
   member_invited: '✉️',
   member_removed: '👋',
-  settings_updated: '⚙️'
+  settings_updated: '⚙️',
 }
 
 const activityLabels: Record<string, string> = {
@@ -52,26 +52,30 @@ const activityLabels: Record<string, string> = {
   chat_message_sent: 'Mesaj gönderdi',
   note_created: 'Not ekledi',
   note_updated: 'Not güncelledi',
-  workspace_joined: 'Workspace\'e katıldı',
-  workspace_left: 'Workspace\'den ayrıldı',
+  workspace_joined: "Workspace'e katıldı",
+  workspace_left: "Workspace'den ayrıldı",
   member_invited: 'Üye davet etti',
   member_removed: 'Üye çıkardı',
-  settings_updated: 'Ayarları güncelledi'
+  settings_updated: 'Ayarları güncelledi',
 }
 
 export function ActivityFeed({ workspaceId, limit = 50, className = '' }: ActivityFeedProps) {
   const { activities, status, error } = useRealtimeActivity({
     workspaceId,
     limit,
-    enabled: true
+    enabled: true,
   })
 
   if (status === 'connecting') {
     return (
-      <div className={`rounded-lg border border-gray-200 bg-white p-4 ${className}`}>
-        <h3 className="mb-3 text-sm font-semibold text-gray-700">Son Aktiviteler</h3>
-        <div className="flex items-center justify-center py-8">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+      <div className={`rounded-lg border border-gray-200 bg-white ${className}`}>
+        <div className="p-3 border-b border-gray-100">
+          <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+            Son Aktiviteler
+          </h3>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
         </div>
       </div>
     )
@@ -79,69 +83,94 @@ export function ActivityFeed({ workspaceId, limit = 50, className = '' }: Activi
 
   if (status === 'error') {
     return (
-      <div className={`rounded-lg border border-red-200 bg-red-50 p-4 ${className}`}>
-        <h3 className="mb-2 text-sm font-semibold text-red-700">Hata</h3>
-        <p className="text-xs text-red-600">{error?.message || 'Aktiviteler yüklenemiyor'}</p>
+      <div className={`rounded-lg border border-red-200 bg-red-50 ${className}`}>
+        <div className="p-3 border-b border-red-200">
+          <h3 className="text-xs font-semibold text-red-700 uppercase tracking-wide">Hata</h3>
+        </div>
+        <div className="p-3">
+          <p className="text-xs text-red-600">{error?.message || 'Aktiviteler yüklenemiyor'}</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={`rounded-lg border border-gray-200 bg-white p-4 ${className}`}>
-      <h3 className="mb-3 text-sm font-semibold text-gray-700">Son Aktiviteler</h3>
+    <div
+      className={`rounded-lg border border-gray-200 bg-white ${className}`}
+      onClick={(e) => {
+        e.stopPropagation()
+      }}
+      onMouseDown={(e) => {
+        e.stopPropagation()
+      }}
+    >
+      <div className="p-3 border-b border-gray-100">
+        <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+          Son Aktiviteler
+        </h3>
+      </div>
 
-      <div className="space-y-2">
+      <div className="p-2">
         {activities.length === 0 ? (
-          <p className="py-4 text-center text-xs text-gray-500">
-            Henüz aktivite yok
-          </p>
+          <div className="py-8 text-center">
+            <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center">
+              <Activity className="w-6 h-6 text-gray-400" />
+            </div>
+            <p className="text-xs text-gray-500 font-medium">Henüz aktivite yok</p>
+          </div>
         ) : (
-          activities.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-start gap-3 rounded-md border border-gray-100 p-2 hover:bg-gray-50"
-            >
-              {/* Icon */}
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-lg">
-                {activityIcons[activity.activity_type] || '📋'}
-              </div>
+          <div className="space-y-1">
+            {activities.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex items-start gap-2 rounded-lg p-2 hover:bg-gray-50 transition-colors group"
+              >
+                {/* Icon */}
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm group-hover:bg-gray-200 transition-colors">
+                  {activityIcons[activity.activity_type] || '📋'}
+                </div>
 
-              {/* Content */}
-              <div className="flex-1 overflow-hidden">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    {/* User */}
-                    {activity.user && (
-                      <p className="text-xs font-medium text-gray-900">
-                        {activity.user.full_name || 'İsimsiz Kullanıcı'}
-                        {activity.user.title && (
-                          <span className="ml-1 text-gray-500">({activity.user.title})</span>
-                        )}
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      {/* User */}
+                      {activity.user && (
+                        <p className="text-xs font-semibold text-gray-900 truncate">
+                          {activity.user.full_name || 'İsimsiz Kullanıcı'}
+                          {activity.user.title && (
+                            <span className="ml-1 text-gray-500 font-normal">
+                              ({activity.user.title})
+                            </span>
+                          )}
+                        </p>
+                      )}
+
+                      {/* Action */}
+                      <p className="text-[11px] text-gray-600 mt-0.5">
+                        {activityLabels[activity.activity_type] || activity.activity_type}
                       </p>
-                    )}
 
-                    {/* Action */}
-                    <p className="text-xs text-gray-600">
-                      {activityLabels[activity.activity_type] || activity.activity_type}
-                    </p>
+                      {/* Description */}
+                      {activity.description && (
+                        <p className="mt-1 text-[10px] text-gray-500 line-clamp-1">
+                          {activity.description}
+                        </p>
+                      )}
+                    </div>
 
-                    {/* Description */}
-                    {activity.description && (
-                      <p className="mt-0.5 text-xs text-gray-500">{activity.description}</p>
-                    )}
+                    {/* Time */}
+                    <span className="flex-shrink-0 text-[10px] text-gray-400 whitespace-nowrap">
+                      {formatDistanceToNow(new Date(activity.created_at), {
+                        addSuffix: true,
+                        locale: tr,
+                      })}
+                    </span>
                   </div>
-
-                  {/* Time */}
-                  <span className="flex-shrink-0 text-xs text-gray-400">
-                    {formatDistanceToNow(new Date(activity.created_at), {
-                      addSuffix: true,
-                      locale: tr
-                    })}
-                  </span>
                 </div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -10,7 +10,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
-import type { RealtimeChannel as ChannelType, ConnectionStatus } from '@/types'
+import type { ConnectionStatus } from '@/types/realtime.types'
 
 /**
  * Get Supabase realtime client
@@ -60,7 +60,7 @@ export function subscribeToTable<T = unknown>(
       event: '*',
       schema: 'public',
       table,
-      ...(filter ? { filter } : {})
+      ...(filter ? { filter } : {}),
     },
     (payload) => {
       if (callback) {
@@ -78,11 +78,7 @@ export function subscribeToBroadcast<T = unknown>(
   event: string,
   callback: (payload: T) => void
 ) {
-  return channel.on(
-    'broadcast',
-    { event },
-    ({ payload }) => callback(payload as T)
-  )
+  return channel.on('broadcast', { event }, ({ payload }) => callback(payload as T))
 }
 
 /**
@@ -153,7 +149,7 @@ export async function broadcastMessage<T = unknown>(
   return channel.send({
     type: 'broadcast',
     event,
-    payload
+    payload,
   })
 }
 
@@ -251,7 +247,7 @@ export interface RetryConfig {
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxAttempts: 3,
   delayMs: 1000,
-  backoffMultiplier: 2
+  backoffMultiplier: 2,
 }
 
 /**
@@ -275,7 +271,7 @@ export async function retrySubscription(
 
       if (attempt < finalConfig.maxAttempts) {
         const delay = finalConfig.delayMs * Math.pow(finalConfig.backoffMultiplier, attempt - 1)
-        await new Promise(resolve => setTimeout(resolve, delay))
+        await new Promise((resolve) => setTimeout(resolve, delay))
       }
     }
   }

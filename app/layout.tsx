@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Providers } from '@/components/providers/Providers'
+import { QueryProvider } from '@/components/providers/QueryProvider'
 
 export const metadata: Metadata = {
   title: 'ACIL - AI Destekli Hasta Takip Sistemi',
@@ -29,7 +30,9 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body className="antialiased bg-white text-gray-900">
-        <Providers>{children}</Providers>
+        <QueryProvider>
+          <Providers>{children}</Providers>
+        </QueryProvider>
       </body>
     </html>
   )
