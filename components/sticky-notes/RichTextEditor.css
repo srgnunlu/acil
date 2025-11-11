@@ -1,0 +1,228 @@
+/* Rich Text Editor Styles */
+
+.rich-text-editor {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  overflow-y: auto;
+  transition: border-color 0.2s;
+}
+
+.rich-text-editor:focus-within {
+  border-color: #3b82f6;
+  outline: none;
+  ring: 2px;
+  ring-color: #3b82f680;
+}
+
+.rich-text-editor.disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.rich-text-editor .ProseMirror {
+  padding: 12px;
+  outline: none;
+  min-height: inherit;
+  max-height: inherit;
+}
+
+.rich-text-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Mention styles */
+.rich-text-editor .mention {
+  background-color: #dbeafe;
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: #1e40af;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.rich-text-editor .mention:hover {
+  background-color: #bfdbfe;
+}
+
+/* Mention suggestions popup */
+.mention-suggestions-popup {
+  position: absolute;
+  z-index: 1000;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  min-width: 250px;
+}
+
+.mention-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mention-list-empty {
+  padding: 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background-color 0.15s;
+}
+
+.mention-item:hover,
+.mention-item.selected {
+  background-color: #f3f4f6;
+}
+
+.mention-item.selected {
+  background-color: #e5e7eb;
+}
+
+.mention-item-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mention-item-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mention-item-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.mention-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mention-item-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mention-item-email {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Typography */
+.rich-text-editor .ProseMirror p {
+  margin: 0.5em 0;
+}
+
+.rich-text-editor .ProseMirror p:first-child {
+  margin-top: 0;
+}
+
+.rich-text-editor .ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+.rich-text-editor .ProseMirror strong {
+  font-weight: 600;
+}
+
+.rich-text-editor .ProseMirror em {
+  font-style: italic;
+}
+
+.rich-text-editor .ProseMirror code {
+  background-color: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.rich-text-editor .ProseMirror pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.rich-text-editor .ProseMirror pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.rich-text-editor .ProseMirror ul,
+.rich-text-editor .ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.rich-text-editor .ProseMirror li {
+  margin: 0.25em 0;
+}
+
+.rich-text-editor .ProseMirror blockquote {
+  border-left: 3px solid #e5e7eb;
+  padding-left: 1em;
+  margin-left: 0;
+  color: #6b7280;
+}
+
+.rich-text-editor .ProseMirror h1,
+.rich-text-editor .ProseMirror h2,
+.rich-text-editor .ProseMirror h3 {
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+}
+
+.rich-text-editor .ProseMirror h1 {
+  font-size: 1.5em;
+}
+
+.rich-text-editor .ProseMirror h2 {
+  font-size: 1.25em;
+}
+
+.rich-text-editor .ProseMirror h3 {
+  font-size: 1.1em;
+}

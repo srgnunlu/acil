@@ -322,6 +322,8 @@ export default async function PatientDetailPage({ params }: PageProps) {
         patientData={patientData || []}
         tests={tests || []}
         analyses={analyses || []}
+        workspaceId={patient.workspace_id}
+        currentUserId={user.id}
       />
     </div>
   )
