@@ -41,7 +41,7 @@ const ASSIGNMENT_TYPES = [
   { value: 'secondary', label: 'Secondary Doctor', color: 'green', icon: '🩺' },
   { value: 'consultant', label: 'Consultant', color: 'purple', icon: '💼' },
   { value: 'nurse', label: 'Nurse', color: 'pink', icon: '👩‍⚕️' },
-  { value: 'observer', label: 'Observer', color: 'gray', icon: '👁️' }
+  { value: 'observer', label: 'Observer', color: 'gray', icon: '👁️' },
 ]
 
 export default function AssignmentManager({ patientId, workspaceId }: AssignmentManagerProps) {
@@ -56,12 +56,13 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
   const [formData, setFormData] = useState({
     user_id: '',
     assignment_type: 'secondary' as Assignment['assignment_type'],
-    notes: ''
+    notes: '',
   })
 
   useEffect(() => {
     fetchAssignments()
     fetchWorkspaceMembers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId])
 
   const fetchAssignments = async () => {
@@ -83,11 +84,28 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
 
   const fetchWorkspaceMembers = async () => {
     try {
-      const response = await fetch(`/api/workspace/members?workspace_id=${workspaceId}`)
+      const response = await fetch(`/api/workspaces/${workspaceId}/members`)
 
       if (response.ok) {
         const data = await response.json()
-        setWorkspaceMembers(data.members || [])
+        // API returns { success: true, members: [...] }
+        const members = data.members || []
+        // Map to expected format with profiles
+        setWorkspaceMembers(
+          members.map(
+            (m: {
+              id: string
+              user_id: string
+              role: string
+              profile?: { id: string; full_name: string; specialty?: string | null }
+            }) => ({
+              id: m.id,
+              user_id: m.user_id,
+              role: m.role,
+              profiles: m.profile || { id: m.user_id, full_name: 'Unknown', specialty: null },
+            })
+          )
+        )
       }
     } catch (err) {
       console.error('Failed to fetch workspace members:', err)
@@ -104,8 +122,8 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patient_id: patientId,
-          ...formData
-        })
+          ...formData,
+        }),
       })
 
       if (!response.ok) {
@@ -117,7 +135,7 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
       setFormData({
         user_id: '',
         assignment_type: 'secondary',
-        notes: ''
+        notes: '',
       })
       setIsAdding(false)
       await fetchAssignments()
@@ -136,7 +154,7 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
 
     try {
       const response = await fetch(`/api/assignments/${assignmentId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       })
 
       if (!response.ok) {
@@ -152,7 +170,7 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
   }
 
   const getTypeConfig = (type: string) => {
-    return ASSIGNMENT_TYPES.find(t => t.value === type) || ASSIGNMENT_TYPES[0]
+    return ASSIGNMENT_TYPES.find((t) => t.value === type) || ASSIGNMENT_TYPES[0]
   }
 
   if (loading) {
@@ -185,12 +203,13 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
 
       {/* Add Assignment Form */}
       {isAdding && (
-        <form onSubmit={handleCreate} className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+        <form
+          onSubmit={handleCreate}
+          className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                User *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">User *</label>
               <select
                 required
                 value={formData.user_id}
@@ -200,7 +219,8 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
                 <option value="">Select a user...</option>
                 {workspaceMembers.map((member) => (
                   <option key={member.user_id} value={member.user_id}>
-                    {member.profiles?.full_name || 'Unknown'} {member.profiles?.specialty ? `(${member.profiles.specialty})` : ''}
+                    {member.profiles?.full_name || 'Unknown'}{' '}
+                    {member.profiles?.specialty ? `(${member.profiles.specialty})` : ''}
                   </option>
                 ))}
               </select>
@@ -213,7 +233,12 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
               <select
                 required
                 value={formData.assignment_type}
-                onChange={(e) => setFormData({ ...formData, assignment_type: e.target.value as Assignment['assignment_type'] })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    assignment_type: e.target.value as Assignment['assignment_type'],
+                  })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               >
                 {ASSIGNMENT_TYPES.map((type) => (
@@ -226,9 +251,7 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -260,19 +283,17 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
       <div className="space-y-2">
         {assignments.map((assignment) => {
           const typeConfig = getTypeConfig(assignment.assignment_type)
-          const colorClasses = {
-            blue: 'bg-blue-50 text-blue-700 border-blue-200',
-            green: 'bg-green-50 text-green-700 border-green-200',
-            purple: 'bg-purple-50 text-purple-700 border-purple-200',
-            pink: 'bg-pink-50 text-pink-700 border-pink-200',
-            gray: 'bg-gray-50 text-gray-700 border-gray-200'
-          }[typeConfig.color] || 'bg-gray-50 text-gray-700 border-gray-200'
+          const colorClasses =
+            {
+              blue: 'bg-blue-50 text-blue-700 border-blue-200',
+              green: 'bg-green-50 text-green-700 border-green-200',
+              purple: 'bg-purple-50 text-purple-700 border-purple-200',
+              pink: 'bg-pink-50 text-pink-700 border-pink-200',
+              gray: 'bg-gray-50 text-gray-700 border-gray-200',
+            }[typeConfig.color] || 'bg-gray-50 text-gray-700 border-gray-200'
 
           return (
-            <div
-              key={assignment.id}
-              className={`border rounded-lg p-3 ${colorClasses}`}
-            >
+            <div key={assignment.id} className={`border rounded-lg p-3 ${colorClasses}`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -283,7 +304,8 @@ export default function AssignmentManager({ patientId, workspaceId }: Assignment
                       </div>
                       <div className="text-xs opacity-75">
                         {typeConfig.label}
-                        {assignment.assigned_user?.specialty && ` • ${assignment.assigned_user.specialty}`}
+                        {assignment.assigned_user?.specialty &&
+                          ` • ${assignment.assigned_user.specialty}`}
                       </div>
                     </div>
                   </div>

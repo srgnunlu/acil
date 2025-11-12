@@ -17,6 +17,7 @@ interface PatientTabsProps {
   analyses: AIAnalysis[]
   workspaceId?: string
   currentUserId?: string
+  workflowState?: string
 }
 
 type TabType = 'overview' | 'data' | 'tests' | 'ai' | 'chat' | 'notes'
@@ -29,6 +30,7 @@ export function PatientTabs({
   analyses,
   workspaceId,
   currentUserId,
+  workflowState,
 }: PatientTabsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
 
@@ -172,7 +174,14 @@ export function PatientTabs({
       {/* Tab Content */}
       <div className="animate-fadeIn">
         {activeTab === 'overview' && (
-          <OverviewTab patientData={patientData} tests={tests} analyses={analyses} />
+          <OverviewTab
+            patientData={patientData}
+            tests={tests}
+            analyses={analyses}
+            patientId={patientId}
+            workspaceId={workspaceId}
+            workflowState={workflowState}
+          />
         )}
 
         {activeTab === 'data' && <DataTab patientId={patientId} patientData={patientData} />}

@@ -1,17 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { PatientData, PatientTest, AIAnalysis, AIAnalysisResponse } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import AssignmentManager from '@/components/assignments/AssignmentManager'
+import WorkflowStateManager from '@/components/patients/WorkflowStateManager'
 
 interface OverviewTabProps {
   patientData: PatientData[]
   tests: PatientTest[]
   analyses: AIAnalysis[]
+  patientId?: string
+  workspaceId?: string
+  workflowState?: string
 }
 
-export function OverviewTab({ patientData, tests, analyses }: OverviewTabProps) {
+export function OverviewTab({
+  patientData,
+  tests,
+  analyses,
+  patientId,
+  workspaceId,
+  workflowState,
+}: OverviewTabProps) {
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'data' | 'test' | 'analysis'>('all')
   const [mounted] = useState(true)
 
@@ -643,6 +655,20 @@ export function OverviewTab({ patientData, tests, analyses }: OverviewTabProps) 
             </div>
           </div>
         </div>
+
+        {/* Phase 5: Workflow State Manager */}
+        {patientId && workflowState && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <WorkflowStateManager patientId={patientId} currentState={workflowState} />
+          </div>
+        )}
+
+        {/* Phase 5: Assignment Manager */}
+        {patientId && workspaceId && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <AssignmentManager patientId={patientId} workspaceId={workspaceId} />
+          </div>
+        )}
       </div>
     </div>
   )

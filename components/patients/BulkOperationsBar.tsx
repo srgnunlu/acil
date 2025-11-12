@@ -31,20 +31,20 @@ const WORKFLOW_STATES = [
   { value: 'treatment', label: 'Treatment', icon: '💊' },
   { value: 'observation', label: 'Observation', icon: '👁️' },
   { value: 'discharge_planning', label: 'Discharge Planning', icon: '📋' },
-  { value: 'discharged', label: 'Discharged', icon: '✅' }
+  { value: 'discharged', label: 'Discharged', icon: '✅' },
 ]
 
 const ASSIGNMENT_TYPES = [
   { value: 'primary', label: 'Primary Doctor', icon: '👨‍⚕️' },
   { value: 'secondary', label: 'Secondary Doctor', icon: '🩺' },
   { value: 'consultant', label: 'Consultant', icon: '💼' },
-  { value: 'nurse', label: 'Nurse', icon: '👩‍⚕️' }
+  { value: 'nurse', label: 'Nurse', icon: '👩‍⚕️' },
 ]
 
 export default function BulkOperationsBar({
   selectedPatientIds,
   workspaceId,
-  onClearSelection
+  onClearSelection,
 }: BulkOperationsBarProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -59,7 +59,8 @@ export default function BulkOperationsBar({
       fetchCategories()
       fetchMembers()
     }
-  }, [selectedPatientIds.length > 0])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPatientIds.length])
 
   const fetchCategories = async () => {
     try {
@@ -75,10 +76,23 @@ export default function BulkOperationsBar({
 
   const fetchMembers = async () => {
     try {
-      const response = await fetch(`/api/workspace/members?workspace_id=${workspaceId}`)
+      const response = await fetch(`/api/workspaces/${workspaceId}/members`)
       if (response.ok) {
         const data = await response.json()
-        setMembers(data.members || [])
+        // API returns { success: true, members: [...] }
+        const members = data.members || []
+        // Map to expected format
+        setMembers(
+          members.map(
+            (m: {
+              user_id: string
+              profile?: { full_name: string; specialty?: string | null }
+            }) => ({
+              user_id: m.user_id,
+              profiles: m.profile || { full_name: 'Unknown', specialty: null },
+            })
+          )
+        )
       }
     } catch (err) {
       console.error('Failed to fetch members:', err)
@@ -97,8 +111,8 @@ export default function BulkOperationsBar({
         body: JSON.stringify({
           patient_ids: selectedPatientIds,
           operation,
-          data
-        })
+          data,
+        }),
       })
 
       if (!response.ok) {
@@ -136,7 +150,7 @@ export default function BulkOperationsBar({
     if (confirm(`Assign doctor to ${selectedPatientIds.length} patient(s)?`)) {
       handleBulkOperation('assign_doctor', {
         doctor_id: doctorId,
-        assignment_type: assignmentType
+        assignment_type: assignmentType,
       })
     }
   }
@@ -226,9 +240,7 @@ export default function BulkOperationsBar({
 
             {/* Assign Doctor */}
             <div className="bg-gray-50 rounded-lg p-3">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Assign Doctor
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Assign Doctor</label>
               <div className="space-y-2">
                 <select
                   id="bulk-doctor"
@@ -238,7 +250,8 @@ export default function BulkOperationsBar({
                   <option value="">Select doctor...</option>
                   {members.map((member) => (
                     <option key={member.user_id} value={member.user_id}>
-                      {member.profiles?.full_name || 'Unknown'} {member.profiles?.specialty ? `(${member.profiles.specialty})` : ''}
+                      {member.profiles?.full_name || 'Unknown'}{' '}
+                      {member.profiles?.specialty ? `(${member.profiles.specialty})` : ''}
                     </option>
                   ))}
                 </select>
@@ -256,7 +269,9 @@ export default function BulkOperationsBar({
                 <button
                   onClick={() => {
                     const doctorSelect = document.getElementById('bulk-doctor') as HTMLSelectElement
-                    const typeSelect = document.getElementById('bulk-assignment-type') as HTMLSelectElement
+                    const typeSelect = document.getElementById(
+                      'bulk-assignment-type'
+                    ) as HTMLSelectElement
                     if (doctorSelect.value && typeSelect.value) {
                       handleAssignDoctor(doctorSelect.value, typeSelect.value)
                     }

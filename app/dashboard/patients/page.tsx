@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { AddPatientButton } from '@/components/patients/AddPatientButton'
-import { PatientListClient } from '@/components/patients/PatientListClient'
+import EnhancedPatientList from '@/components/patients/EnhancedPatientList'
 import { Sparkles, TrendingUp, Shield } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
@@ -151,7 +151,13 @@ export default async function PatientsPage() {
           </div>
         </div>
       ) : (
-        <PatientListClient initialPatients={patients || []} />
+        <div className="space-y-6">
+          {/* Phase 5: Enhanced Patient List with Categories and Workflow */}
+          <EnhancedPatientList workspaceId={currentWorkspaceId} />
+
+          {/* Legacy Patient List (fallback) */}
+          {/* <PatientListClient initialPatients={patients || []} /> */}
+        </div>
       )}
 
       {/* Upgrade Banner */}

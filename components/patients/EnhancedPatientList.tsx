@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 interface Patient {
   id: string
-  full_name: string
+  name: string
   age?: number
   gender?: string
   workflow_state?: string
@@ -46,7 +46,7 @@ const WORKFLOW_STATES = [
   { value: 'treatment', label: 'Treatment', color: 'green', icon: '💊' },
   { value: 'observation', label: 'Observation', color: 'cyan', icon: '👁️' },
   { value: 'discharge_planning', label: 'Discharge Planning', color: 'orange', icon: '📋' },
-  { value: 'discharged', label: 'Discharged', color: 'gray', icon: '✅' }
+  { value: 'discharged', label: 'Discharged', color: 'gray', icon: '✅' },
 ]
 
 export default function EnhancedPatientList({ workspaceId }: EnhancedPatientListProps) {
@@ -60,6 +60,7 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
 
   useEffect(() => {
     fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId])
 
   const fetchData = async () => {
@@ -88,7 +89,7 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
 
   // Filter and search patients
   const filteredPatients = useMemo(() => {
-    return patients.filter(patient => {
+    return patients.filter((patient) => {
       // Category filter
       if (selectedCategoryId !== 'all' && patient.category_id !== selectedCategoryId) {
         return false
@@ -102,7 +103,7 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
       // Search query
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
-        const nameMatch = patient.full_name?.toLowerCase().includes(query)
+        const nameMatch = patient.name?.toLowerCase().includes(query)
         const categoryMatch = patient.category?.name?.toLowerCase().includes(query)
         return nameMatch || categoryMatch
       }
@@ -114,20 +115,20 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
   // Calculate category counts
   const categoriesWithCounts = useMemo(() => {
     const counts = new Map<string, number>()
-    patients.forEach(patient => {
+    patients.forEach((patient) => {
       if (patient.category_id) {
         counts.set(patient.category_id, (counts.get(patient.category_id) || 0) + 1)
       }
     })
 
-    return categories.map(cat => ({
+    return categories.map((cat) => ({
       ...cat,
-      patient_count: counts.get(cat.id) || 0
+      patient_count: counts.get(cat.id) || 0,
     }))
   }, [categories, patients])
 
   const getWorkflowConfig = (state?: string) => {
-    return WORKFLOW_STATES.find(s => s.value === state) || WORKFLOW_STATES[0]
+    return WORKFLOW_STATES.find((s) => s.value === state) || WORKFLOW_STATES[0]
   }
 
   if (loading) {
@@ -166,7 +167,7 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
             All States ({patients.length})
           </button>
           {WORKFLOW_STATES.map((state) => {
-            const count = patients.filter(p => p.workflow_state === state.value).length
+            const count = patients.filter((p) => p.workflow_state === state.value).length
             return (
               <button
                 key={state.value}
@@ -231,13 +232,12 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
               key={category.id}
               onClick={() => setSelectedCategoryId(category.id)}
               className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-                selectedCategoryId === category.id
-                  ? 'text-white'
-                  : 'hover:opacity-80'
+                selectedCategoryId === category.id ? 'text-white' : 'hover:opacity-80'
               }`}
               style={{
-                backgroundColor: selectedCategoryId === category.id ? category.color : category.color + '20',
-                color: selectedCategoryId === category.id ? 'white' : category.color
+                backgroundColor:
+                  selectedCategoryId === category.id ? category.color : category.color + '20',
+                color: selectedCategoryId === category.id ? 'white' : category.color,
               }}
             >
               {category.icon} {category.name} ({category.patient_count})
@@ -265,7 +265,7 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
                         className="w-12 h-12 rounded-lg flex items-center justify-center text-xl shrink-0"
                         style={{
                           backgroundColor: patient.category.color + '20',
-                          color: patient.category.color
+                          color: patient.category.color,
                         }}
                       >
                         {patient.category.icon || '📋'}
@@ -275,9 +275,11 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
                     {/* Patient Info */}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900">{patient.full_name}</h3>
+                        <h3 className="font-semibold text-gray-900">{patient.name}</h3>
                         {patient.age && (
-                          <span className="text-sm text-gray-500">({patient.age}y, {patient.gender})</span>
+                          <span className="text-sm text-gray-500">
+                            ({patient.age}y, {patient.gender})
+                          </span>
                         )}
                       </div>
 
@@ -288,7 +290,7 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
                             className="px-2 py-0.5 text-xs rounded"
                             style={{
                               backgroundColor: patient.category.color + '20',
-                              color: patient.category.color
+                              color: patient.category.color,
                             }}
                           >
                             {patient.category.name}
@@ -311,19 +313,21 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
                       {/* Dates */}
                       <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                         {patient.admission_date && (
-                          <span>Admitted: {new Date(patient.admission_date).toLocaleDateString()}</span>
+                          <span>
+                            Admitted: {new Date(patient.admission_date).toLocaleDateString()}
+                          </span>
                         )}
                         {patient.discharge_date && (
-                          <span>Discharged: {new Date(patient.discharge_date).toLocaleDateString()}</span>
+                          <span>
+                            Discharged: {new Date(patient.discharge_date).toLocaleDateString()}
+                          </span>
                         )}
                       </div>
                     </div>
                   </div>
 
                   {/* Arrow */}
-                  <div className="text-gray-400">
-                    →
-                  </div>
+                  <div className="text-gray-400">→</div>
                 </div>
               </Link>
             )
@@ -355,13 +359,13 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
                       className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
                       style={{
                         backgroundColor: patient.category.color + '20',
-                        color: patient.category.color
+                        color: patient.category.color,
                       }}
                     >
                       {patient.category.icon || '📋'}
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">{patient.full_name}</div>
+                      <div className="font-semibold text-gray-900">{patient.name}</div>
                       <div className="text-xs text-gray-500">
                         {patient.age}y, {patient.gender}
                       </div>
@@ -377,7 +381,7 @@ export default function EnhancedPatientList({ workspaceId }: EnhancedPatientList
                       className="px-2 py-0.5 text-xs rounded"
                       style={{
                         backgroundColor: patient.category?.color + '20' || '#e5e7eb',
-                        color: patient.category?.color || '#6b7280'
+                        color: patient.category?.color || '#6b7280',
                       }}
                     >
                       {patient.category?.name || 'None'}
