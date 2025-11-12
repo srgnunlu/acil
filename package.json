@@ -59,7 +59,9 @@
     "react-syntax-highlighter": "^16.1.0",
     "recharts": "^3.3.0",
     "remark-gfm": "^4.0.1",
+    "resend": "^4.0.1",
     "tailwind-merge": "^3.3.1",
+    "web-push": "^3.6.7",
     "web-vitals": "^5.1.0",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
@@ -73,6 +75,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.3",
     "@vitejs/plugin-react": "^5.1.0",
     "eslint": "^9.38.0",
     "eslint-config-next": "16.0.1",

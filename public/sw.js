@@ -72,36 +72,103 @@ async function syncData() {
   console.log('Syncing data in background')
 }
 
-// Push notification
+// Push notification - Phase 6 Enhanced
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {}
+  console.log('[SW] Push notification received:', event)
+
+  if (!event.data) {
+    console.log('[SW] Push event but no data')
+    return
+  }
+
+  let notificationData
+  try {
+    notificationData = event.data.json()
+  } catch (error) {
+    console.error('[SW] Failed to parse push data:', error)
+    notificationData = {
+      title: 'ACIL Bildirimi',
+      body: event.data.text(),
+    }
+  }
+
+  const { title, body, icon, badge, image, data, tag, requireInteraction, severity, actions } =
+    notificationData
+
   const options = {
-    body: data.body || 'Yeni bildirim',
-    vibrate: [200, 100, 200],
+    body: body || 'Yeni bildirim',
+    icon: icon || '/icon-192.png',
+    badge: badge || '/icon-192.png',
+    image: image,
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: data.primaryKey || '1',
+      ...data,
     },
-    actions: [
+    tag: tag || 'acil-notification',
+    requireInteraction: severity === 'critical' || requireInteraction || false,
+    vibrate: severity === 'critical' ? [200, 100, 200, 100, 200] : [200, 100, 200],
+    actions: actions || [
       {
-        action: 'explore',
-        title: 'Aç',
+        action: 'view',
+        title: 'Görüntüle',
       },
       {
-        action: 'close',
+        action: 'dismiss',
         title: 'Kapat',
       },
     ],
   }
 
-  event.waitUntil(self.registration.showNotification(data.title || 'ACIL', options))
+  event.waitUntil(self.registration.showNotification(title || 'ACIL', options))
 })
 
-// Notification click
+// Notification click - Phase 6 Enhanced
 self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event)
+
   event.notification.close()
 
-  if (event.action === 'explore') {
-    event.waitUntil(clients.openWindow('/'))
+  if (event.action === 'dismiss') {
+    return
+  }
+
+  // Get the action URL from notification data
+  const actionUrl = event.notification.data?.action_url || '/dashboard'
+  const fullUrl = new URL(actionUrl, self.location.origin).href
+
+  // Open or focus the client
+  event.waitUntil(
+    clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Check if there's already a window open
+        for (const client of clientList) {
+          if (client.url === fullUrl && 'focus' in client) {
+            return client.focus()
+          }
+        }
+
+        // If not, open a new window
+        if (clients.openWindow) {
+          return clients.openWindow(fullUrl)
+        }
+      })
+      .catch((error) => {
+        console.error('[SW] Error handling notification click:', error)
+      })
+  )
+})
+
+// Notification close event
+self.addEventListener('notificationclose', (event) => {
+  console.log('[SW] Notification closed:', event)
+})
+
+// Message event - handle messages from the main thread
+self.addEventListener('message', (event) => {
+  console.log('[SW] Message received:', event.data)
+
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
   }
 })
