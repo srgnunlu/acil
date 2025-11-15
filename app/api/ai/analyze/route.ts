@@ -50,14 +50,10 @@ export async function POST(request: Request) {
     }
 
     // Build patient context using shared utility (eliminates duplicate code)
+    // Workspace access already verified by requirePatientWorkspaceAccess above
     const result = await buildPatientContext(supabase, patientId, user.id)
 
     if (!result) {
-      return NextResponse.json({ error: 'Hasta bulunamadı' }, { status: 404 })
-    }
-
-    // Workspace kontrolü - hasta kullanıcının workspace'inde olmalı
-    if (result.patient.workspace_id !== accessResult.workspaceId) {
       return NextResponse.json(
         { error: 'Hasta bulunamadı veya erişim yetkiniz yok' },
         { status: 404 }

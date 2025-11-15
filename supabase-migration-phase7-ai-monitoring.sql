@@ -93,6 +93,15 @@ CREATE POLICY "Users can view alerts in their workspaces"
     )
   );
 
+CREATE POLICY "Users can insert alerts in their workspaces"
+  ON ai_alerts FOR INSERT
+  WITH CHECK (
+    workspace_id IN (
+      SELECT workspace_id FROM workspace_members
+      WHERE user_id = auth.uid() AND status = 'active'
+    )
+  );
+
 CREATE POLICY "Users can update alerts in their workspaces"
   ON ai_alerts FOR UPDATE
   USING (
@@ -540,6 +549,8 @@ CREATE TRIGGER trigger_create_monitoring_config
   FOR EACH ROW EXECUTE FUNCTION create_default_monitoring_config();
 
 -- Function: Check for critical values and create alerts
+-- SECURITY DEFINER allows trigger to bypass RLS policies
+-- (Safe because trigger validates workspace access internally)
 CREATE OR REPLACE FUNCTION check_critical_values_and_alert()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -594,7 +605,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger: Auto-create alerts from AI analyses
 DROP TRIGGER IF EXISTS trigger_ai_analysis_alert ON ai_analyses;

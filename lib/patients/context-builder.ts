@@ -1,6 +1,13 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import type { PatientContext } from '@/lib/ai/openai'
-import type { PatientData, PatientTest, AIAnalysis, Patient } from '@/types'
+import type {
+  PatientData,
+  PatientTest,
+  AIAnalysis,
+  Patient,
+  Medication,
+  Demographics,
+} from '@/types'
 
 /**
  * Build complete patient context from database
@@ -14,14 +21,16 @@ import type { PatientData, PatientTest, AIAnalysis, Patient } from '@/types'
 export async function buildPatientContext(
   supabase: SupabaseClient,
   patientId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   userId: string
 ): Promise<{ context: PatientContext; patient: Patient } | null> {
-  // Fetch patient with authorization check
+  // Fetch patient - workspace access is checked by caller via requirePatientWorkspaceAccess
+  // RLS policies ensure user can only access patients in their workspaces
   const { data: patient, error: patientError } = await supabase
     .from('patients')
     .select('*')
     .eq('id', patientId)
-    .eq('user_id', userId)
+    .is('deleted_at', null)
     .single()
 
   if (patientError || !patient) {
@@ -29,11 +38,7 @@ export async function buildPatientContext(
   }
 
   // Fetch all patient data in parallel for better performance
-  const [
-    { data: patientData },
-    { data: tests },
-    { data: previousAnalyses },
-  ] = await Promise.all([
+  const [{ data: patientData }, { data: tests }, { data: previousAnalyses }] = await Promise.all([
     supabase
       .from('patient_data')
       .select('*')
@@ -64,33 +69,49 @@ export async function buildPatientContext(
   }
 
   // Process patient data by type
+  // Note: Data is ordered by created_at DESC, so newest records come first
   if (patientData && patientData.length > 0) {
     const typedData = patientData as PatientData[]
 
+    // Track which types we've already processed (to use only the newest record)
+    const processedTypes = new Set<string>()
+
     typedData.forEach((data) => {
+      // Skip if we've already processed this type (we want only the newest)
+      if (processedTypes.has(data.data_type)) {
+        return
+      }
+
       switch (data.data_type) {
         case 'anamnesis':
           context.anamnesis = data.content as PatientContext['anamnesis']
+          processedTypes.add('anamnesis')
           break
 
         case 'medications':
+          // Medications can have multiple entries, collect all
           if (!context.medications) context.medications = []
-          context.medications.push(data.content as any)
+          context.medications.push(data.content as Medication)
+          // Don't mark as processed - allow multiple medication entries
           break
 
         case 'vital_signs':
+          // Use only the newest vital signs (first in DESC ordered list)
           context.vitalSigns = data.content as PatientContext['vitalSigns']
+          processedTypes.add('vital_signs')
           break
 
         case 'history':
           context.history = data.content as PatientContext['history']
+          processedTypes.add('history')
           break
 
         case 'demographics':
           context.demographics = {
             ...context.demographics,
-            ...(data.content as any),
+            ...(data.content as Partial<Demographics>),
           } as PatientContext['demographics']
+          processedTypes.add('demographics')
           break
       }
     })
@@ -128,13 +149,16 @@ export async function buildPatientContext(
 export async function getPatient(
   supabase: SupabaseClient,
   patientId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   userId: string
 ): Promise<Patient | null> {
+  // Workspace access should be checked by caller
+  // RLS policies ensure user can only access patients in their workspaces
   const { data: patient, error } = await supabase
     .from('patients')
     .select('*')
     .eq('id', patientId)
-    .eq('user_id', userId)
+    .is('deleted_at', null)
     .single()
 
   if (error || !patient) {
@@ -169,10 +193,7 @@ export async function getPatientDataByType(
 /**
  * Get latest vital signs for a patient
  */
-export async function getLatestVitalSigns(
-  supabase: SupabaseClient,
-  patientId: string
-) {
+export async function getLatestVitalSigns(supabase: SupabaseClient, patientId: string) {
   const vitalData = await getPatientDataByType(supabase, patientId, 'vital_signs')
 
   if (vitalData.length === 0) {
