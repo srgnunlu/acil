@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     const patientId = searchParams.get('patient_id')
     const workspaceId = searchParams.get('workspace_id')
     const statistics = searchParams.get('statistics') === 'true'
+    const statusFilter = searchParams.get('status') // 'all', 'active', 'acknowledged', 'resolved', 'dismissed'
 
     // Get workspace access
     if (workspaceId) {
@@ -60,11 +61,28 @@ export async function GET(request: Request) {
       }
 
       // Get alerts for workspace
-      const alerts = await getActiveAlertsForWorkspace(supabase, workspaceId)
+      let query = supabase
+        .from('ai_alerts')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .order('severity', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      // Apply status filter
+      if (statusFilter && statusFilter !== 'all') {
+        query = query.eq('status', statusFilter)
+      }
+
+      const { data: alerts, error } = await query
+
+      if (error) {
+        throw error
+      }
+
       return NextResponse.json({
-        alerts,
-        total: alerts.length,
-        has_critical: alerts.some((a) => a.severity === 'critical'),
+        alerts: alerts || [],
+        total: alerts?.length || 0,
+        has_critical: alerts?.some((a) => a.severity === 'critical') || false,
       })
     }
 
@@ -83,11 +101,35 @@ export async function GET(request: Request) {
         )
       }
 
-      const alerts = await getActiveAlertsForPatient(supabase, patientId)
+      // Build query for patient alerts
+      let query = supabase
+        .from('ai_alerts')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('severity', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      // Apply status filter
+      if (statusFilter && statusFilter !== 'all') {
+        query = query.eq('status', statusFilter)
+      } else if (!statusFilter || statusFilter === 'all') {
+        // If no filter or 'all', get all alerts (not just active)
+        // No additional filter needed
+      } else {
+        // Default to active if invalid filter
+        query = query.eq('status', 'active')
+      }
+
+      const { data: alerts, error } = await query
+
+      if (error) {
+        throw error
+      }
+
       return NextResponse.json({
-        alerts,
-        total: alerts.length,
-        has_critical: alerts.some((a) => a.severity === 'critical'),
+        alerts: alerts || [],
+        total: alerts?.length || 0,
+        has_critical: alerts?.some((a) => a.severity === 'critical') || false,
       })
     }
 

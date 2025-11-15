@@ -134,3 +134,4 @@ Eğer bu daveti beklemiyorsanız, bu e-postayı görmezden gelebilirsiniz.
 © ${new Date().getFullYear()} ACIL. Tüm hakları saklıdır.
   `.trim()
 }
+

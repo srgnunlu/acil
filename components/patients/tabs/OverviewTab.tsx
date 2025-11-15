@@ -669,6 +669,39 @@ export function OverviewTab({
             <AssignmentManager patientId={patientId} workspaceId={workspaceId} />
           </div>
         )}
+
+        {/* Phase 7: Monitoring Summary */}
+        {patientId && workspaceId && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">AI Monitoring</h3>
+              <a
+                href={`/dashboard/patients/${patientId}?tab=monitoring`}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Detayları Gör →
+              </a>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">Aktif Alertler</p>
+                <p className="text-xl font-bold text-gray-900">-</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">Trend Analizleri</p>
+                <p className="text-xl font-bold text-gray-900">-</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">Karşılaştırmalar</p>
+                <p className="text-xl font-bold text-gray-900">-</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">Monitoring</p>
+                <p className="text-sm font-semibold text-green-600">Aktif</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

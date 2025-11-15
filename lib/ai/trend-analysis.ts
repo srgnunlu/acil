@@ -122,8 +122,22 @@ export function determineTrendDirection(
   stats: StatisticalAnalysis,
   dataPointCount: number
 ): TrendDirection {
-  if (dataPointCount < 3) {
+  // Require at least 2 data points (API already checks this)
+  // But for meaningful trend analysis, we prefer 3+
+  if (dataPointCount < 2) {
     return 'insufficient_data'
+  }
+  
+  // If we have 2 data points, we can still do basic analysis
+  // but mark it as potentially insufficient for complex trends
+  if (dataPointCount === 2) {
+    // With only 2 points, we can determine if it's improving or worsening
+    // but we'll mark it as needing more data for confidence
+    const slope = stats.slope
+    if (Math.abs(slope) < 0.01) {
+      return 'stable'
+    }
+    return slope < 0 ? 'improving' : 'worsening'
   }
 
   const { slope, std_dev, mean } = stats
@@ -171,34 +185,53 @@ export async function generateTrendInterpretation(
   clinical_significance: string
   should_alert: boolean
 }> {
+  // Handle insufficient_data case early - don't call AI for this
+  if (trendDirection === 'insufficient_data') {
+    return {
+      ai_interpretation: `Yetersiz veri: ${metricName} için sadece ${dataPoints.length} veri noktası bulundu. Trend analizi için en az 3 veri noktası önerilir. Mevcut veriler: Ortalama ${stats.mean.toFixed(1)}, Aralık ${stats.min}-${stats.max}.`,
+      clinical_significance: `Daha fazla ölçüm gerekli - ${dataPoints.length}/3 veri noktası`,
+      should_alert: false,
+    }
+  }
+
+  // Build patient context string for prompt
+  const patientInfo = patientContext?.demographics
+    ? `Hasta Bilgileri:
+- İsim: ${patientContext.demographics.name || 'Bilinmiyor'}
+- Yaş: ${patientContext.demographics.age || 'Bilinmiyor'}
+- Cinsiyet: ${patientContext.demographics.gender || 'Bilinmiyor'}
+`
+    : `Hasta Bilgileri:
+- Genel hasta profili (detaylı bilgi mevcut değil)
+`
+
   const prompt = `
-Analyze the following patient metric trend:
+Sen deneyimli bir acil tıp uzmanısın. Aşağıdaki hasta metrik trendini analiz et ve klinik yorum yap.
 
-Metric: ${metricName} (${metricType})
-Trend Direction: ${trendDirection}
+${patientInfo}
+Metrik: ${metricName} (${metricType})
+Trend Yönü: ${trendDirection === 'improving' ? 'İyileşme' : trendDirection === 'worsening' ? 'Kötüleşme' : trendDirection === 'stable' ? 'Stabil' : 'Değişken'}
 
-Statistical Analysis:
-- Mean: ${stats.mean.toFixed(2)}
-- Standard Deviation: ${stats.std_dev.toFixed(2)}
-- Min: ${stats.min}
-- Max: ${stats.max}
-- Slope: ${stats.slope.toFixed(4)}
-- R²: ${stats.r_squared?.toFixed(3)}
+İstatistiksel Analiz:
+- Ortalama: ${stats.mean.toFixed(2)}
+- Standart Sapma: ${stats.std_dev.toFixed(2)}
+- Minimum: ${stats.min}
+- Maksimum: ${stats.max}
+- Eğim (Slope): ${stats.slope.toFixed(4)}
+${stats.r_squared !== undefined ? `- R²: ${stats.r_squared.toFixed(3)}` : ''}
 
-Data Points (${dataPoints.length} measurements):
+Veri Noktaları (${dataPoints.length} ölçüm):
 ${dataPoints
   .slice(-10)
-  .map((dp) => `- ${new Date(dp.timestamp).toLocaleString()}: ${dp.value}${dp.unit || ''}`)
+  .map((dp) => `- ${new Date(dp.timestamp).toLocaleString('tr-TR')}: ${dp.value}${dp.unit || ''}`)
   .join('\n')}
 
-${patientContext ? `\nPatient Context:\n${JSON.stringify(patientContext, null, 2)}` : ''}
+Lütfen şunları sağla:
+1. Klinik yorum (2-3 cümle, Türkçe)
+2. Klinik önem (acil/önemli/rutin)
+3. Bu bir uyarı tetiklemeli mi? (evet/hayır ve neden)
 
-Provide:
-1. Clinical interpretation (2-3 sentences)
-2. Clinical significance (urgent/important/routine)
-3. Should this trigger an alert? (yes/no and why)
-
-Return JSON format:
+JSON formatında döndür:
 {
   "interpretation": "...",
   "significance": "...",
@@ -208,26 +241,62 @@ Return JSON format:
 `
 
   try {
-    // Use a lightweight OpenAI call for trend interpretation
-    const response = await analyzePatient(
-      {
-        demographics: patientContext?.demographics as never,
-      },
-      'updated'
-    )
+    // Use OpenAI directly for trend interpretation
+    const OpenAI = (await import('openai')).default
+    const { env } = await import('@/lib/config/env')
+    
+    if (!env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured')
+    }
+    
+    const openai = new OpenAI({
+      apiKey: env.OPENAI_API_KEY,
+    })
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        {
+          role: 'system',
+          content: 'Sen deneyimli bir acil tıp uzmanısın. Hasta metrik trendlerini analiz edip klinik yorum yapıyorsun. Yanıtlarını Türkçe, net ve anlaşılır şekilde ver. Hasta bilgileri eksik olsa bile mevcut vital bulgulara göre analiz yap.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.3,
+      max_tokens: 500,
+    })
 
-    // Parse response (simplified - you'd want better parsing)
+    const content = response.choices[0]?.message?.content
+    if (!content) {
+      throw new Error('No response from OpenAI')
+    }
+
+    const parsed = JSON.parse(content)
+    const directionText = trendDirection === 'improving' ? 'İyileşme' 
+      : trendDirection === 'worsening' ? 'Kötüleşme' 
+      : trendDirection === 'stable' ? 'Stabil' 
+      : 'Değişken'
+    
     return {
-      ai_interpretation: `${trendDirection.toUpperCase()} trend detected in ${metricName}. ${response.summary || ''}`,
-      clinical_significance: `Mean: ${stats.mean.toFixed(1)}, Range: ${stats.min}-${stats.max}`,
-      should_alert: trendDirection === 'worsening' && Math.abs(stats.slope) > 0.1,
+      ai_interpretation: parsed.interpretation || `${directionText} trend gözlemlendi: ${metricName}. Ortalama değer: ${stats.mean.toFixed(1)}, ${dataPoints.length} ölçüm ile analiz edildi.`,
+      clinical_significance: parsed.significance || getRuleBasedSignificance(metricName, stats, trendDirection),
+      should_alert: parsed.should_alert ?? (trendDirection === 'worsening' && Math.abs(stats.slope) > 0.1),
     }
   } catch (error) {
     console.error('Error generating trend interpretation:', error)
 
     // Fallback interpretation
+    const directionText = trendDirection === 'improving' ? 'İyileşme' 
+      : trendDirection === 'worsening' ? 'Kötüleşme' 
+      : trendDirection === 'stable' ? 'Stabil' 
+      : 'Değişken'
+    
     return {
-      ai_interpretation: `${trendDirection} trend observed in ${metricName}. Mean value: ${stats.mean.toFixed(1)}, with ${dataPoints.length} data points.`,
+      ai_interpretation: `${directionText} trend gözlemlendi: ${metricName}. Ortalama değer: ${stats.mean.toFixed(1)}, ${dataPoints.length} veri noktası ile analiz edildi.`,
       clinical_significance: getRuleBasedSignificance(metricName, stats, trendDirection),
       should_alert: shouldAlertBasedOnRules(metricName, stats, trendDirection),
     }
@@ -434,34 +503,165 @@ export async function extractTrendDataPoints(
 ): Promise<TrendDataPoint[]> {
   const periodStart = new Date(Date.now() - periodHours * 60 * 60 * 1000).toISOString()
 
-  // This is a simplified version - you'd need to adjust based on your actual data structure
-  // For vital signs stored in patient_data or a separate vital_signs table
-
   try {
-    // Example: Query vital signs history
-    const { data, error } = await supabase
-      .from('vital_signs_history') // Assuming you have this table
-      .select('*')
+    // Query vital signs from patient_data table
+    // Include deleted_at check and increase period if needed
+    let query = supabase
+      .from('patient_data')
+      .select('id, content, created_at')
       .eq('patient_id', patientId)
-      .gte('measured_at', periodStart)
-      .order('measured_at', { ascending: true })
+      .eq('data_type', 'vital_signs')
+      .is('deleted_at', null) // Only get non-deleted records
+    
+    // If periodHours is provided and reasonable, use it; otherwise get all data
+    // For trend analysis, we want to see all available data, not just last 24 hours
+    if (periodHours && periodHours > 0 && periodHours < 720) { // Max 30 days
+      query = query.gte('created_at', periodStart)
+    }
+    // If periodHours is 0 or very large, get all data
+    
+    const { data, error } = await query.order('created_at', { ascending: true })
 
-    if (error) throw error
+    if (error) {
+      console.error('Error querying patient_data:', error)
+      throw error
+    }
+
+    if (!data || data.length === 0) {
+      console.log(`[extractTrendDataPoints] No vital signs data found for patient ${patientId} in last ${periodHours} hours`)
+      return []
+    }
+
+    console.log(`[extractTrendDataPoints] Found ${data.length} vital signs records for patient ${patientId}`)
+    console.log(`[extractTrendDataPoints] Sample content:`, data[0]?.content)
+
+    // Comprehensive metric name mapping for field lookups
+    // Handles both camelCase (TypeScript) and snake_case (database) formats
+    const getPossibleFieldNames = (metric: string): string[] => {
+      const lowerMetric = metric.toLowerCase().replace(/[-_\s]/g, '')
+      
+      const mappings: Record<string, string[]> = {
+        // Heart Rate variations
+        heartrate: ['heartRate', 'heart_rate', 'hr', 'HR', 'pulse', 'Pulse'],
+        hr: ['heartRate', 'heart_rate', 'hr', 'HR', 'pulse'],
+        pulse: ['heartRate', 'heart_rate', 'pulse', 'hr'],
+        
+        // Temperature variations
+        temperature: ['temperature', 'temp', 'Temperature', 'Temp', 'body_temperature'],
+        temp: ['temperature', 'temp', 'Temperature'],
+        bodytemperature: ['temperature', 'body_temperature', 'bodyTemperature'],
+        
+        // Blood Pressure variations
+        bloodpressure: ['bloodPressureSystolic', 'blood_pressure', 'bp', 'systolic', 'BP'],
+        bloodpressuresystolic: ['bloodPressureSystolic', 'blood_pressure_systolic', 'systolic', 'bp_systolic', 'sbp', 'SBP'],
+        systolic: ['bloodPressureSystolic', 'systolic', 'bp_systolic', 'sbp'],
+        sbp: ['bloodPressureSystolic', 'systolic', 'blood_pressure_systolic', 'sbp', 'SBP'],
+        bloodpressurediastolic: ['bloodPressureDiastolic', 'blood_pressure_diastolic', 'diastolic', 'bp_diastolic', 'dbp', 'DBP'],
+        diastolic: ['bloodPressureDiastolic', 'diastolic', 'bp_diastolic', 'dbp'],
+        dbp: ['bloodPressureDiastolic', 'diastolic', 'blood_pressure_diastolic', 'dbp', 'DBP'],
+        
+        // Respiratory Rate variations
+        respiratoryrate: ['respiratoryRate', 'respiratory_rate', 'rr', 'RR', 'breathing_rate', 'respiration'],
+        rr: ['respiratoryRate', 'respiratory_rate', 'rr', 'RR'],
+        breathingrate: ['respiratoryRate', 'respiratory_rate', 'breathing_rate', 'rr'],
+        respiration: ['respiratoryRate', 'respiratory_rate', 'respiration', 'rr'],
+        
+        // Oxygen Saturation variations
+        oxygensaturation: ['oxygenSaturation', 'oxygen_saturation', 'spo2', 'SpO2', 'o2_sat', 'o2sat', 'O2', 'saturation'],
+        spo2: ['oxygenSaturation', 'oxygen_saturation', 'spo2', 'SpO2', 'o2_sat', 'o2sat'],
+        o2sat: ['oxygenSaturation', 'oxygen_saturation', 'spo2', 'o2sat', 'o2_sat'],
+        o2saturation: ['oxygenSaturation', 'oxygen_saturation', 'o2_saturation', 'spo2'],
+        saturation: ['oxygenSaturation', 'oxygen_saturation', 'saturation', 'spo2'],
+        
+        // Pain Score variations
+        painscore: ['painScore', 'pain_score', 'pain', 'Pain', 'painLevel', 'pain_level'],
+        pain: ['painScore', 'pain_score', 'pain', 'painLevel'],
+        painlevel: ['painScore', 'pain_score', 'pain_level', 'painLevel'],
+        
+        // Consciousness variations
+        consciousness: ['consciousness', 'conscious_level', 'consciousnessLevel', 'mental_status', 'gcs'],
+        gcs: ['consciousness', 'gcs', 'glasgow_coma_scale', 'GCS'],
+      }
+      
+      // Return mapped values or try variations of the original metric
+      return mappings[lowerMetric] || [
+        metric,  // Original
+        metric.toLowerCase(),  // lowercase
+        metric.toUpperCase(),  // UPPERCASE
+        // Convert camelCase to snake_case
+        metric.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, ''),
+        // Convert snake_case to camelCase
+        metric.replace(/_([a-z])/g, (g) => g[1].toUpperCase()),
+      ]
+    }
+
+    const possibleFieldNames = getPossibleFieldNames(metricName)
 
     // Map to trend data points
     const dataPoints: TrendDataPoint[] = data
       .map((record: any) => {
-        const value = record[metricName] || record.vital_signs?.[metricName]
-        if (value === null || value === undefined) return null
+        const content = record.content as any
+        if (!content) return null
+
+        // Try all possible field name variations
+        let value: any = null
+        for (const fieldName of possibleFieldNames) {
+          if (content[fieldName] !== null && content[fieldName] !== undefined) {
+            value = content[fieldName]
+            break
+          }
+        }
+
+        // Also check if blood_pressure is a string like "120/80" or object like {systolic: 120, diastolic: 80}
+        if (!value && metricName.toLowerCase().includes('blood') && metricName.toLowerCase().includes('pressure')) {
+          // Check for string format "120/80"
+          if (content.blood_pressure && typeof content.blood_pressure === 'string') {
+            const bp = String(content.blood_pressure)
+            const parts = bp.split('/')
+            if (parts.length === 2) {
+              if (metricName.toLowerCase().includes('systolic') || metricName.toLowerCase().includes('sbp')) {
+                value = parts[0].trim()
+              } else if (metricName.toLowerCase().includes('diastolic') || metricName.toLowerCase().includes('dbp')) {
+                value = parts[1].trim()
+              }
+            }
+          }
+          // Check for object format {systolic: 120, diastolic: 80}
+          else if (content.blood_pressure && typeof content.blood_pressure === 'object') {
+            const bp = content.blood_pressure as any
+            if (metricName.toLowerCase().includes('systolic') || metricName.toLowerCase().includes('sbp')) {
+              value = bp.systolic || bp.systolic_bp || bp.sbp
+            } else if (metricName.toLowerCase().includes('diastolic') || metricName.toLowerCase().includes('dbp')) {
+              value = bp.diastolic || bp.diastolic_bp || bp.dbp
+            }
+          }
+          // Also check direct bloodPressureSystolic and bloodPressureDiastolic fields
+          if (!value) {
+            if (metricName.toLowerCase().includes('systolic') || metricName.toLowerCase().includes('sbp')) {
+              value = content.bloodPressureSystolic || content.blood_pressure_systolic || content.systolic || content.sbp
+            } else if (metricName.toLowerCase().includes('diastolic') || metricName.toLowerCase().includes('dbp')) {
+              value = content.bloodPressureDiastolic || content.blood_pressure_diastolic || content.diastolic || content.dbp
+            }
+          }
+        }
+
+        if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+          return null
+        }
 
         return {
-          timestamp: record.measured_at,
+          timestamp: record.created_at,
           value: Number(value),
           unit: getMetricUnit(metricName),
-          context: { record_id: record.id },
+          context: { record_id: record.id, data_type: 'vital_signs' },
         }
       })
       .filter((dp): dp is TrendDataPoint => dp !== null)
+
+    console.log(`[extractTrendDataPoints] Extracted ${dataPoints.length} valid data points for metric "${metricName}"`)
+    if (dataPoints.length > 0) {
+      console.log(`[extractTrendDataPoints] Sample data point:`, dataPoints[0])
+    }
 
     return dataPoints
   } catch (error) {
@@ -474,16 +674,24 @@ export async function extractTrendDataPoints(
  * Get unit for a metric
  */
 function getMetricUnit(metricName: string): string {
-  const metric = metricName.toLowerCase()
+  const metric = metricName.toLowerCase().replace(/[-_\s]/g, '')
 
-  if (metric.includes('heart') || metric.includes('hr')) return 'bpm'
+  // Vital Signs
+  if (metric.includes('heart') || metric.includes('hr') || metric === 'pulse') return 'bpm'
   if (metric.includes('temp')) return '°C'
-  if (metric.includes('bp') || metric.includes('pressure')) return 'mmHg'
-  if (metric.includes('o2') || metric.includes('sat')) return '%'
-  if (metric.includes('resp')) return '/min'
-  if (metric.includes('glucose')) return 'mg/dL'
-  if (metric.includes('wbc')) return 'K/μL'
-  if (metric.includes('hemoglobin') || metric.includes('hgb')) return 'g/dL'
+  if (metric.includes('bp') || metric.includes('pressure') || metric === 'systolic' || metric === 'diastolic' || metric === 'sbp' || metric === 'dbp') return 'mmHg'
+  if (metric.includes('o2') || metric.includes('sat') || metric === 'spo2' || metric.includes('oxygen')) return '%'
+  if (metric.includes('resp') || metric === 'rr' || metric.includes('breathing')) return '/min'
+  if (metric.includes('pain')) return '/10'
+  
+  // Lab Values
+  if (metric.includes('glucose') || metric.includes('sugar')) return 'mg/dL'
+  if (metric.includes('wbc') || metric.includes('leukocyte')) return 'K/μL'
+  if (metric.includes('hemoglobin') || metric.includes('hgb') || metric === 'hb') return 'g/dL'
+  if (metric.includes('platelet') || metric === 'plt') return 'K/μL'
+  if (metric.includes('creatinine')) return 'mg/dL'
+  if (metric.includes('sodium') || metric === 'na') return 'mEq/L'
+  if (metric.includes('potassium') || metric === 'k') return 'mEq/L'
 
   return ''
 }

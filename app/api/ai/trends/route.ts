@@ -95,12 +95,49 @@ export async function POST(request: Request) {
     }
 
     // Parse request body
-    const body: CalculateTrendInput = await request.json()
+    let body: CalculateTrendInput
+    try {
+      body = await request.json()
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 })
+    }
+    
     const { patient_id, metric_type, metric_name, period_hours = 24 } = body
 
     // Validate required fields
     if (!patient_id || !metric_type || !metric_name) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      const missingFields = []
+      if (!patient_id) missingFields.push('patient_id')
+      if (!metric_type) missingFields.push('metric_type')
+      if (!metric_name) missingFields.push('metric_name')
+      
+      return NextResponse.json(
+        { 
+          error: 'Missing required fields',
+          message: `Eksik alanlar: ${missingFields.join(', ')}`,
+          missing_fields: missingFields,
+          received: { 
+            patient_id: patient_id || null, 
+            metric_type: metric_type || null, 
+            metric_name: metric_name || null 
+          }
+        }, 
+        { status: 400 }
+      )
+    }
+
+    // Validate metric_type is a valid MetricType
+    const validMetricTypes: MetricType[] = ['vital_signs', 'lab_values', 'clinical_scores', 'overall_condition']
+    if (!validMetricTypes.includes(metric_type as MetricType)) {
+      return NextResponse.json(
+        {
+          error: 'Invalid metric_type',
+          message: `metric_type geçersiz. Geçerli değerler: ${validMetricTypes.join(', ')}`,
+          received: metric_type,
+          valid_types: validMetricTypes
+        },
+        { status: 400 }
+      )
     }
 
     // Verify patient access
@@ -117,11 +154,16 @@ export async function POST(request: Request) {
     // Extract data points
     const dataPoints = await extractTrendDataPoints(supabase, patient_id, metric_name, period_hours)
 
+    console.log(`[Trend API] Extracted ${dataPoints.length} data points for ${metric_name} (patient: ${patient_id}, period: ${period_hours}h)`)
+
     if (dataPoints.length < 2) {
       return NextResponse.json(
         {
           error: 'Insufficient data points for trend analysis',
-          message: `At least 2 data points required, found ${dataPoints.length}`,
+          message: `Trend analizi için en az 2 veri noktası gereklidir. Son ${period_hours} saat içinde ${dataPoints.length} veri noktası bulundu. Lütfen önce hasta verilerine vital bulgular ekleyin.`,
+          data_points_found: dataPoints.length,
+          period_hours,
+          metric_name,
         },
         { status: 400 }
       )
@@ -133,13 +175,41 @@ export async function POST(request: Request) {
     // Determine trend direction
     const trendDirection = determineTrendDirection(stats, dataPoints.length)
 
-    // Generate AI interpretation
+    // Fetch patient information for AI interpretation context
+    const { data: patient, error: patientError } = await supabase
+      .from('patients')
+      .select('id, name, age, gender')
+      .eq('id', patient_id)
+      .single()
+
+    if (patientError) {
+      console.error('[Trend API] Failed to fetch patient info:', patientError)
+    }
+
+    // Build comprehensive patient context for AI interpretation
+    const patientContext = patient
+      ? {
+          demographics: {
+            name: patient.name,
+            age: patient.age,
+            gender: patient.gender as 'Erkek' | 'Kadın' | 'Diğer' | null,
+          },
+        }
+      : undefined
+
+    // Log patient context for debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Trend API] Patient context:', patientContext)
+    }
+
+    // Generate AI interpretation with patient context
     const interpretation = await generateTrendInterpretation(
       metric_type,
       metric_name,
       stats,
       trendDirection,
-      dataPoints
+      dataPoints,
+      patientContext
     )
 
     // Calculate period dates

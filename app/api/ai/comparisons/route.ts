@@ -118,16 +118,98 @@ export async function POST(request: Request) {
     let comparison
 
     // Auto-compare latest two analyses
-    if (auto_compare) {
-      comparison = await autoCompareLatestAnalyses(supabase, patient_id, accessResult.workspaceId!)
-
-      if (!comparison) {
+    if (auto_compare === true) {
+      if (!accessResult.workspaceId) {
+        console.error('No workspace ID found for patient access')
         return NextResponse.json(
           {
             error: 'Unable to auto-compare',
-            message: 'At least 2 analyses required for comparison',
+            message: 'Workspace access not found',
+          },
+          { status: 403 }
+        )
+      }
+
+      console.log(`Starting auto-compare for patient ${patient_id} in workspace ${accessResult.workspaceId}`)
+
+      // First, check how many analyses exist for this patient
+      const { data: analysesCheck, error: checkError, count } = await supabase
+        .from('ai_analyses')
+        .select('id', { count: 'exact', head: false })
+        .eq('patient_id', patient_id)
+
+      if (checkError) {
+        console.error('Error checking analyses:', checkError)
+        return NextResponse.json(
+          {
+            error: 'Unable to check analyses',
+            message: checkError.message,
+          },
+          { status: 500 }
+        )
+      }
+
+      const analysisCount = count ?? analysesCheck?.length ?? 0
+      console.log(`Found ${analysisCount} analyses for patient ${patient_id}`)
+
+      if (analysisCount < 2) {
+        return NextResponse.json(
+          {
+            error: 'Unable to auto-compare',
+            message: `At least 2 analyses required for comparison. Found ${analysisCount} analysis(es).`,
           },
           { status: 400 }
+        )
+      }
+
+      try {
+        comparison = await autoCompareLatestAnalyses(supabase, patient_id, accessResult.workspaceId)
+
+        if (!comparison) {
+          console.error('autoCompareLatestAnalyses returned null')
+          // Try to get more details about what went wrong
+          const { data: lastError } = await supabase
+            .from('ai_analyses')
+            .select('id, patient_id, created_at')
+            .eq('patient_id', patient_id)
+            .order('created_at', { ascending: false })
+            .limit(2)
+          
+          console.error('Last 2 analyses:', lastError)
+          
+          return NextResponse.json(
+            {
+              error: 'Unable to auto-compare',
+              message: 'Failed to create comparison. Check server logs for details.',
+              debug: {
+                analysesFound: lastError?.length || 0,
+                patientId: patient_id,
+                workspaceId: accessResult.workspaceId,
+              },
+            },
+            { status: 500 }
+          )
+        }
+
+        console.log('Comparison created successfully:', comparison.id)
+      } catch (compareError) {
+        console.error('Error in autoCompareLatestAnalyses:', compareError)
+        const errorMessage = compareError instanceof Error 
+          ? compareError.message 
+          : String(compareError)
+        const errorStack = compareError instanceof Error 
+          ? compareError.stack 
+          : undefined
+        
+        console.error('Full error:', { errorMessage, errorStack })
+        
+        return NextResponse.json(
+          {
+            error: 'Unable to auto-compare',
+            message: errorMessage,
+            ...(process.env.NODE_ENV === 'development' && { stack: errorStack }),
+          },
+          { status: 500 }
         )
       }
     } else {

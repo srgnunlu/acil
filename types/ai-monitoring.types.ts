@@ -407,7 +407,7 @@ export interface ComparisonsResponse {
 }
 
 export interface MonitoringStatusResponse {
-  config: AIMonitoringConfig
+  config: AIMonitoringConfig | null
   active_alerts: AIAlert[]
   recent_trends: AITrend[]
   deterioration_score: number

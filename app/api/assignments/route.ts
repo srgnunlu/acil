@@ -27,9 +27,7 @@ export async function GET(request: NextRequest) {
       .from('patient_assignments')
       .select(`
         *,
-        patient:patients!patient_assignments_patient_id_fkey(id, full_name, age, gender),
-        assigned_user:profiles!patient_assignments_user_id_fkey(id, full_name, specialty),
-        assigned_by_user:profiles!patient_assignments_assigned_by_fkey(id, full_name)
+        patient:patients(id, name, age, gender, workspace_id)
       `)
       .eq('is_active', true)
 
@@ -46,12 +44,43 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching assignments:', error)
       return NextResponse.json(
-        { error: 'Failed to fetch assignments' },
+        { error: 'Failed to fetch assignments', details: error.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ assignments })
+    // Fetch profile information for assigned users and assigned_by
+    if (assignments && assignments.length > 0) {
+      const userIds = new Set<string>()
+      assignments.forEach((a: any) => {
+        if (a.user_id) userIds.add(a.user_id)
+        if (a.assigned_by) userIds.add(a.assigned_by)
+      })
+
+      if (userIds.size > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, specialty')
+          .in('user_id', Array.from(userIds))
+
+        const profileMap = new Map(
+          (profiles || []).map((p: any) => [p.user_id, p])
+        )
+
+        // Attach profile data to assignments
+        const assignmentsWithProfiles = assignments.map((assignment: any) => ({
+          ...assignment,
+          assigned_user: profileMap.get(assignment.user_id) || null,
+          assigned_by_user: assignment.assigned_by
+            ? profileMap.get(assignment.assigned_by) || null
+            : null,
+        }))
+
+        return NextResponse.json({ assignments: assignmentsWithProfiles })
+      }
+    }
+
+    return NextResponse.json({ assignments: assignments || [] })
   } catch (error) {
     console.error('Error in GET /api/assignments:', error)
     return NextResponse.json(
@@ -168,12 +197,7 @@ export async function POST(request: NextRequest) {
         assigned_by: user.id,
         is_active: true,
       })
-      .select(`
-        *,
-        patient:patients!patient_assignments_patient_id_fkey(id, full_name),
-        assigned_user:profiles!patient_assignments_user_id_fkey(id, full_name, specialty),
-        assigned_by_user:profiles!patient_assignments_assigned_by_fkey(id, full_name)
-      `)
+      .select('*')
       .single()
 
     if (error) {
@@ -184,6 +208,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Fetch related data
+    const [patientData, assignedUserProfile, assignedByProfile] = await Promise.all([
+      supabase.from('patients').select('id, name').eq('id', patient_id).single(),
+      supabase.from('profiles').select('user_id, full_name, specialty').eq('user_id', assignedUserId).single(),
+      supabase.from('profiles').select('user_id, full_name').eq('user_id', user.id).single(),
+    ])
+
+    const assignmentWithRelations = {
+      ...assignment,
+      patient: patientData.data || null,
+      assigned_user: assignedUserProfile.data || null,
+      assigned_by_user: assignedByProfile.data || null,
+    }
+
     // If primary assignment, also update patients.assigned_to
     if (assignment_type === 'primary') {
       await supabase
@@ -192,7 +230,7 @@ export async function POST(request: NextRequest) {
         .eq('id', patient_id)
     }
 
-    return NextResponse.json({ assignment }, { status: 201 })
+    return NextResponse.json({ assignment: assignmentWithRelations }, { status: 201 })
   } catch (error) {
     console.error('Error in POST /api/assignments:', error)
     return NextResponse.json(

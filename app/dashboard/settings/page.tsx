@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Building2, Briefcase } from 'lucide-react'
+import { NotificationPreferencesClient } from './NotificationPreferencesClient'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -166,24 +167,11 @@ export default async function SettingsPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Bildirim Ayarları</h2>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900">Tetkik Sonucu Hatırlatıcıları</p>
-              <p className="text-sm text-gray-600">Tetkik sonuçları için otomatik hatırlatma</p>
-            </div>
-            <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-blue-600">
-              <span className="translate-x-5 inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" />
-            </button>
+          <div className="text-sm text-gray-600 mb-4">
+            Bildirim tercihlerinizi yönetin. Hangi bildirimleri almak istediğinizi ve hangi kanallardan almak istediğinizi seçebilirsiniz.
           </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900">E-posta Bildirimleri</p>
-              <p className="text-sm text-gray-600">Önemli güncellemeler için e-posta al</p>
-            </div>
-            <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-gray-200">
-              <span className="translate-x-0 inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" />
-            </button>
+          <div className="border-t border-gray-200 pt-4">
+            <NotificationPreferencesClient />
           </div>
         </div>
       </div>

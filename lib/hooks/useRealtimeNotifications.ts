@@ -8,21 +8,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import type { ConnectionStatus } from '@/types/realtime.types'
-
-export interface Notification {
-  id: string
-  user_id: string
-  type: string
-  title: string
-  message: string | null
-  severity: 'critical' | 'high' | 'medium' | 'low' | 'info'
-  related_patient_id: string | null
-  related_workspace_id: string | null
-  data: Record<string, unknown>
-  is_read: boolean
-  read_at: string | null
-  created_at: string
-}
+import type { Notification } from '@/types/notification.types'
 
 export interface UseRealtimeNotificationsOptions {
   userId: string

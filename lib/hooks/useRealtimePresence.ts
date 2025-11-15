@@ -305,14 +305,14 @@ export function useRealtimePresence({
           .untrack()
           .then(() => {
             if (channelRef.current) {
-              supabase.removeChannel(channelRef.current)
+              supabaseRef.current.removeChannel(channelRef.current)
               channelRef.current = null
             }
           })
           .catch(() => {
             // Ignore errors during cleanup
             if (channelRef.current) {
-              supabase.removeChannel(channelRef.current)
+              supabaseRef.current.removeChannel(channelRef.current)
               channelRef.current = null
             }
           })

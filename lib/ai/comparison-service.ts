@@ -29,36 +29,55 @@ export async function compareAnalyses(
   comparisonType: ComparisonType = 'sequential'
 ): Promise<AIComparison | null> {
   try {
+    console.log(`Starting comparison: baseline=${baselineAnalysisId}, current=${currentAnalysisId}`)
+    
     // Fetch both analyses
-    const { data: baselineAnalysis } = await supabase
+    const { data: baselineAnalysis, error: baselineError } = await supabase
       .from('ai_analyses')
       .select('*')
       .eq('id', baselineAnalysisId)
       .single()
 
-    const { data: currentAnalysis } = await supabase
+    if (baselineError) {
+      console.error('Error fetching baseline analysis:', baselineError)
+      return null
+    }
+
+    const { data: currentAnalysis, error: currentError } = await supabase
       .from('ai_analyses')
       .select('*')
       .eq('id', currentAnalysisId)
       .single()
 
-    if (!baselineAnalysis || !currentAnalysis) {
-      console.error('One or both analyses not found')
+    if (currentError) {
+      console.error('Error fetching current analysis:', currentError)
       return null
     }
+
+    if (!baselineAnalysis || !currentAnalysis) {
+      console.error('One or both analyses not found', { baselineAnalysis, currentAnalysis })
+      return null
+    }
+
+    console.log('Both analyses fetched successfully')
 
     // Extract AI responses
     const baselineResponse = baselineAnalysis.ai_response as AIAnalysisResponse
     const currentResponse = currentAnalysis.ai_response as AIAnalysisResponse
 
+    if (!baselineResponse || !currentResponse) {
+      console.error('Invalid AI responses', { baselineResponse, currentResponse })
+      return null
+    }
+
     // Detect changes
     const changesDetected = detectChanges(baselineResponse, currentResponse)
 
     // Determine overall trend
-    const overallTrend = determineOverallTrend(changesDetected)
+    let overallTrend = determineOverallTrend(changesDetected)
 
     // Calculate significance score
-    const significanceScore = calculateSignificanceScore(changesDetected)
+    let significanceScore = calculateSignificanceScore(changesDetected)
 
     // Calculate time interval
     const timeInterval = calculateTimeInterval(
@@ -66,43 +85,104 @@ export async function compareAnalyses(
       currentAnalysis.created_at
     )
 
+    // Validate values
+    if (!overallTrend || !['improving', 'stable', 'worsening', 'mixed', 'insufficient_data'].includes(overallTrend)) {
+      console.error('Invalid overall trend:', overallTrend)
+      // Fallback to stable if invalid
+      overallTrend = 'stable'
+      console.log('Using fallback trend:', overallTrend)
+    }
+
+    if (significanceScore === null || significanceScore === undefined || isNaN(significanceScore)) {
+      console.error('Invalid significance score:', significanceScore)
+      // Fallback to 0 if invalid
+      significanceScore = 0
+      console.log('Using fallback score:', significanceScore)
+    }
+
+    console.log('Calculated metrics:', { overallTrend, significanceScore, timeInterval })
+
     // Generate AI summary
-    const aiSummary = await generateComparisonSummary(
-      patientId,
-      baselineResponse,
-      currentResponse,
-      changesDetected,
-      timeInterval
-    )
+    let aiSummary
+    try {
+      aiSummary = await generateComparisonSummary(
+        patientId,
+        baselineResponse,
+        currentResponse,
+        changesDetected,
+        timeInterval
+      )
+    } catch (summaryError) {
+      console.error('Error generating summary:', summaryError)
+      // Use fallback summary
+      aiSummary = generateRuleBasedSummary(changesDetected, timeInterval)
+    }
+
+    // Ensure recommendations is an array
+    const recommendations = Array.isArray(aiSummary.recommendations) 
+      ? aiSummary.recommendations 
+      : []
+
+    // Ensure changes_detected has the correct structure
+    const changesDetectedSafe = {
+      improved: Array.isArray(changesDetected.improved) ? changesDetected.improved : [],
+      worsened: Array.isArray(changesDetected.worsened) ? changesDetected.worsened : [],
+      new_findings: Array.isArray(changesDetected.new_findings) ? changesDetected.new_findings : [],
+      resolved: Array.isArray(changesDetected.resolved) ? changesDetected.resolved : [],
+    }
 
     // Create comparison record
+    const insertData = {
+      patient_id: patientId,
+      workspace_id: workspaceId,
+      baseline_analysis_id: baselineAnalysisId,
+      current_analysis_id: currentAnalysisId,
+      comparison_type: comparisonType,
+      changes_detected: changesDetectedSafe,
+      overall_trend: overallTrend,
+      significance_score: significanceScore,
+      ai_summary: aiSummary.summary || '',
+      clinical_implications: aiSummary.implications || '',
+      recommendations: recommendations,
+      time_interval_hours: timeInterval,
+    }
+
+    console.log('Inserting comparison:', insertData)
+
     const { data: comparison, error } = await supabase
       .from('ai_comparisons')
-      .insert({
-        patient_id: patientId,
-        workspace_id: workspaceId,
-        baseline_analysis_id: baselineAnalysisId,
-        current_analysis_id: currentAnalysisId,
-        comparison_type: comparisonType,
-        changes_detected: changesDetected,
-        overall_trend: overallTrend,
-        significance_score: significanceScore,
-        ai_summary: aiSummary.summary,
-        clinical_implications: aiSummary.implications,
-        recommendations: aiSummary.recommendations,
-        time_interval_hours: timeInterval,
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (error) {
       console.error('Error creating comparison:', error)
+      console.error('Error code:', error.code)
+      console.error('Error message:', error.message)
+      console.error('Error details:', error.details)
+      console.error('Error hint:', error.hint)
+      console.error('Insert data:', JSON.stringify(insertData, null, 2))
+      console.error('Insert data types:', {
+        patient_id: typeof insertData.patient_id,
+        workspace_id: typeof insertData.workspace_id,
+        baseline_analysis_id: typeof insertData.baseline_analysis_id,
+        current_analysis_id: typeof insertData.current_analysis_id,
+        comparison_type: typeof insertData.comparison_type,
+        overall_trend: typeof insertData.overall_trend,
+        significance_score: typeof insertData.significance_score,
+        recommendations: Array.isArray(insertData.recommendations),
+        time_interval_hours: typeof insertData.time_interval_hours,
+      })
       return null
     }
 
+    console.log('Comparison created successfully:', comparison?.id)
     return comparison
   } catch (error) {
     console.error('Error in compareAnalyses:', error)
+    if (error instanceof Error) {
+      console.error('Error details:', error.message, error.stack)
+    }
     return null
   }
 }
@@ -452,21 +532,37 @@ export async function autoCompareLatestAnalyses(
   workspaceId: string
 ): Promise<AIComparison | null> {
   try {
+    console.log(`Auto-comparing analyses for patient ${patientId} in workspace ${workspaceId}`)
+    
     // Get latest two analyses
     const { data: analyses, error } = await supabase
       .from('ai_analyses')
-      .select('id, created_at')
+      .select('id, created_at, patient_id')
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false })
       .limit(2)
 
-    if (error || !analyses || analyses.length < 2) {
-      console.log('Not enough analyses to compare')
+    if (error) {
+      console.error('Error fetching analyses:', error)
       return null
     }
 
+    if (!analyses || analyses.length === 0) {
+      console.log(`No analyses found for patient ${patientId}`)
+      return null
+    }
+
+    if (analyses.length < 2) {
+      console.log(`Only ${analyses.length} analysis found for patient ${patientId}, need at least 2`)
+      return null
+    }
+
+    console.log(`Found ${analyses.length} analyses for patient ${patientId}`)
+    console.log(`Baseline: ${analyses[1].id} (${analyses[1].created_at})`)
+    console.log(`Current: ${analyses[0].id} (${analyses[0].created_at})`)
+
     // Compare them (most recent is current, previous is baseline)
-    return await compareAnalyses(
+    const result = await compareAnalyses(
       supabase,
       patientId,
       workspaceId,
@@ -474,8 +570,19 @@ export async function autoCompareLatestAnalyses(
       analyses[0].id, // current (newer)
       'sequential'
     )
+
+    if (!result) {
+      console.error('compareAnalyses returned null')
+    } else {
+      console.log('Comparison successful:', result.id)
+    }
+
+    return result
   } catch (error) {
     console.error('Error in autoCompareLatestAnalyses:', error)
+    if (error instanceof Error) {
+      console.error('Error details:', error.message, error.stack)
+    }
     return null
   }
 }

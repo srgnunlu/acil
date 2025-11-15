@@ -108,6 +108,53 @@ export function AddDataForm({ patientId, dataType, onClose }: AddDataFormProps) 
 
       if (insertError) throw insertError
 
+      // If vital signs were added, trigger automatic trend analysis and check for critical values
+      if (dataType === 'vital_signs') {
+        // Check for critical vital signs and create alerts
+        fetch('/api/ai/alerts/check-vitals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            patient_id: patientId,
+            vital_signs: content,
+          }),
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              const error = await res.json()
+              console.error('Alert check failed:', error)
+            } else {
+              const data = await res.json()
+              console.log('Alert check result:', data)
+            }
+          })
+          .catch((err) => {
+            console.error('Alert check error:', err)
+          })
+
+        // Trigger trend analysis in background (don't wait for it)
+        fetch('/api/ai/trends/auto-create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            patient_id: patientId,
+            period_hours: 24,
+          }),
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              const error = await res.json()
+              console.error('Trend auto-create failed:', error)
+            } else {
+              const data = await res.json()
+              console.log('Trend auto-create result:', data)
+            }
+          })
+          .catch((err) => {
+            console.error('Trend auto-create error:', err)
+          })
+      }
+
       router.refresh()
       onClose()
     } catch (err: any) {

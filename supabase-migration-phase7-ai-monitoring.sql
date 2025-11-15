@@ -173,6 +173,15 @@ CREATE POLICY "Users can view trends in their workspaces"
     )
   );
 
+CREATE POLICY "Users can insert trends in their workspaces"
+  ON ai_trends FOR INSERT
+  WITH CHECK (
+    workspace_id IN (
+      SELECT workspace_id FROM workspace_members
+      WHERE user_id = auth.uid() AND status = 'active'
+    )
+  );
+
 -- ============================================
 -- BÖLÜM 3: AI MONITORING CONFIGS
 -- ============================================
@@ -382,6 +391,15 @@ ALTER TABLE ai_comparisons ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view comparisons in their workspaces"
   ON ai_comparisons FOR SELECT
   USING (
+    workspace_id IN (
+      SELECT workspace_id FROM workspace_members
+      WHERE user_id = auth.uid() AND status = 'active'
+    )
+  );
+
+CREATE POLICY "Users can insert comparisons in their workspaces"
+  ON ai_comparisons FOR INSERT
+  WITH CHECK (
     workspace_id IN (
       SELECT workspace_id FROM workspace_members
       WHERE user_id = auth.uid() AND status = 'active'
