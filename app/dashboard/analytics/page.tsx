@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Download, RefreshCw, Calendar, TrendingUp } from 'lucide-react'
+import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { PatientCountWidget } from '@/components/analytics/widgets/PatientCountWidget'
 import { AIUsageWidget } from '@/components/analytics/widgets/AIUsageWidget'
 import { RecentAlertsWidget } from '@/components/analytics/widgets/RecentAlertsWidget'
@@ -10,6 +11,9 @@ import { TeamActivityWidget } from '@/components/analytics/widgets/TeamActivityW
 import { PieChart } from '@/components/charts/PieChart'
 import { LineChart } from '@/components/charts/LineChart'
 import { BarChart } from '@/components/charts/BarChart'
+import { TestTypeChart } from '@/components/charts/TestTypeChart'
+import { DataEntryChart } from '@/components/charts/DataEntryChart'
+import { PatientStatusChart } from '@/components/charts/PatientStatusChart'
 
 interface WorkspaceAnalytics {
   overview: {
@@ -49,11 +53,43 @@ interface WorkspaceAnalytics {
 
 export default function AnalyticsPage() {
   const searchParams = useSearchParams()
-  const workspaceId = searchParams.get('workspace_id')
+  const { currentWorkspace, isLoading: workspaceLoading } = useWorkspace()
+  const workspaceIdFromUrl = searchParams.get('workspace_id')
+  const workspaceId = workspaceIdFromUrl || currentWorkspace?.id || null
 
   const [analytics, setAnalytics] = useState<WorkspaceAnalytics | null>(null)
   const [teamData, setTeamData] = useState<unknown>(null)
   const [clinicalData, setClinicalData] = useState<unknown>(null)
+  const [detailedData, setDetailedData] = useState<{
+    statusCounts: { active: number; discharged: number; consultation: number }
+    testCounts: {
+      laboratory: number
+      ekg: number
+      radiology: number
+      consultation: number
+      other: number
+    }
+    dataCounts: {
+      anamnesis: number
+      vital_signs: number
+      medications: number
+      history: number
+      demographics: number
+    }
+    summary: {
+      totalPatients: number
+      totalTests: number
+      totalDataEntries: number
+      totalAiAnalyses: number
+      totalChatMessages: number
+    }
+    quickStats: {
+      avgTestsPerPatient: string
+      avgDataEntriesPerPatient: string
+      aiUsageRate: string
+      chatActivityPerPatient: string
+    }
+  } | null>(null)
   const [alerts, setAlerts] = useState<unknown[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -90,6 +126,13 @@ export default function AnalyticsPage() {
       const alertsData = await alertsRes.json()
       if (alertsData.success) {
         setAlerts(alertsData.alerts || [])
+      }
+
+      // Detailed analytics (test types, data entry, etc.)
+      const detailedRes = await fetch(`/api/analytics/detailed?workspace_id=${workspaceId}`)
+      const detailedResData = await detailedRes.json()
+      if (detailedResData.success) {
+        setDetailedData(detailedResData.data)
       }
     } catch (error) {
       console.error('Failed to load analytics:', error)
@@ -137,6 +180,19 @@ export default function AnalyticsPage() {
     } catch (error) {
       console.error('Export failed:', error)
     }
+  }
+
+  if (workspaceLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <RefreshCw className="w-12 h-12 text-blue-400 animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">Workspace yükleniyor...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!workspaceId) {
@@ -275,17 +331,43 @@ export default function AnalyticsPage() {
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Category Distribution */}
-          {analytics?.overview?.category_distribution && analytics.overview.category_distribution.length > 0 && (
+          {/* Patient Status Chart */}
+          {detailedData?.statusCounts && (
             <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <PieChart
-                title="Kategori Dağılımı"
-                data={{
-                  labels: analytics.overview.category_distribution.map((c) => c.category_name),
-                  values: analytics.overview.category_distribution.map((c) => c.patient_count),
-                  colors: analytics.overview.category_distribution.map((c) => c.category_color),
-                }}
+              <PatientStatusChart
+                active={detailedData.statusCounts.active}
+                discharged={detailedData.statusCounts.discharged}
+                consultation={detailedData.statusCounts.consultation}
               />
+            </div>
+          )}
+
+          {/* Category Distribution */}
+          {analytics?.overview?.category_distribution &&
+            analytics.overview.category_distribution.length > 0 && (
+              <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <PieChart
+                  title="Kategori Dağılımı"
+                  data={{
+                    labels: analytics.overview.category_distribution.map((c) => c.category_name),
+                    values: analytics.overview.category_distribution.map((c) => c.patient_count),
+                    colors: analytics.overview.category_distribution.map((c) => c.category_color),
+                  }}
+                />
+              </div>
+            )}
+
+          {/* Test Type Chart */}
+          {detailedData?.testCounts && (
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <TestTypeChart testCounts={detailedData.testCounts} />
+            </div>
+          )}
+
+          {/* Data Entry Chart */}
+          {detailedData?.dataCounts && (
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <DataEntryChart dataCounts={detailedData.dataCounts} />
             </div>
           )}
 
@@ -296,7 +378,10 @@ export default function AnalyticsPage() {
                 title="Günlük Hasta Kabul Trendi"
                 data={{
                   labels: analytics.daily_metrics.map((m) =>
-                    new Date(m.metric_date).toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' })
+                    new Date(m.metric_date).toLocaleDateString('tr-TR', {
+                      month: 'short',
+                      day: 'numeric',
+                    })
                   ),
                   datasets: [
                     {
@@ -317,11 +402,50 @@ export default function AnalyticsPage() {
           )}
         </div>
 
+        {/* Quick Stats Row */}
+        {detailedData?.quickStats && (
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-200 mb-4">Hızlı İstatistikler</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex justify-between items-center p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                <span className="text-sm font-medium text-gray-300">
+                  Hasta Başına Ortalama Test
+                </span>
+                <span className="text-xl font-bold text-blue-400">
+                  {detailedData.quickStats.avgTestsPerPatient}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                <span className="text-sm font-medium text-gray-300">
+                  Hasta Başına Ortalama Veri
+                </span>
+                <span className="text-xl font-bold text-green-400">
+                  {detailedData.quickStats.avgDataEntriesPerPatient}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                <span className="text-sm font-medium text-gray-300">AI Kullanım Oranı</span>
+                <span className="text-xl font-bold text-purple-400">
+                  {detailedData.quickStats.aiUsageRate}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-4 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+                <span className="text-sm font-medium text-gray-300">Chat Aktivitesi</span>
+                <span className="text-xl font-bold text-indigo-400">
+                  {detailedData.quickStats.chatActivityPerPatient}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Bottom Widgets Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RecentAlertsWidget alerts={alerts as never[]} />
           {teamData && (
-            <TeamActivityWidget members={(teamData as { team_performance: unknown[] }).team_performance as never[]} />
+            <TeamActivityWidget
+              members={(teamData as { team_performance: unknown[] }).team_performance as never[]}
+            />
           )}
         </div>
 
@@ -331,9 +455,9 @@ export default function AnalyticsPage() {
             <BarChart
               title="Ekip Performansı"
               data={{
-                labels: (teamData as { team_performance: { user_name: string }[] }).team_performance.map(
-                  (m) => m.user_name
-                ),
+                labels: (
+                  teamData as { team_performance: { user_name: string }[] }
+                ).team_performance.map((m) => m.user_name),
                 datasets: [
                   {
                     label: 'Yönetilen Hasta',
@@ -362,24 +486,26 @@ export default function AnalyticsPage() {
             <LineChart
               title="Kabul ve Taburcu Trendleri (30 Gün)"
               data={{
-                labels: (clinicalData as { admission_trends: { date: string }[] }).admission_trends.map((t) =>
+                labels: (
+                  clinicalData as { admission_trends: { date: string }[] }
+                ).admission_trends.map((t) =>
                   new Date(t.date).toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' })
                 ),
                 datasets: [
                   {
                     label: 'Kabul',
-                    data: (clinicalData as { admission_trends: { count: number }[] }).admission_trends.map(
-                      (t) => t.count
-                    ),
+                    data: (
+                      clinicalData as { admission_trends: { count: number }[] }
+                    ).admission_trends.map((t) => t.count),
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                   },
                   {
                     label: 'Taburcu',
                     data:
-                      (clinicalData as { discharge_trends?: { count: number }[] }).discharge_trends?.map(
-                        (t) => t.count
-                      ) || [],
+                      (
+                        clinicalData as { discharge_trends?: { count: number }[] }
+                      ).discharge_trends?.map((t) => t.count) || [],
                     borderColor: '#10b981',
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
                   },

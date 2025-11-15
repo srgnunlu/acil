@@ -166,7 +166,7 @@ export default async function DashboardHome() {
         </Card>
 
         <Card variant="elevated" interactive className="group">
-          <Link href="/dashboard/statistics">
+          <Link href="/dashboard/analytics">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-gray-600">Test Sayısı</h3>
               <Activity className="h-8 w-8 text-blue-600 group-hover:scale-110 transition-transform" />
@@ -181,7 +181,7 @@ export default async function DashboardHome() {
         </Card>
 
         <Card variant="elevated" interactive className="group">
-          <Link href="/dashboard/statistics">
+          <Link href="/dashboard/analytics">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-gray-600">AI Analizi</h3>
               <Brain className="h-8 w-8 text-purple-600 group-hover:scale-110 transition-transform" />
@@ -360,7 +360,7 @@ export default async function DashboardHome() {
             </Button>
           </Link>
 
-          <Link href="/dashboard/statistics">
+          <Link href="/dashboard/analytics">
             <Button
               variant="outline"
               size="lg"
