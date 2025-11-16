@@ -19,6 +19,8 @@ export type Subjects =
   | 'Analytics'
   | 'Audit'
   | 'AI'
+  | 'Protocol'
+  | 'ProtocolCategory'
   | 'all'
 
 // Actions that can be performed
