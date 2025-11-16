@@ -9,6 +9,7 @@ import { AIAnalysisTab } from './tabs/AIAnalysisTab'
 import { ChatTab } from './tabs/ChatTab'
 import { NotesTab } from './tabs/NotesTab'
 import { MonitoringTab } from './tabs/MonitoringTab'
+import { CalculatorsTab } from './tabs/CalculatorsTab'
 
 interface PatientTabsProps {
   patientId: string
@@ -19,9 +20,10 @@ interface PatientTabsProps {
   workspaceId?: string
   currentUserId?: string
   workflowState?: string
+  patient?: Patient
 }
 
-type TabType = 'overview' | 'data' | 'tests' | 'ai' | 'monitoring' | 'chat' | 'notes'
+type TabType = 'overview' | 'data' | 'tests' | 'ai' | 'monitoring' | 'chat' | 'notes' | 'calculators'
 
 export function PatientTabs({
   patientId,
@@ -32,6 +34,7 @@ export function PatientTabs({
   workspaceId,
   currentUserId,
   workflowState,
+  patient,
 }: PatientTabsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
 
@@ -141,6 +144,21 @@ export function PatientTabs({
       ),
       count: null,
     },
+    {
+      id: 'calculators' as TabType,
+      label: 'Kalkulatörler',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+          />
+        </svg>
+      ),
+      count: null,
+    },
   ]
 
   return (
@@ -221,6 +239,16 @@ export function PatientTabs({
 
         {activeTab === 'notes' && workspaceId && currentUserId && (
           <NotesTab patientId={patientId} workspaceId={workspaceId} currentUserId={currentUserId} />
+        )}
+
+        {activeTab === 'calculators' && workspaceId && patient && (
+          <CalculatorsTab
+            patientId={patientId}
+            workspaceId={workspaceId}
+            patient={patient}
+            patientData={patientData}
+            tests={tests}
+          />
         )}
       </div>
     </div>

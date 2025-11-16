@@ -1,20 +1,45 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCalculateScore } from '@/lib/hooks/useCalculators'
+import { autoFillCalculator } from '@/lib/calculators/auto-fill'
 import type { qSOFAInput } from '@/types/calculator.types'
+import type { Patient, PatientData, PatientTest } from '@/types'
 
 interface QSOFACalculatorProps {
   workspaceId: string
   patientId?: string
+  patient?: Patient
+  patientData?: PatientData[]
+  tests?: PatientTest[]
 }
 
-export default function QSOFACalculator({ workspaceId, patientId }: QSOFACalculatorProps) {
+export default function QSOFACalculator({
+  workspaceId,
+  patientId,
+  patient,
+  patientData = [],
+  tests = [],
+}: QSOFACalculatorProps) {
   const [input, setInput] = useState<qSOFAInput>({
     respiratory_rate: 18,
     altered_mentation: false,
     systolic_bp: 120,
   })
+
+  // Auto-fill from patient data
+  useEffect(() => {
+    if (patient && patientData.length > 0) {
+      const autoFilled = autoFillCalculator('qsofa', patient, patientData, tests) as Partial<qSOFAInput>
+      if (autoFilled.respiratory_rate || autoFilled.systolic_bp !== undefined || autoFilled.altered_mentation !== undefined) {
+        setInput((prev) => ({
+          ...prev,
+          ...autoFilled,
+        }))
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient, patientData, tests])
 
   const calculateMutation = useCalculateScore()
 

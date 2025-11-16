@@ -30,6 +30,15 @@ export interface PatientContext {
     response: AIAnalysisResponse
     date: string
   }>
+  calculatorResults?: Array<{
+    type: string
+    score: number | null
+    interpretation: string | null
+    riskCategory: string | null
+    recommendations: string | null
+    inputData: Record<string, unknown>
+    date: string
+  }>
 }
 
 export async function analyzePatient(
@@ -93,6 +102,7 @@ ${patientContext.medications ? `KULLANDIĞI İLAÇLAR:\n${JSON.stringify(patient
 ${patientContext.vitalSigns ? `VİTAL BULGULAR:\n${JSON.stringify(patientContext.vitalSigns, null, 2)}\n` : ''}
 ${patientContext.history ? `ÖZGEÇMİŞ:\n${JSON.stringify(patientContext.history, null, 2)}\n` : ''}
 ${patientContext.tests && patientContext.tests.length > 0 ? `TETKİK SONUÇLARI:\n${JSON.stringify(patientContext.tests, null, 2)}\n` : ''}
+${patientContext.calculatorResults && patientContext.calculatorResults.length > 0 ? `KLİNİK KALKÜLATÖR SONUÇLARI:\n${JSON.stringify(patientContext.calculatorResults, null, 2)}\n` : ''}
 ${patientContext.previousAnalyses && patientContext.previousAnalyses.length > 0 ? `ÖNCEKİ DEĞERLENDİRMELER:\n${JSON.stringify(patientContext.previousAnalyses, null, 2)}\n` : ''}
 
 Yukarıdaki hasta bilgilerini değerlendirerek, kanıta dayalı ve akademik kaynaklarla desteklenmiş bir analiz sun.

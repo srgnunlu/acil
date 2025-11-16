@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const workspaceId = searchParams.get('workspace_id')
     const categoryId = searchParams.get('category_id')
-    const status = searchParams.get('status') || 'published'
+    const statusParam = searchParams.get('status')
+    const status = statusParam && statusParam !== 'all' ? statusParam : null
     const isFavorited = searchParams.get('is_favorited') === 'true'
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
@@ -73,7 +74,10 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status)
     }
 
-    query = query.eq('is_active', true)
+    // Only show active protocols (unless filtering by status)
+    if (!status || status === 'published') {
+      query = query.eq('is_active', true)
+    }
 
     // Apply pagination
     query = query.range(offset, offset + limit - 1)

@@ -38,7 +38,12 @@ export async function buildPatientContext(
   }
 
   // Fetch all patient data in parallel for better performance
-  const [{ data: patientData }, { data: tests }, { data: previousAnalyses }] = await Promise.all([
+  const [
+    { data: patientData },
+    { data: tests },
+    { data: previousAnalyses },
+    { data: calculatorResults },
+  ] = await Promise.all([
     supabase
       .from('patient_data')
       .select('*')
@@ -57,6 +62,13 @@ export async function buildPatientContext(
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false })
       .limit(3),
+
+    supabase
+      .from('clinical_calculator_results')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false })
+      .limit(10),
   ])
 
   // Build context object
@@ -136,6 +148,19 @@ export async function buildPatientContext(
       type: analysis.analysis_type,
       response: analysis.ai_response,
       date: analysis.created_at,
+    }))
+  }
+
+  // Add calculator results
+  if (calculatorResults && calculatorResults.length > 0) {
+    context.calculatorResults = calculatorResults.map((result) => ({
+      type: result.calculator_type,
+      score: result.score,
+      interpretation: result.score_interpretation,
+      riskCategory: result.risk_category,
+      recommendations: result.recommendations,
+      inputData: result.input_data,
+      date: result.created_at,
     }))
   }
 

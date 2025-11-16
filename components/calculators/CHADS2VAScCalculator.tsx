@@ -1,15 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCalculateScore } from '@/lib/hooks/useCalculators'
+import { autoFillCalculator } from '@/lib/calculators/auto-fill'
 import type { CHADS2VAScInput } from '@/types/calculator.types'
+import type { Patient, PatientData, PatientTest } from '@/types'
 
 interface CHADS2VAScCalculatorProps {
   workspaceId: string
   patientId?: string
+  patient?: Patient
+  patientData?: PatientData[]
+  tests?: PatientTest[]
 }
 
-export default function CHADS2VAScCalculator({ workspaceId, patientId }: CHADS2VAScCalculatorProps) {
+export default function CHADS2VAScCalculator({
+  workspaceId,
+  patientId,
+  patient,
+  patientData = [],
+  tests = [],
+}: CHADS2VAScCalculatorProps) {
   const [input, setInput] = useState<CHADS2VAScInput>({
     congestive_heart_failure: false,
     hypertension: false,
@@ -19,6 +30,21 @@ export default function CHADS2VAScCalculator({ workspaceId, patientId }: CHADS2V
     vascular_disease: false,
     sex: 'male',
   })
+
+  // Auto-fill from patient data
+  useEffect(() => {
+    if (patient && patientData.length > 0) {
+      const autoFilled = autoFillCalculator('chads2vasc', patient, patientData, tests) as Partial<CHADS2VAScInput>
+      if (autoFilled.age || autoFilled.sex) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setInput((prev) => ({
+          ...prev,
+          ...autoFilled,
+        }))
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient, patientData, tests])
 
   const calculateMutation = useCalculateScore()
 

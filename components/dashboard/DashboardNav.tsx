@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Book, Settings, Building2, TrendingUp, CheckSquare } from 'lucide-react'
+import { Users, Settings, Building2, TrendingUp, CheckSquare, FileText } from 'lucide-react'
 
 const navItems = [
   { href: '/dashboard/patients', label: 'Hastalar', icon: Users },
   { href: '/dashboard/tasks', label: 'Görevler', icon: CheckSquare },
   { href: '/dashboard/analytics', label: 'Analitik', icon: TrendingUp },
-  { href: '/dashboard/guidelines', label: 'Kılavuzlar', icon: Book },
+  { href: '/dashboard/protocols', label: 'Protokoller', icon: FileText },
   { href: '/dashboard/organizations', label: 'Organizasyonlar', icon: Building2 },
   { href: '/dashboard/settings', label: 'Ayarlar', icon: Settings },
 ]

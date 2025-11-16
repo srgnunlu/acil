@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Star, Filter } from 'lucide-react'
+import { Search, Star, Filter, Plus } from 'lucide-react'
 import { useProtocols } from '@/lib/hooks/useProtocols'
 import { useProtocolCategories } from '@/lib/hooks/useProtocolCategories'
 import type { ProtocolFilters, ProtocolStatus } from '@/types/protocol.types'
 import ProtocolCard from './ProtocolCard'
+import CreateProtocolModal from './CreateProtocolModal'
 
 interface ProtocolListProps {
   workspaceId: string
@@ -14,12 +15,13 @@ interface ProtocolListProps {
 export default function ProtocolList({ workspaceId }: ProtocolListProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<ProtocolStatus>('published')
+  const [statusFilter, setStatusFilter] = useState<ProtocolStatus | 'all'>('all')
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   const filters: ProtocolFilters = {
     category_id: selectedCategory,
-    status: statusFilter,
+    status: statusFilter === 'all' ? undefined : statusFilter,
     is_favorited: showFavoritesOnly,
     search: searchQuery,
   }
@@ -35,10 +37,21 @@ export default function ProtocolList({ workspaceId }: ProtocolListProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Protokol Kütüphanesi</h1>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          + Yeni Protokol
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-5 w-5" />
+          Yeni Protokol
         </button>
       </div>
+
+      {/* Create Protocol Modal */}
+      <CreateProtocolModal
+        workspaceId={workspaceId}
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
 
       {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow-sm p-4 space-y-4">
@@ -70,6 +83,21 @@ export default function ProtocolList({ workspaceId }: ProtocolListProps) {
                   {cat.icon} {cat.name} ({cat.protocol_count})
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="min-w-[150px]">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as ProtocolStatus | 'all')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">Tümü</option>
+              <option value="published">Yayınlanmış</option>
+              <option value="draft">Taslak</option>
+              <option value="archived">Arşivlenmiş</option>
             </select>
           </div>
 

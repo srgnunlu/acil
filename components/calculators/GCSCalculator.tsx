@@ -1,20 +1,46 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCalculateScore } from '@/lib/hooks/useCalculators'
+import { autoFillCalculator } from '@/lib/calculators/auto-fill'
 import type { GCSInput, GCSEyeResponse, GCSVerbalResponse, GCSMotorResponse } from '@/types/calculator.types'
+import type { Patient, PatientData, PatientTest } from '@/types'
 
 interface GCSCalculatorProps {
   workspaceId: string
   patientId?: string
+  patient?: Patient
+  patientData?: PatientData[]
+  tests?: PatientTest[]
 }
 
-export default function GCSCalculator({ workspaceId, patientId }: GCSCalculatorProps) {
+export default function GCSCalculator({
+  workspaceId,
+  patientId,
+  patient,
+  patientData = [],
+  tests = [],
+}: GCSCalculatorProps) {
   const [input, setInput] = useState<GCSInput>({
     eye_response: 4,
     verbal_response: 5,
     motor_response: 6,
   })
+
+  // Auto-fill from patient data
+  useEffect(() => {
+    if (patient && patientData.length > 0) {
+      const autoFilled = autoFillCalculator('gcs', patient, patientData, tests) as Partial<GCSInput>
+      if (autoFilled.eye_response || autoFilled.verbal_response || autoFilled.motor_response) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setInput((prev) => ({
+          ...prev,
+          ...autoFilled,
+        }))
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient, patientData, tests])
 
   const calculateMutation = useCalculateScore()
 

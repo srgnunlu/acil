@@ -18,7 +18,7 @@ import {
   Clock,
   Plus,
   BarChart3,
-  BookOpen,
+  FileText,
 } from 'lucide-react'
 
 export default async function DashboardHome() {
@@ -373,16 +373,16 @@ export default async function DashboardHome() {
             </Button>
           </Link>
 
-          <Link href="/dashboard/guidelines">
+          <Link href="/dashboard/protocols">
             <Button
               variant="outline"
               size="lg"
-              leftIcon={<BookOpen className="h-5 w-5" />}
+              leftIcon={<FileText className="h-5 w-5" />}
               className="h-full flex-col items-center justify-center text-center group hover:border-purple-500 hover:bg-purple-50 w-full"
             >
               <div className="text-2xl mb-2 group-hover:scale-110 transition">📚</div>
-              <p className="font-medium text-gray-900">Rehberlere Bak</p>
-              <p className="text-sm text-gray-500 mt-1">Acil tıp protokolleri ve kılavuzlar</p>
+              <p className="font-medium text-gray-900">Protokol Kütüphanesi</p>
+              <p className="text-sm text-gray-500 mt-1">Klinik protokoller ve kılavuzlar</p>
             </Button>
           </Link>
         </div>

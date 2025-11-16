@@ -31,6 +31,9 @@ export function useProtocols(
       if (filters?.status) params.append('status', filters.status)
       if (filters?.is_favorited) params.append('is_favorited', 'true')
       if (filters?.search) params.append('search', filters.search)
+      
+      // If no status filter, send 'all' to get all protocols
+      if (!filters?.status) params.append('status', 'all')
 
       const response = await fetch(`/api/protocols?${params.toString()}`)
 
@@ -135,7 +138,7 @@ export function useDeleteProtocol() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, workspaceId }: { id: string; workspaceId: string }) => {
+    mutationFn: async ({ id }: { id: string; workspaceId: string }) => {
       const response = await fetch(`/api/protocols/${id}`, {
         method: 'DELETE',
       })
@@ -263,7 +266,7 @@ export function useRemoveFavorite() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ protocolId, workspaceId }: { protocolId: string; workspaceId: string }) => {
+    mutationFn: async ({ protocolId }: { protocolId: string; workspaceId: string }) => {
       const response = await fetch(`/api/protocols/favorites?protocol_id=${protocolId}`, {
         method: 'DELETE',
       })

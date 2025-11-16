@@ -1,15 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCalculateScore } from '@/lib/hooks/useCalculators'
+import { autoFillCalculator } from '@/lib/calculators/auto-fill'
 import type { HASBLEDInput } from '@/types/calculator.types'
+import type { Patient, PatientData, PatientTest } from '@/types'
 
 interface HASBLEDCalculatorProps {
   workspaceId: string
   patientId?: string
+  patient?: Patient
+  patientData?: PatientData[]
+  tests?: PatientTest[]
 }
 
-export default function HASBLEDCalculator({ workspaceId, patientId }: HASBLEDCalculatorProps) {
+export default function HASBLEDCalculator({
+  workspaceId,
+  patientId,
+  patient,
+  patientData = [],
+  tests = [],
+}: HASBLEDCalculatorProps) {
   const [input, setInput] = useState<HASBLEDInput>({
     hypertension_uncontrolled: false,
     renal_disease: false,
@@ -21,6 +32,19 @@ export default function HASBLEDCalculator({ workspaceId, patientId }: HASBLEDCal
     drugs_predisposing: false,
     alcohol_excess: false,
   })
+
+  // Auto-fill from patient data
+  useEffect(() => {
+    if (patient && patientData.length > 0) {
+      const autoFilled = autoFillCalculator('hasbled', patient, patientData, tests) as Partial<HASBLEDInput>
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setInput((prev) => ({
+        ...prev,
+        ...autoFilled,
+      }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient, patientData, tests])
 
   const calculateMutation = useCalculateScore()
 
