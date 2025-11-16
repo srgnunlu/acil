@@ -132,30 +132,20 @@ export function AdminOrganizationsTable({ organizations }: AdminOrganizationsTab
                 </td>
                 <td className="px-4 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <button
+                    <Link
+                      href={`/dashboard/admin/organizations/${org.id}`}
                       className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       title="Görüntüle"
                     >
                       <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="Ayarlar"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </button>
-                    <button
+                    </Link>
+                    <Link
+                      href={`/dashboard/admin/organizations/${org.id}/edit`}
                       className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       title="Düzenle"
                     >
                       <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                      title="Sil"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Link>
                   </div>
                 </td>
               </tr>
