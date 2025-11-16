@@ -15,6 +15,8 @@ import type { WorkflowState } from './multi-tenant.types'
 export * from './patient.types'
 export * from './multi-tenant.types'
 export * from './realtime.types'
+export * from './protocol.types'
+export * from './calculator.types'
 
 export interface Patient {
   id: string
