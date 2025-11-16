@@ -11,22 +11,68 @@ import { TaskFormModal } from '@/components/tasks/TaskFormModal'
 import { CheckSquare, TrendingUp, Clock, AlertCircle } from 'lucide-react'
 import type { TaskWithDetails } from '@/types/task.types'
 import { useTaskStatistics } from '@/lib/hooks/useTasks'
-
-// Mock workspace - in real app, get from context/route
-const WORKSPACE_ID = '00000000-0000-0000-0000-000000000000' // Replace with actual workspace
+import { useWorkspace } from '@/contexts/WorkspaceContext'
 
 export default function TasksPage() {
+  const { currentWorkspace, isLoading: workspaceLoading } = useWorkspace()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(null)
 
-  const { data: statistics, isLoading: statsLoading } = useTaskStatistics(WORKSPACE_ID, {
-    enabled: false, // Will enable when workspace context is available
+  const workspaceId = currentWorkspace?.id || null
+
+  const { data: statistics, isLoading: statsLoading } = useTaskStatistics(workspaceId || '', {
+    enabled: !!workspaceId && !workspaceLoading,
   })
 
   const handleTaskClick = (task: TaskWithDetails) => {
     setSelectedTask(task)
     // In future, navigate to task detail page
     // router.push(`/dashboard/tasks/${task.id}`)
+  }
+
+  const handleEditTask = (task: TaskWithDetails) => {
+    setSelectedTask(task)
+    setIsEditModalOpen(true)
+  }
+
+  // Show loading state while workspace is loading
+  if (workspaceLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Workspace yükleniyor...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show message if no workspace selected
+  if (!workspaceId) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Workspace Seçilmedi</h2>
+                <p className="text-gray-600">
+                  Görev yönetimini kullanmak için lütfen bir workspace seçin.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -40,7 +86,9 @@ export default function TasksPage() {
                 <CheckSquare className="w-8 h-8 text-blue-600" />
                 Görev Yönetimi
               </h1>
-              <p className="text-gray-600 mt-1">Ekip görevlerinizi takip edin ve yönetin</p>
+              <p className="text-gray-600 mt-1">
+                {currentWorkspace?.name} workspace&apos;inde görevlerinizi takip edin ve yönetin
+              </p>
             </div>
           </div>
         </div>
@@ -95,7 +143,9 @@ export default function TasksPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Yüksek Öncelik</p>
-                  <p className="text-2xl font-bold text-gray-900">{statistics.high_priority_tasks}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {statistics.high_priority_tasks}
+                  </p>
                 </div>
               </div>
             </div>
@@ -105,49 +155,40 @@ export default function TasksPage() {
         {/* Task List */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <TaskList
-            workspaceId={WORKSPACE_ID}
+            workspaceId={workspaceId}
             onTaskClick={handleTaskClick}
+            onEdit={handleEditTask}
             onCreateClick={() => setIsCreateModalOpen(true)}
             showFilters={true}
           />
         </div>
 
-        {/* Create/Edit Task Modal */}
+        {/* Create Task Modal */}
         <TaskFormModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          workspaceId={WORKSPACE_ID}
+          workspaceId={workspaceId}
           onSuccess={() => {
             setIsCreateModalOpen(false)
             // Optionally show success toast
           }}
         />
 
-        {/* Info Message for Development */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="font-medium text-blue-900 mb-1">Geliştirme Notu</h3>
-              <p className="text-sm text-blue-800">
-                Bu sayfa aktif workspace context entegrasyonunu bekliyor. Workspace ID şu anda sabit kodlanmış durumda. Production'da
-                aktif workspace'ten otomatik olarak alınacaktır.
-              </p>
-              <p className="text-sm text-blue-800 mt-2">
-                <strong>Özellikler:</strong>
-              </p>
-              <ul className="text-sm text-blue-800 list-disc list-inside mt-1 space-y-1">
-                <li>Görev oluşturma ve düzenleme (Modal form)</li>
-                <li>Öncelik, durum ve kategori filtreleme</li>
-                <li>Görev arama</li>
-                <li>Checklist desteği</li>
-                <li>Yorum sistemi (API hazır)</li>
-                <li>Real-time güncellemeler (Hook hazır)</li>
-                <li>Hatırlatma sistemi (Backend hazır)</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        {/* Edit Task Modal */}
+        <TaskFormModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false)
+            setSelectedTask(null)
+          }}
+          workspaceId={workspaceId}
+          task={selectedTask || undefined}
+          onSuccess={() => {
+            setIsEditModalOpen(false)
+            setSelectedTask(null)
+            // Optionally show success toast
+          }}
+        />
       </div>
     </div>
   )

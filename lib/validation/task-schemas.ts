@@ -11,7 +11,13 @@ import { z } from 'zod'
 
 export const taskPrioritySchema = z.enum(['urgent', 'high', 'medium', 'low'])
 
-export const taskStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'cancelled', 'on_hold'])
+export const taskStatusSchema = z.enum([
+  'pending',
+  'in_progress',
+  'completed',
+  'cancelled',
+  'on_hold',
+])
 
 export const taskCategorySchema = z.enum([
   'clinical',
@@ -43,34 +49,50 @@ export const taskActivityTypeSchema = z.enum([
 // TASK SCHEMAS
 // =====================================================
 
-export const createTaskSchema = z.object({
-  workspace_id: z.string().uuid('Geçerli bir workspace ID gerekli'),
-  patient_id: z.string().uuid('Geçerli bir patient ID gerekli').optional(),
-  title: z
-    .string()
-    .min(3, 'Görev başlığı en az 3 karakter olmalı')
-    .max(200, 'Görev başlığı en fazla 200 karakter olabilir'),
-  description: z.string().max(2000, 'Açıklama en fazla 2000 karakter olabilir').optional(),
-  priority: taskPrioritySchema.default('medium'),
-  status: taskStatusSchema.default('pending'),
-  assigned_to: z.string().uuid('Geçerli bir user ID gerekli').optional(),
-  due_date: z.string().datetime('Geçerli bir tarih formatı gerekli').optional(),
-  category: taskCategorySchema.optional(),
-  tags: z.array(z.string().max(50)).max(10, 'En fazla 10 etiket eklenebilir').optional(),
-  template_id: z.string().uuid().optional(),
-  reminder_enabled: z.boolean().default(false),
-  reminder_before_minutes: z.number().int().min(5).max(10080).optional(), // Max 1 week
-  checklist_items: z
-    .array(
-      z.object({
-        title: z.string().min(1).max(200),
-        description: z.string().max(500).optional(),
-        order_index: z.number().int().min(0).optional(),
-        assigned_to: z.string().uuid().optional(),
-      })
-    )
-    .optional(),
-})
+export const createTaskSchema = z
+  .object({
+    workspace_id: z.string().uuid('Geçerli bir workspace ID gerekli'),
+    patient_id: z
+      .union([z.string().uuid('Geçerli bir patient ID gerekli'), z.literal('')])
+      .optional()
+      .transform((val) => (val === '' ? undefined : val)),
+    title: z
+      .string()
+      .min(3, 'Görev başlığı en az 3 karakter olmalı')
+      .max(200, 'Görev başlığı en fazla 200 karakter olabilir'),
+    description: z.string().max(2000, 'Açıklama en fazla 2000 karakter olabilir').optional(),
+    priority: taskPrioritySchema.default('medium'),
+    status: taskStatusSchema.default('pending'),
+    assigned_to: z
+      .union([z.string().uuid('Geçerli bir user ID gerekli'), z.literal('')])
+      .optional()
+      .transform((val) => (val === '' ? undefined : val)),
+    due_date: z
+      .union([z.string().datetime('Geçerli bir tarih formatı gerekli'), z.literal('')])
+      .optional()
+      .transform((val) => (val === '' ? undefined : val)),
+    category: z.union([taskCategorySchema, z.literal('')]).optional(),
+    tags: z.array(z.string().max(50)).max(10, 'En fazla 10 etiket eklenebilir').optional(),
+    template_id: z.string().uuid().optional(),
+    reminder_enabled: z.boolean().default(false),
+    reminder_before_minutes: z.number().int().min(5).max(10080).optional(), // Max 1 week
+    checklist_items: z
+      .array(
+        z.object({
+          title: z.string().min(1).max(200),
+          description: z.string().max(500).optional(),
+          order_index: z.number().int().min(0).optional(),
+          assigned_to: z.string().uuid().optional(),
+        })
+      )
+      .optional(),
+  })
+  .transform((data) => ({
+    ...data,
+    // Convert empty strings to undefined (patient_id, assigned_to, due_date already handled above)
+    category: data.category === '' ? undefined : data.category,
+    description: data.description === '' ? undefined : data.description,
+  }))
 
 export const updateTaskSchema = z.object({
   title: z
@@ -105,7 +127,9 @@ export const taskFiltersSchema = z.object({
   search: z.string().max(200).optional(),
   page: z.number().int().min(1).default(1),
   limit: z.number().int().min(1).max(100).default(20),
-  sort_by: z.enum(['created_at', 'updated_at', 'due_date', 'priority', 'status']).default('created_at'),
+  sort_by: z
+    .enum(['created_at', 'updated_at', 'due_date', 'priority', 'status'])
+    .default('created_at'),
   sort_order: z.enum(['asc', 'desc']).default('desc'),
 })
 
@@ -165,7 +189,10 @@ export const updateTaskTemplateSchema = z.object({
 
 export const createChecklistItemSchema = z.object({
   task_id: z.string().uuid('Geçerli bir task ID gerekli'),
-  title: z.string().min(1, 'Checklist başlığı gerekli').max(200, 'Başlık en fazla 200 karakter olabilir'),
+  title: z
+    .string()
+    .min(1, 'Checklist başlığı gerekli')
+    .max(200, 'Başlık en fazla 200 karakter olabilir'),
   description: z.string().max(500).optional(),
   order_index: z.number().int().min(0).default(0),
   assigned_to: z.string().uuid().optional(),
@@ -231,8 +258,18 @@ export const createTaskAttachmentSchema = z.object({
 // =====================================================
 
 export const bulkTaskOperationSchema = z.object({
-  task_ids: z.array(z.string().uuid()).min(1, 'En az bir görev seçilmeli').max(50, 'En fazla 50 görev seçilebilir'),
-  operation: z.enum(['update_status', 'update_priority', 'assign', 'delete', 'add_tag', 'remove_tag']),
+  task_ids: z
+    .array(z.string().uuid())
+    .min(1, 'En az bir görev seçilmeli')
+    .max(50, 'En fazla 50 görev seçilebilir'),
+  operation: z.enum([
+    'update_status',
+    'update_priority',
+    'assign',
+    'delete',
+    'add_tag',
+    'remove_tag',
+  ]),
   params: z
     .object({
       status: taskStatusSchema.optional(),

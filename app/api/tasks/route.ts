@@ -73,7 +73,10 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (membershipError || !membership) {
-      logger.error({ error: membershipError, userId: user.id, workspaceId: filters.workspace_id }, 'Workspace access denied')
+      logger.error(
+        { error: membershipError, userId: user.id, workspaceId: filters.workspace_id },
+        'Workspace access denied'
+      )
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -83,9 +86,6 @@ export async function GET(request: NextRequest) {
       .select(
         `
         *,
-        assigned_to_user:profiles!tasks_assigned_to_fkey(id, full_name, avatar_url),
-        assigned_by_user:profiles!tasks_assigned_by_fkey(id, full_name),
-        created_by_user:profiles!tasks_created_by_fkey(id, full_name),
         patient:patients(id, name),
         workspace:workspaces(id, name, color)
       `,
@@ -144,7 +144,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (filters.is_overdue) {
-      query = query.lt('due_date', new Date().toISOString()).not('status', 'in', '(completed,cancelled)')
+      query = query
+        .lt('due_date', new Date().toISOString())
+        .not('status', 'eq', 'completed')
+        .not('status', 'eq', 'cancelled')
     }
 
     if (filters.search) {
@@ -152,7 +155,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply sorting
-    query = query.order(filters.sort_by as any, { ascending: filters.sort_order === 'asc' })
+    const sortBy = filters.sort_by as
+      | 'created_at'
+      | 'updated_at'
+      | 'due_date'
+      | 'priority'
+      | 'status'
+    query = query.order(sortBy, { ascending: filters.sort_order === 'asc' })
 
     // Apply pagination
     const from = (filters.page - 1) * filters.limit
@@ -167,7 +176,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 })
     }
 
-    // 6. Fetch checklist counts for each task (optimization: single query)
+    // 6. Fetch user profiles for assigned_to, assigned_by, created_by
+    const userIds = new Set<string>()
+    tasks?.forEach((task) => {
+      if (task.assigned_to) userIds.add(task.assigned_to)
+      if (task.assigned_by) userIds.add(task.assigned_by)
+      if (task.created_by) userIds.add(task.created_by)
+    })
+
+    const { data: profiles } =
+      userIds.size > 0
+        ? await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url')
+            .in('user_id', Array.from(userIds))
+        : { data: null }
+
+    const profileMap = new Map(
+      (profiles || []).map((p) => [
+        p.user_id,
+        { id: p.user_id, full_name: p.full_name, avatar_url: p.avatar_url },
+      ])
+    )
+
+    // 7. Fetch checklist counts for each task (optimization: single query)
     const taskIds = tasks?.map((t) => t.id) || []
     const { data: checklistCounts } = await supabase
       .from('task_checklist_items')
@@ -185,17 +217,20 @@ export async function GET(request: NextRequest) {
       countsMap.set(item.task_id, current)
     })
 
-    // 7. Enhance tasks with counts
+    // 8. Enhance tasks with counts and user profiles
     const enhancedTasks: TaskWithDetails[] =
       tasks?.map((task) => ({
         ...task,
+        assigned_to_user: task.assigned_to ? profileMap.get(task.assigned_to) || null : null,
+        assigned_by_user: task.assigned_by ? profileMap.get(task.assigned_by) || null : null,
+        created_by_user: task.created_by ? profileMap.get(task.created_by) || null : null,
         _count: {
           checklist_items: countsMap.get(task.id)?.total || 0,
           completed_checklist_items: countsMap.get(task.id)?.completed || 0,
         },
       })) || []
 
-    // 8. Return response
+    // 9. Return response
     return NextResponse.json({
       tasks: enhancedTasks,
       pagination: {
@@ -234,10 +269,14 @@ export async function POST(request: NextRequest) {
     const validationResult = createTaskSchema.safeParse(body)
 
     if (!validationResult.success) {
+      logger.error({ error: validationResult.error, body }, 'Task validation failed')
       return NextResponse.json(
         {
           error: 'Validation failed',
           details: validationResult.error.flatten(),
+          message: validationResult.error.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join(', '),
         },
         { status: 400 }
       )
@@ -261,7 +300,10 @@ export async function POST(request: NextRequest) {
     // Check if user has permission to create tasks
     const allowedRoles = ['owner', 'admin', 'senior_doctor', 'doctor', 'resident']
     if (!allowedRoles.includes(membership.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions to create tasks' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'Insufficient permissions to create tasks' },
+        { status: 403 }
+      )
     }
 
     // 4. If patient_id is provided, verify patient exists and belongs to workspace
@@ -275,7 +317,10 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (patientError || !patient) {
-        return NextResponse.json({ error: 'Patient not found or not in workspace' }, { status: 404 })
+        return NextResponse.json(
+          { error: 'Patient not found or not in workspace' },
+          { status: 404 }
+        )
       }
     }
 
@@ -290,7 +335,10 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (assignedError || !assignedMember) {
-        return NextResponse.json({ error: 'Assigned user is not a member of this workspace' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'Assigned user is not a member of this workspace' },
+          { status: 400 }
+        )
       }
     }
 
@@ -307,9 +355,6 @@ export async function POST(request: NextRequest) {
       .select(
         `
         *,
-        assigned_to_user:profiles!tasks_assigned_to_fkey(id, full_name, avatar_url),
-        assigned_by_user:profiles!tasks_assigned_by_fkey(id, full_name),
-        created_by_user:profiles!tasks_created_by_fkey(id, full_name),
         patient:patients(id, name),
         workspace:workspaces(id, name, color)
       `
@@ -321,51 +366,85 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create task' }, { status: 500 })
     }
 
-    // 7. Create checklist items if provided
+    // 7. Fetch user profiles for the created task
+    const userIds = new Set<string>()
+    if (task.assigned_to) userIds.add(task.assigned_to)
+    if (task.assigned_by) userIds.add(task.assigned_by)
+    if (task.created_by) userIds.add(task.created_by)
+
+    const { data: profiles } =
+      userIds.size > 0
+        ? await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url')
+            .in('user_id', Array.from(userIds))
+        : { data: null }
+
+    const profileMap = new Map(
+      (profiles || []).map((p) => [
+        p.user_id,
+        { id: p.user_id, full_name: p.full_name, avatar_url: p.avatar_url },
+      ])
+    )
+
+    // Enhance task with user profiles
+    const enhancedTask = {
+      ...task,
+      assigned_to_user: task.assigned_to ? profileMap.get(task.assigned_to) || null : null,
+      assigned_by_user: task.assigned_by ? profileMap.get(task.assigned_by) || null : null,
+      created_by_user: task.created_by ? profileMap.get(task.created_by) || null : null,
+    }
+
+    // 8. Create checklist items if provided
     if (checklist_items && checklist_items.length > 0) {
       const checklistData = checklist_items.map((item, index) => ({
-        task_id: task.id,
+        task_id: enhancedTask.id,
         title: item.title,
         description: item.description,
         order_index: item.order_index ?? index,
         assigned_to: item.assigned_to,
       }))
 
-      const { error: checklistError } = await supabase.from('task_checklist_items').insert(checklistData)
+      const { error: checklistError } = await supabase
+        .from('task_checklist_items')
+        .insert(checklistData)
 
       if (checklistError) {
-        logger.error({ error: checklistError, taskId: task.id }, 'Failed to create checklist items')
+        logger.error(
+          { error: checklistError, taskId: enhancedTask.id },
+          'Failed to create checklist items'
+        )
         // Don't fail the whole request, just log the error
       }
     }
 
-    // 8. Log activity
+    // 9. Log activity
     await supabase.from('task_activity_log').insert({
-      task_id: task.id,
+      task_id: enhancedTask.id,
       activity_type: 'created',
       performed_by: user.id,
     })
 
-    // 9. Send notification if task is assigned
+    // 10. Send notification if task is assigned
     if (data.assigned_to && data.assigned_to !== user.id) {
       await supabase.from('notifications').insert({
         user_id: data.assigned_to,
         workspace_id: data.workspace_id,
         type: 'task_assigned',
         title: 'Yeni görev atandı',
-        message: `"${task.title}" görevi size atandı`,
-        link: `/dashboard/tasks/${task.id}`,
+        message: `"${enhancedTask.title}" görevi size atandı`,
+        link: `/dashboard/tasks/${enhancedTask.id}`,
         related_patient_id: data.patient_id,
         data: {
-          task_id: task.id,
+          task_id: enhancedTask.id,
           assigned_by: user.id,
         },
       })
     }
 
-    logger.info({ taskId: task.id, userId: user.id }, 'Task created successfully')
+    logger.info({ taskId: enhancedTask.id, userId: user.id }, 'Task created successfully')
 
-    return NextResponse.json({ task }, { status: 201 })
+    return NextResponse.json({ task: enhancedTask }, { status: 201 })
   } catch (error) {
     logger.error({ error }, 'Unexpected error in POST /api/tasks')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

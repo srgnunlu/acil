@@ -36,9 +36,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .select(
         `
         *,
-        assigned_to_user:profiles!tasks_assigned_to_fkey(id, full_name, avatar_url, specialty),
-        assigned_by_user:profiles!tasks_assigned_by_fkey(id, full_name),
-        created_by_user:profiles!tasks_created_by_fkey(id, full_name),
         patient:patients(id, name, age, gender),
         workspace:workspaces(id, name, color, icon),
         template:task_templates(id, name)
@@ -52,7 +49,28 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Task not found' }, { status: 404 })
     }
 
-    // 3. Check workspace access
+    // 3. Fetch user profiles
+    const userIds = new Set<string>()
+    if (task.assigned_to) userIds.add(task.assigned_to)
+    if (task.assigned_by) userIds.add(task.assigned_by)
+    if (task.created_by) userIds.add(task.created_by)
+
+    const { data: profiles } =
+      userIds.size > 0
+        ? await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url, specialty')
+            .in('user_id', Array.from(userIds))
+        : { data: null }
+
+    const profileMap = new Map(
+      (profiles || []).map((p) => [
+        p.user_id,
+        { id: p.user_id, full_name: p.full_name, avatar_url: p.avatar_url, specialty: p.specialty },
+      ])
+    )
+
+    // 4. Check workspace access
     const { data: membership, error: membershipError } = await supabase
       .from('workspace_members')
       .select('role')
@@ -65,70 +83,156 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // 4. Fetch checklist items
+    // 5. Fetch checklist items
     const { data: checklistItems } = await supabase
       .from('task_checklist_items')
-      .select(
-        `
-        *,
-        assigned_to_user:profiles!task_checklist_items_assigned_to_fkey(id, full_name),
-        completed_by_user:profiles!task_checklist_items_completed_by_fkey(id, full_name)
-      `
-      )
+      .select('*')
       .eq('task_id', task.id)
       .order('order_index', { ascending: true })
 
-    // 5. Fetch comments
+    // Fetch checklist user profiles
+    const checklistUserIds = new Set<string>()
+    checklistItems?.forEach((item) => {
+      if (item.assigned_to) checklistUserIds.add(item.assigned_to)
+      if (item.completed_by) checklistUserIds.add(item.completed_by)
+    })
+
+    const { data: checklistProfiles } =
+      checklistUserIds.size > 0
+        ? await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .in('user_id', Array.from(checklistUserIds))
+        : { data: null }
+
+    const checklistProfileMap = new Map(
+      (checklistProfiles || []).map((p) => [p.user_id, { id: p.user_id, full_name: p.full_name }])
+    )
+
+    const enhancedChecklistItems = checklistItems?.map((item) => ({
+      ...item,
+      assigned_to_user: item.assigned_to ? checklistProfileMap.get(item.assigned_to) || null : null,
+      completed_by_user: item.completed_by
+        ? checklistProfileMap.get(item.completed_by) || null
+        : null,
+    }))
+
+    // 6. Fetch comments
     const { data: comments } = await supabase
       .from('task_comments')
-      .select(
-        `
-        *,
-        author:profiles!task_comments_created_by_fkey(id, full_name, avatar_url)
-      `
-      )
+      .select('*')
       .eq('task_id', task.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
 
-    // 6. Fetch attachments
+    // Fetch comment author profiles
+    const commentUserIds = new Set<string>()
+    comments?.forEach((comment) => {
+      if (comment.created_by) commentUserIds.add(comment.created_by)
+    })
+
+    const { data: commentProfiles } =
+      commentUserIds.size > 0
+        ? await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url')
+            .in('user_id', Array.from(commentUserIds))
+        : { data: null }
+
+    const commentProfileMap = new Map(
+      (commentProfiles || []).map((p) => [
+        p.user_id,
+        { id: p.user_id, full_name: p.full_name, avatar_url: p.avatar_url },
+      ])
+    )
+
+    const enhancedComments = comments?.map((comment) => ({
+      ...comment,
+      author: comment.created_by ? commentProfileMap.get(comment.created_by) || null : null,
+    }))
+
+    // 7. Fetch attachments
     const { data: attachments } = await supabase
       .from('task_attachments')
-      .select(
-        `
-        *,
-        uploader:profiles!task_attachments_uploaded_by_fkey(id, full_name)
-      `
-      )
+      .select('*')
       .eq('task_id', task.id)
       .is('deleted_at', null)
       .order('uploaded_at', { ascending: false })
 
-    // 7. Fetch activity log (last 20 activities)
+    // Fetch attachment uploader profiles
+    const attachmentUserIds = new Set<string>()
+    attachments?.forEach((attachment) => {
+      if (attachment.uploaded_by) attachmentUserIds.add(attachment.uploaded_by)
+    })
+
+    const { data: attachmentProfiles } =
+      attachmentUserIds.size > 0
+        ? await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .in('user_id', Array.from(attachmentUserIds))
+        : { data: null }
+
+    const attachmentProfileMap = new Map(
+      (attachmentProfiles || []).map((p) => [p.user_id, { id: p.user_id, full_name: p.full_name }])
+    )
+
+    const enhancedAttachments = attachments?.map((attachment) => ({
+      ...attachment,
+      uploader: attachment.uploaded_by
+        ? attachmentProfileMap.get(attachment.uploaded_by) || null
+        : null,
+    }))
+
+    // 8. Fetch activity log (last 20 activities)
     const { data: activityLog } = await supabase
       .from('task_activity_log')
-      .select(
-        `
-        *,
-        performed_by_user:profiles!task_activity_log_performed_by_fkey(id, full_name)
-      `
-      )
+      .select('*')
       .eq('task_id', task.id)
       .order('performed_at', { ascending: false })
       .limit(20)
 
-    // 8. Build enhanced task response
+    // Fetch activity log user profiles
+    const activityUserIds = new Set<string>()
+    activityLog?.forEach((activity) => {
+      if (activity.performed_by) activityUserIds.add(activity.performed_by)
+    })
+
+    const { data: activityProfiles } =
+      activityUserIds.size > 0
+        ? await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .in('user_id', Array.from(activityUserIds))
+        : { data: null }
+
+    const activityProfileMap = new Map(
+      (activityProfiles || []).map((p) => [p.user_id, { id: p.user_id, full_name: p.full_name }])
+    )
+
+    const enhancedActivityLog = activityLog?.map((activity) => ({
+      ...activity,
+      performed_by_user: activity.performed_by
+        ? activityProfileMap.get(activity.performed_by) || null
+        : null,
+    }))
+
+    // 9. Build enhanced task response
     const enhancedTask: TaskWithDetails = {
       ...task,
-      checklist_items: checklistItems || [],
-      comments: comments || [],
-      attachments: attachments || [],
-      activity_log: activityLog || [],
+      assigned_to_user: task.assigned_to ? profileMap.get(task.assigned_to) || null : null,
+      assigned_by_user: task.assigned_by ? profileMap.get(task.assigned_by) || null : null,
+      created_by_user: task.created_by ? profileMap.get(task.created_by) || null : null,
+      checklist_items: enhancedChecklistItems || [],
+      comments: enhancedComments || [],
+      attachments: enhancedAttachments || [],
+      activity_log: enhancedActivityLog || [],
       _count: {
-        checklist_items: checklistItems?.length || 0,
-        completed_checklist_items: checklistItems?.filter((item) => item.is_completed).length || 0,
-        comments: comments?.length || 0,
-        attachments: attachments?.length || 0,
+        checklist_items: enhancedChecklistItems?.length || 0,
+        completed_checklist_items:
+          enhancedChecklistItems?.filter((item) => item.is_completed).length || 0,
+        comments: enhancedComments?.length || 0,
+        attachments: enhancedAttachments?.length || 0,
       },
     }
 
@@ -206,7 +310,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       ['owner', 'admin', 'senior_doctor'].includes(membership.role)
 
     if (!canUpdate) {
-      return NextResponse.json({ error: 'Insufficient permissions to update this task' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'Insufficient permissions to update this task' },
+        { status: 403 }
+      )
     }
 
     // 5. If assigned_to is being changed, verify new assignee is workspace member
@@ -220,12 +327,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         .single()
 
       if (!assignedMember) {
-        return NextResponse.json({ error: 'Assigned user is not a member of this workspace' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'Assigned user is not a member of this workspace' },
+          { status: 400 }
+        )
       }
     }
 
     // 6. Prepare update data with tracking
-    const updateData: any = { ...data }
+    const updateData: Record<string, unknown> = { ...data }
 
     // Auto-set completed_at when status changes to completed
     if (data.status === 'completed' && existingTask.status !== 'completed') {
@@ -235,7 +345,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     // Auto-set started_at when status changes to in_progress
-    if (data.status === 'in_progress' && existingTask.status !== 'in_progress' && !existingTask.started_at) {
+    if (
+      data.status === 'in_progress' &&
+      existingTask.status !== 'in_progress' &&
+      !existingTask.started_at
+    ) {
       updateData.started_at = new Date().toISOString()
     }
 
@@ -247,9 +361,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .select(
         `
         *,
-        assigned_to_user:profiles!tasks_assigned_to_fkey(id, full_name, avatar_url),
-        assigned_by_user:profiles!tasks_assigned_by_fkey(id, full_name),
-        created_by_user:profiles!tasks_created_by_fkey(id, full_name),
         patient:patients(id, name),
         workspace:workspaces(id, name, color)
       `
@@ -259,6 +370,40 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (updateError) {
       logger.error({ error: updateError, taskId: id }, 'Failed to update task')
       return NextResponse.json({ error: 'Failed to update task' }, { status: 500 })
+    }
+
+    // Fetch user profiles for updated task
+    const updatedUserIds = new Set<string>()
+    if (updatedTask.assigned_to) updatedUserIds.add(updatedTask.assigned_to)
+    if (updatedTask.assigned_by) updatedUserIds.add(updatedTask.assigned_by)
+    if (updatedTask.created_by) updatedUserIds.add(updatedTask.created_by)
+
+    const { data: updatedProfiles } =
+      updatedUserIds.size > 0
+        ? await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url')
+            .in('user_id', Array.from(updatedUserIds))
+        : { data: null }
+
+    const updatedProfileMap = new Map(
+      (updatedProfiles || []).map((p) => [
+        p.user_id,
+        { id: p.user_id, full_name: p.full_name, avatar_url: p.avatar_url },
+      ])
+    )
+
+    const enhancedUpdatedTask = {
+      ...updatedTask,
+      assigned_to_user: updatedTask.assigned_to
+        ? updatedProfileMap.get(updatedTask.assigned_to) || null
+        : null,
+      assigned_by_user: updatedTask.assigned_by
+        ? updatedProfileMap.get(updatedTask.assigned_by) || null
+        : null,
+      created_by_user: updatedTask.created_by
+        ? updatedProfileMap.get(updatedTask.created_by) || null
+        : null,
     }
 
     // 8. Log specific changes
@@ -306,7 +451,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           workspace_id: existingTask.workspace_id,
           type: 'task_assigned',
           title: 'Görev size atandı',
-          message: `"${updatedTask.title}" görevi size atandı`,
+          message: `"${enhancedUpdatedTask.title}" görevi size atandı`,
           link: `/dashboard/tasks/${id}`,
           related_patient_id: existingTask.patient_id,
           data: {
@@ -327,9 +472,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       })
     }
 
-    logger.info({ taskId: id, userId: user.id, changes: changedFields }, 'Task updated successfully')
+    logger.info(
+      { taskId: id, userId: user.id, changes: changedFields },
+      'Task updated successfully'
+    )
 
-    return NextResponse.json({ task: updatedTask })
+    return NextResponse.json({ task: enhancedUpdatedTask })
   } catch (error) {
     logger.error({ error }, 'Unexpected error in PATCH /api/tasks/[id]')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -340,7 +488,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 // DELETE /api/tasks/[id] - Delete task (soft delete)
 // =====================================================
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params
     const supabase = await createClient()
@@ -380,10 +531,15 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const canDelete = ['owner', 'admin', 'senior_doctor'].includes(membership.role) || existingTask.created_by === user.id
+    const canDelete =
+      ['owner', 'admin', 'senior_doctor'].includes(membership.role) ||
+      existingTask.created_by === user.id
 
     if (!canDelete) {
-      return NextResponse.json({ error: 'Insufficient permissions to delete this task' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'Insufficient permissions to delete this task' },
+        { status: 403 }
+      )
     }
 
     // 4. Soft delete task

@@ -8,7 +8,7 @@
 import React, { useState } from 'react'
 import { Plus, Filter, Search, Loader2 } from 'lucide-react'
 import { TaskCard } from './TaskCard'
-import type { TaskWithDetails, TaskFilters } from '@/types/task.types'
+import type { TaskWithDetails, TaskFilters, TaskStatus, TaskPriority } from '@/types/task.types'
 import { useTasks } from '@/lib/hooks/useTasks'
 
 interface TaskListProps {
@@ -16,6 +16,7 @@ interface TaskListProps {
   patientId?: string
   filters?: Partial<TaskFilters>
   onTaskClick?: (task: TaskWithDetails) => void
+  onEdit?: (task: TaskWithDetails) => void
   onCreateClick?: () => void
   showFilters?: boolean
   compact?: boolean
@@ -26,6 +27,7 @@ export function TaskList({
   patientId,
   filters: externalFilters = {},
   onTaskClick,
+  onEdit,
   onCreateClick,
   showFilters = true,
   compact = false,
@@ -39,8 +41,8 @@ export function TaskList({
     workspace_id: workspaceId,
     patient_id: patientId,
     search: searchQuery || undefined,
-    status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
-    priority: priorityFilter !== 'all' ? (priorityFilter as any) : undefined,
+    status: statusFilter !== 'all' ? (statusFilter as TaskStatus) : undefined,
+    priority: priorityFilter !== 'all' ? (priorityFilter as TaskPriority) : undefined,
     ...externalFilters,
   }
 
@@ -159,7 +161,13 @@ export function TaskList({
       {!isLoading && !error && tasks.length > 0 && (
         <div className="space-y-3">
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onClick={() => onTaskClick?.(task)} compact={compact} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onClick={() => onTaskClick?.(task)}
+              onEdit={onEdit}
+              compact={compact}
+            />
           ))}
         </div>
       )}

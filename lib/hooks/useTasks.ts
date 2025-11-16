@@ -13,6 +13,8 @@ import type {
   UpdateTaskPayload,
   TaskFilters,
   TaskStatistics,
+  TaskStatus,
+  TaskPriority,
 } from '@/types/task.types'
 
 const supabase = createClient()
@@ -77,7 +79,9 @@ async function createTask(data: CreateTaskPayload) {
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to create task')
+    // Show validation errors if available
+    const errorMessage = error.message || error.error || 'Failed to create task'
+    throw new Error(errorMessage)
   }
 
   return response.json()
@@ -177,16 +181,19 @@ export function useUpdateTask() {
       const previousTask = queryClient.getQueryData(taskKeys.detail(id))
 
       // Optimistically update
-      queryClient.setQueryData(taskKeys.detail(id), (old: any) => {
-        if (!old) return old
-        return {
-          ...old,
-          task: {
-            ...old.task,
-            ...data,
-          },
+      queryClient.setQueryData(
+        taskKeys.detail(id),
+        (old: { task: TaskWithDetails } | undefined) => {
+          if (!old) return old
+          return {
+            ...old,
+            task: {
+              ...old.task,
+              ...data,
+            },
+          }
         }
-      })
+      )
 
       return { previousTask }
     },
@@ -250,8 +257,8 @@ export function useUpdateTaskStatus() {
   const updateMutation = useUpdateTask()
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      updateMutation.mutateAsync({ id, data: { status: status as any } }),
+    mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
+      updateMutation.mutateAsync({ id, data: { status } }),
   })
 }
 
@@ -262,8 +269,8 @@ export function useUpdateTaskPriority() {
   const updateMutation = useUpdateTask()
 
   return useMutation({
-    mutationFn: ({ id, priority }: { id: string; priority: string }) =>
-      updateMutation.mutateAsync({ id, data: { priority: priority as any } }),
+    mutationFn: ({ id, priority }: { id: string; priority: TaskPriority }) =>
+      updateMutation.mutateAsync({ id, data: { priority } }),
   })
 }
 
@@ -317,7 +324,7 @@ export function useRealtimeTask(taskId: string) {
             table: 'tasks',
             filter: `id=eq.${taskId}`,
           },
-          (payload) => {
+          () => {
             // Invalidate task detail on any change
             queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
           }
