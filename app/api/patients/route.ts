@@ -23,8 +23,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'workspace_id is required' }, { status: 400 })
     }
 
-    // Check if user is a member of this workspace
-    const { data: membership } = await supabase
+    // Check if user has access to this workspace
+    // Organization'a üye olan kullanıcılar workspace'leri görebilir
+    // Workspace'in organization'ını kontrol et
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('organization_id')
+      .eq('id', workspaceId)
+      .is('deleted_at', null)
+      .single()
+
+    if (!workspace) {
+      return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
+    }
+
+    // Check if user is a member of the workspace's organization
+    const { data: orgMembership } = await supabase
+      .from('organization_members')
+      .select('role')
+      .eq('organization_id', workspace.organization_id)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single()
+
+    // Also check workspace_members for backward compatibility
+    const { data: workspaceMembership } = await supabase
       .from('workspace_members')
       .select('role')
       .eq('workspace_id', workspaceId)
@@ -32,7 +55,7 @@ export async function GET(request: NextRequest) {
       .eq('status', 'active')
       .single()
 
-    if (!membership) {
+    if (!orgMembership && !workspaceMembership) {
       return NextResponse.json({ error: 'You are not a member of this workspace' }, { status: 403 })
     }
 

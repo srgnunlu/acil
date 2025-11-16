@@ -29,14 +29,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 2. Fetch handoff with details
+    // 2. Fetch handoff with details (without foreign key references to profiles)
     const { data: handoff, error: fetchError } = await supabase
       .from('handoffs')
       .select(
         `
         *,
-        from_user:profiles!handoffs_from_user_id_fkey(user_id, full_name, avatar_url, specialty),
-        to_user:profiles!handoffs_to_user_id_fkey(user_id, full_name, avatar_url, specialty),
         shift:shift_schedules(
           id,
           start_time,
@@ -46,15 +44,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         ),
         template:handoff_templates(id, name, sections),
         workspace:workspaces(id, name, color),
-        acknowledged_by_user:profiles!handoffs_acknowledged_by_fkey(user_id, full_name),
         patients:handoff_patients(
           *,
           patient:patients(id, name, age, gender, category:patient_categories(id, name, color))
         ),
-        checklist_items:handoff_checklist_items(
-          *,
-          completed_by_user:profiles(user_id, full_name)
-        )
+        checklist_items:handoff_checklist_items(*)
       `
       )
       .eq('id', id)
@@ -66,7 +60,46 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Handoff not found' }, { status: 404 })
     }
 
-    // 3. Check access
+    // 3. Fetch profiles for from_user, to_user, and acknowledged_by
+    const userIds = new Set<string>()
+    if (handoff.from_user_id) userIds.add(handoff.from_user_id)
+    if (handoff.to_user_id) userIds.add(handoff.to_user_id)
+    if (handoff.acknowledged_by) userIds.add(handoff.acknowledged_by)
+
+    // Also collect user IDs from checklist items
+    if (handoff.checklist_items) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      handoff.checklist_items.forEach((item: any) => {
+        if (item.completed_by) userIds.add(item.completed_by)
+      })
+    }
+
+    let profilesMap = new Map()
+    if (userIds.size > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, specialty')
+        .in('user_id', Array.from(userIds))
+
+      profilesMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+    }
+
+    // 4. Attach profiles to handoff
+    const enhancedHandoff = {
+      ...handoff,
+      from_user: handoff.from_user_id ? profilesMap.get(handoff.from_user_id) || null : null,
+      to_user: handoff.to_user_id ? profilesMap.get(handoff.to_user_id) || null : null,
+      acknowledged_by_user: handoff.acknowledged_by
+        ? profilesMap.get(handoff.acknowledged_by) || null
+        : null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      checklist_items: handoff.checklist_items?.map((item: any) => ({
+        ...item,
+        completed_by_user: item.completed_by ? profilesMap.get(item.completed_by) || null : null,
+      })),
+    }
+
+    // 5. Check access
     const { data: membership } = await supabase
       .from('workspace_members')
       .select('role')
@@ -85,7 +118,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     logger.info({ userId: user.id, handoffId: id }, 'Handoff fetched successfully')
 
-    return NextResponse.json(handoff)
+    return NextResponse.json(enhancedHandoff)
   } catch (error) {
     logger.error({ error }, 'Unexpected error in GET /api/handoffs/[id]')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -144,6 +177,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     // 5. Update handoff
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {}
 
     if (body.template_id !== undefined) updateData.template_id = body.template_id
@@ -196,7 +230,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 // DELETE /api/handoffs/[id] - Delete handoff (soft delete)
 // =====================================================
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params
     const supabase = await createClient()

@@ -168,6 +168,8 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         setWorkspaces([])
       } else {
         const workspacesData = await workspacesRes.json()
+        console.log('[WorkspaceContext] Loaded workspaces:', workspacesData.workspaces?.length || 0)
+        console.log('[WorkspaceContext] Workspaces data:', workspacesData)
         setWorkspaces(workspacesData.workspaces || [])
       }
 

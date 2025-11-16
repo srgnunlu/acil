@@ -22,9 +22,9 @@ export default async function AdminActivityLogsPage({
   const limit = 50
   const offset = (page - 1) * limit
 
-  // Build query
+  // Build query - try activity_logs first, fallback to user_activity_log
   let query = supabase
-    .from('user_activity_log')
+    .from('activity_logs')
     .select(
       `
       *,
@@ -44,31 +44,94 @@ export default async function AdminActivityLogsPage({
     query = query.eq('user_id', searchParams.user)
   }
 
-  const { data: activities, count } = await query
+  const queryResult = await query
+  let activities = queryResult.data
+  let count = queryResult.count
+  const initialQueryError = queryResult.error
 
-  // Get stats
-  const [
-    { count: totalActivities },
-    { count: todayActivities },
-    { count: userLogins },
-    { count: patientActions },
-  ] = await Promise.all([
-    supabase.from('user_activity_log').select('*', { count: 'exact', head: true }),
-    supabase
+  // Fallback to user_activity_log if activity_logs doesn't exist
+  if (initialQueryError) {
+    query = supabase
       .from('user_activity_log')
+      .select(
+        `
+        *,
+        profiles(full_name, avatar_url)
+      `,
+        { count: 'exact' }
+      )
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (searchParams.type) {
+      query = query.eq('activity_type', searchParams.type)
+    }
+
+    if (searchParams.user) {
+      query = query.eq('user_id', searchParams.user)
+    }
+
+    const result = await query
+    activities = result.data
+    count = result.count
+  }
+
+  // Get stats - try activity_logs first, fallback to user_activity_log
+  // eslint-disable-next-line react-hooks/purity
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+  const todayStart = new Date().toISOString().split('T')[0]
+  const statsQueries = [
+    supabase.from('activity_logs').select('*', { count: 'exact', head: true }),
+    supabase
+      .from('activity_logs')
       .select('*', { count: 'exact', head: true })
-      .gte('created_at', new Date().toISOString().split('T')[0]),
+      .gte('created_at', todayStart),
     supabase
-      .from('user_activity_log')
+      .from('activity_logs')
       .select('*', { count: 'exact', head: true })
       .eq('activity_type', 'user_login')
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+      .gte('created_at', oneDayAgo),
     supabase
-      .from('user_activity_log')
+      .from('activity_logs')
       .select('*', { count: 'exact', head: true })
       .in('activity_type', ['patient_create', 'patient_update', 'patient_delete'])
-      .gte('created_at', new Date().toISOString().split('T')[0]),
-  ])
+      .gte('created_at', todayStart),
+  ]
+
+  const statsResults = await Promise.all(statsQueries)
+
+  // Check if any query failed and use fallback
+  let totalActivities = statsResults[0]?.count || 0
+  let todayActivities = statsResults[1]?.count || 0
+  let userLogins = statsResults[2]?.count || 0
+  let patientActions = statsResults[3]?.count || 0
+
+  if (statsResults[0]?.error) {
+    // Use user_activity_log as fallback
+    const fallbackStats = await Promise.all([
+      supabase.from('user_activity_log').select('*', { count: 'exact', head: true }),
+      supabase
+        .from('user_activity_log')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', todayStart),
+      supabase
+        .from('user_activity_log')
+        .select('*', { count: 'exact', head: true })
+        .eq('activity_type', 'user_login')
+        .gte('created_at', oneDayAgo),
+      supabase
+        .from('user_activity_log')
+        .select('*', { count: 'exact', head: true })
+        .in('activity_type', ['patient_create', 'patient_update', 'patient_delete'])
+        .gte('created_at', todayStart),
+    ])
+
+    totalActivities = fallbackStats[0]?.count || 0
+    todayActivities = fallbackStats[1]?.count || 0
+    userLogins = fallbackStats[2]?.count || 0
+    patientActions = fallbackStats[3]?.count || 0
+  }
 
   return (
     <div className="space-y-6">
@@ -92,11 +155,7 @@ export default async function AdminActivityLogsPage({
       <AdminActivityFilters />
 
       {/* Activity Table */}
-      <AdminActivityLogsTable
-        activities={activities || []}
-        total={count || 0}
-        currentPage={page}
-      />
+      <AdminActivityLogsTable activities={activities || []} total={count || 0} currentPage={page} />
     </div>
   )
 }

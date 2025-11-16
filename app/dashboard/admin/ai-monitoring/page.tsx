@@ -25,7 +25,8 @@ export default async function AdminAIMonitoringPage() {
   // Calculate stats
   const totalLogs = aiLogs?.length || 0
   const totalCost = aiLogs?.reduce((sum, log) => sum + (log.total_cost || 0), 0) || 0
-  const totalTokens = aiLogs?.reduce((sum, log) => sum + (log.input_tokens || 0) + (log.output_tokens || 0), 0) || 0
+  const totalTokens =
+    aiLogs?.reduce((sum, log) => sum + (log.input_tokens || 0) + (log.output_tokens || 0), 0) || 0
   const avgResponseTime =
     aiLogs?.reduce((sum, log) => sum + (log.response_time_ms || 0), 0) / (aiLogs?.length || 1) || 0
 
@@ -38,16 +39,33 @@ export default async function AdminAIMonitoringPage() {
   const geminiLogs = aiLogs?.filter((log) => log.model?.includes('gemini')).length || 0
 
   // Get recent logs with user info
-  const { data: recentLogs } = await supabase
+  const { data: recentLogsData } = await supabase
     .from('ai_usage_logs')
-    .select(
-      `
-      *,
-      profiles(full_name, avatar_url)
-    `
-    )
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(20)
+
+  // Fetch profiles separately
+  let recentLogs = recentLogsData || []
+  if (recentLogs.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userIds = [...new Set(recentLogs.map((log: any) => log.user_id).filter(Boolean))]
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', userIds)
+
+      const profilesMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+
+      // Attach profiles to logs
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recentLogs = recentLogs.map((log: any) => ({
+        ...log,
+        profiles: profilesMap.get(log.user_id) || null,
+      }))
+    }
+  }
 
   return (
     <div className="space-y-6">

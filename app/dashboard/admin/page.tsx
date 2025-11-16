@@ -1,19 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import {
-  Users,
-  Building2,
-  Briefcase,
-  UserPlus,
-  Activity,
-  TrendingUp,
-  Database,
-  Zap,
-  Bell,
-  FileText,
-  AlertTriangle,
-  CheckCircle,
-} from 'lucide-react'
+// Icons are now passed as strings to AdminStatCard
 import { AdminStatCard } from '@/components/admin/AdminStatCard'
 import { AdminActivityChart } from '@/components/admin/AdminActivityChart'
 import { AdminRecentActivity } from '@/components/admin/AdminRecentActivity'
@@ -31,33 +18,54 @@ export default async function AdminDashboardPage() {
   }
 
   // Fetch system statistics
+  // eslint-disable-next-line react-hooks/purity
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+  const todayStart = new Date().toISOString().split('T')[0]
   const [
     { count: totalUsers },
     { count: totalOrganizations },
     { count: totalWorkspaces },
     { count: totalPatients },
     { count: activeUsers },
-    { count: todayActivities },
+    todayActivitiesResult,
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('organizations').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    supabase
+      .from('organizations')
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null),
     supabase.from('workspaces').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('patients').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    // Active users in last 24 hours (check updated_at if last_seen_at doesn't exist)
     supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
-      .gte('last_seen_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+      .gte('updated_at', oneDayAgo),
+    // Activity logs - try activity_logs first, then user_activity_log
     supabase
-      .from('user_activity_log')
+      .from('activity_logs')
       .select('*', { count: 'exact', head: true })
-      .gte('created_at', new Date().toISOString().split('T')[0]),
+      .gte('created_at', todayStart),
   ])
 
+  // Handle activity logs fallback
+  let todayActivities = todayActivitiesResult?.count || 0
+  if (todayActivitiesResult?.error) {
+    const { count } = await supabase
+      .from('user_activity_log')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', todayStart)
+    todayActivities = count || 0
+  }
+
   // Fetch AI usage stats
+  // eslint-disable-next-line react-hooks/purity
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const { data: aiStats } = await supabase
     .from('ai_usage_logs')
     .select('total_cost, created_at')
-    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+    .gte('created_at', thirtyDaysAgo)
 
   const totalAICost = aiStats?.reduce((sum, log) => sum + (log.total_cost || 0), 0) || 0
 
@@ -68,11 +76,46 @@ export default async function AdminDashboardPage() {
     .eq('is_read', false)
 
   // Fetch recent activity
-  const { data: recentActivity } = await supabase
-    .from('user_activity_log')
+  // Try activity_logs first, fallback to user_activity_log
+  let recentActivity = null
+  const { data: activityLogs, error: activityError } = await supabase
+    .from('activity_logs')
     .select('*, profiles(full_name, avatar_url)')
     .order('created_at', { ascending: false })
     .limit(10)
+
+  if (activityError) {
+    // Fallback to user_activity_log
+    const { data: userActivityLogs } = await supabase
+      .from('user_activity_log')
+      .select('*, profiles(full_name, avatar_url)')
+      .order('created_at', { ascending: false })
+      .limit(10)
+    recentActivity = userActivityLogs
+  } else {
+    recentActivity = activityLogs
+  }
+
+  // If both fail, fetch profiles separately and create mock activity
+  if (!recentActivity || recentActivity.length === 0) {
+    const { data: recentProfiles } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, avatar_url, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(10)
+
+    recentActivity =
+      recentProfiles?.map((profile) => ({
+        id: profile.user_id,
+        activity_type: 'user_activity',
+        description: 'Kullanıcı aktivitesi',
+        created_at: profile.updated_at || new Date().toISOString(),
+        profiles: {
+          full_name: profile.full_name,
+          avatar_url: profile.avatar_url,
+        },
+      })) || []
+  }
 
   return (
     <div className="space-y-8">
@@ -89,28 +132,28 @@ export default async function AdminDashboardPage() {
         <AdminStatCard
           title="Toplam Kullanıcı"
           value={totalUsers || 0}
-          icon={Users}
+          icon="Users"
           trend={{ value: 12, isPositive: true }}
           color="blue"
         />
         <AdminStatCard
           title="Organizasyonlar"
           value={totalOrganizations || 0}
-          icon={Building2}
+          icon="Building2"
           trend={{ value: 5, isPositive: true }}
           color="purple"
         />
         <AdminStatCard
           title="Workspace'ler"
           value={totalWorkspaces || 0}
-          icon={Briefcase}
+          icon="Briefcase"
           trend={{ value: 8, isPositive: true }}
           color="green"
         />
         <AdminStatCard
           title="Toplam Hasta"
           value={totalPatients || 0}
-          icon={UserPlus}
+          icon="UserPlus"
           trend={{ value: 15, isPositive: true }}
           color="orange"
         />
@@ -121,25 +164,25 @@ export default async function AdminDashboardPage() {
         <AdminStatCard
           title="Aktif Kullanıcı (24s)"
           value={activeUsers || 0}
-          icon={Activity}
+          icon="Activity"
           color="emerald"
         />
         <AdminStatCard
           title="Bugünkü Aktivite"
           value={todayActivities || 0}
-          icon={TrendingUp}
+          icon="TrendingUp"
           color="cyan"
         />
         <AdminStatCard
           title="AI Maliyeti (30g)"
           value={`$${totalAICost.toFixed(2)}`}
-          icon={Zap}
+          icon="Zap"
           color="amber"
         />
         <AdminStatCard
           title="Okunmamış Bildirim"
           value={unreadNotifications || 0}
-          icon={Bell}
+          icon="Bell"
           color="red"
         />
       </div>

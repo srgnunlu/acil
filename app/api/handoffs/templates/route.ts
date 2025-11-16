@@ -37,8 +37,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'workspace_id is required' }, { status: 400 })
     }
 
-    // 3. Check workspace membership
-    const { data: membership, error: membershipError } = await supabase
+    // 3. Check workspace access
+    // Organization'a üye olan kullanıcılar workspace'leri görebilir
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('organization_id')
+      .eq('id', workspace_id)
+      .is('deleted_at', null)
+      .single()
+
+    if (!workspace) {
+      return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
+    }
+
+    // Check if user is a member of the workspace's organization
+    const { data: orgMembership } = await supabase
+      .from('organization_members')
+      .select('role')
+      .eq('organization_id', workspace.organization_id)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single()
+
+    // Also check workspace_members for backward compatibility
+    const { data: workspaceMembership } = await supabase
       .from('workspace_members')
       .select('role')
       .eq('workspace_id', workspace_id)
@@ -46,7 +68,7 @@ export async function GET(request: NextRequest) {
       .eq('status', 'active')
       .single()
 
-    if (membershipError || !membership) {
+    if (!orgMembership && !workspaceMembership) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -56,8 +78,7 @@ export async function GET(request: NextRequest) {
       .select(
         `
         *,
-        workspace:workspaces(id, name),
-        created_by_user:profiles!handoff_templates_created_by_fkey(user_id, full_name)
+        workspace:workspaces(id, name)
       `
       )
       .eq('workspace_id', workspace_id)
@@ -80,6 +101,30 @@ export async function GET(request: NextRequest) {
     if (fetchError) {
       logger.error({ error: fetchError }, 'Failed to fetch templates')
       return NextResponse.json({ error: 'Failed to fetch templates' }, { status: 500 })
+    }
+
+    // Fetch profiles for created_by
+    if (templates && templates.length > 0) {
+      const userIds = new Set<string>()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      templates.forEach((t: any) => {
+        if (t.created_by) userIds.add(t.created_by)
+      })
+
+      if (userIds.size > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', Array.from(userIds))
+
+        const profilesMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+
+        // Attach profiles to templates
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        templates.forEach((t: any) => {
+          t.created_by_user = t.created_by ? profilesMap.get(t.created_by) || null : null
+        })
+      }
     }
 
     return NextResponse.json(templates)
@@ -116,8 +161,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // 3. Check workspace membership (only admins can create templates)
-    const { data: membership, error: membershipError } = await supabase
+    // 3. Check workspace access (only admins can create templates)
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('organization_id')
+      .eq('id', workspace_id)
+      .is('deleted_at', null)
+      .single()
+
+    if (!workspace) {
+      return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
+    }
+
+    // Check if user is a member of the workspace's organization
+    const { data: orgMembership } = await supabase
+      .from('organization_members')
+      .select('role')
+      .eq('organization_id', workspace.organization_id)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single()
+
+    // Also check workspace_members for backward compatibility
+    const { data: workspaceMembership } = await supabase
       .from('workspace_members')
       .select('role')
       .eq('workspace_id', workspace_id)
@@ -125,11 +191,12 @@ export async function POST(request: NextRequest) {
       .eq('status', 'active')
       .single()
 
-    if (membershipError || !membership) {
+    if (!orgMembership && !workspaceMembership) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const isAdmin = ['owner', 'admin', 'senior_doctor'].includes(membership.role)
+    const membership = orgMembership || workspaceMembership
+    const isAdmin = membership && ['owner', 'admin', 'senior_doctor'].includes(membership.role)
     if (!isAdmin) {
       return NextResponse.json({ error: 'Only admins can create templates' }, { status: 403 })
     }

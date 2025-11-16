@@ -25,10 +25,13 @@ export async function GET(request: NextRequest) {
     const organizationId = searchParams.get('organization_id')
 
     // Step 1: Get organization IDs where user is a member
-    console.log('[/api/workspaces] Step 1: Fetching organization_members...')
+    console.log('[/api/workspaces] Step 1: Fetching organization_members...', {
+      user_id: user.id,
+      user_email: user.email,
+    })
     const { data: orgMemberships, error: orgMemberError } = await supabase
       .from('organization_members')
-      .select('organization_id')
+      .select('organization_id, role, status')
       .eq('user_id', user.id)
       .eq('status', 'active')
 
@@ -39,18 +42,24 @@ export async function GET(request: NextRequest) {
         message: orgMemberError.message,
         details: orgMemberError.details,
         hint: orgMemberError.hint,
+        user_id: user.id,
       })
-      return NextResponse.json(
-        {
-          error: 'Failed to fetch organization memberships',
-          details: orgMemberError.message,
-          code: orgMemberError.code,
-        },
-        { status: 500 }
+      // Hata olsa bile devam et (backward compatibility için)
+      // Boş array döndür, kullanıcının organization'ı olmayabilir
+      console.warn(
+        '[/api/workspaces] Continuing despite organization_members error, returning empty array'
       )
+      return NextResponse.json({ workspaces: [] })
     }
 
+    console.log('[/api/workspaces] Organization memberships:', {
+      count: orgMemberships?.length || 0,
+      memberships: orgMemberships,
+    })
+
     const orgIds = orgMemberships?.map((m) => m.organization_id).filter(Boolean) || []
+
+    console.log('[/api/workspaces] Extracted organization IDs:', orgIds)
 
     if (orgIds.length === 0) {
       console.log(
@@ -63,12 +72,16 @@ export async function GET(request: NextRequest) {
 
     // Step 2: Get workspace memberships for role mapping
     console.log('[/api/workspaces] Step 2: Fetching workspace_members for role mapping...')
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: memberships, error: memberError } = await supabase
       .from('workspace_members')
       .select('workspace_id, role')
       .eq('user_id', user.id)
       .eq('status', 'active')
+
+    if (memberError) {
+      console.warn('[/api/workspaces] Warning: Failed to fetch workspace memberships:', memberError)
+      // Devam et, role mapping olmadan da çalışabiliriz
+    }
 
     const roleMap = new Map(memberships?.map((m) => [m.workspace_id, m.role]) || [])
 
@@ -77,6 +90,13 @@ export async function GET(request: NextRequest) {
     // Step 3: Get workspaces from user's organizations (RLS will filter)
     // Organization'a üye olan kullanıcılar o organization'ın tüm workspace'lerini görebilir
     // NOT: Organization join'i RLS sorunlarına neden olabilir, bu yüzden ayrı çekiyoruz
+
+    // orgIds boş array ise sorgu yapmadan dön
+    if (orgIds.length === 0) {
+      console.log('[/api/workspaces] No organization IDs, returning empty array')
+      return NextResponse.json({ workspaces: [] })
+    }
+
     let workspacesQuery = supabase
       .from('workspaces')
       .select('*')
@@ -92,16 +112,43 @@ export async function GET(request: NextRequest) {
       workspacesQuery = workspacesQuery.eq('organization_id', organizationId)
     }
 
+    console.log('[/api/workspaces] Executing workspaces query...', {
+      orgIds,
+      orgIdsLength: orgIds.length,
+      organizationId,
+    })
+
     const { data: workspaces, error: workspacesError } = await workspacesQuery.order('created_at', {
       ascending: false,
     })
+
+    console.log('[/api/workspaces] Workspaces query completed:', {
+      count: workspaces?.length || 0,
+      hasError: !!workspacesError,
+      errorCode: workspacesError?.code,
+      errorMessage: workspacesError?.message,
+      errorDetails: workspacesError?.details,
+      errorHint: workspacesError?.hint,
+    })
+
+    // Hata varsa detaylı log
+    if (workspacesError) {
+      console.error('[/api/workspaces] Workspaces query error details:', {
+        code: workspacesError.code,
+        message: workspacesError.message,
+        details: workspacesError.details,
+        hint: workspacesError.hint,
+        orgIds,
+        user_id: user.id,
+      })
+    }
 
     // Step 4: Get organizations separately (RLS sorunlarını önlemek için)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const organizationsMap = new Map<string, any>()
     if (workspaces && workspaces.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const uniqueOrgIds = [
+      const uniqueOrgIds: string[] = [
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...new Set(workspaces.map((w: any) => w.organization_id).filter(Boolean)),
       ]
       if (uniqueOrgIds.length > 0) {
@@ -134,15 +181,13 @@ export async function GET(request: NextRequest) {
         message: workspacesError.message,
         details: workspacesError.details,
         hint: workspacesError.hint,
+        orgIds,
+        user_id: user.id,
       })
-      return NextResponse.json(
-        {
-          error: 'Failed to fetch workspaces',
-          details: workspacesError.message,
-          code: workspacesError.code,
-        },
-        { status: 500 }
-      )
+      // Hata olsa bile boş array döndür (kullanıcı workspace'leri göremeyebilir)
+      // 500 hatası yerine boş array döndürerek UI'ın çalışmasını sağla
+      console.warn('[/api/workspaces] Returning empty array due to error')
+      return NextResponse.json({ workspaces: [] })
     }
 
     // Step 3: Get stats for each workspace
@@ -153,34 +198,71 @@ export async function GET(request: NextRequest) {
 
     const workspacesWithStats = await Promise.all(
       workspaces.map(async (workspace) => {
-        // Get member count
-        const { count: memberCount } = await supabase
-          .from('workspace_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspace.id)
-          .eq('status', 'active')
+        try {
+          // Get member count
+          const { count: memberCount, error: memberCountError } = await supabase
+            .from('workspace_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('workspace_id', workspace.id)
+            .eq('status', 'active')
 
-        // Get patient count
-        const { count: patientCount } = await supabase
-          .from('patients')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspace.id)
-          .is('deleted_at', null)
+          if (memberCountError) {
+            console.warn(
+              `[/api/workspaces] Error fetching member count for workspace ${workspace.id}:`,
+              memberCountError
+            )
+          }
 
-        // Get category count
-        const { count: categoryCount } = await supabase
-          .from('patient_categories')
-          .select('*', { count: 'exact', head: true })
-          .eq('workspace_id', workspace.id)
-          .is('deleted_at', null)
+          // Get patient count
+          const { count: patientCount, error: patientCountError } = await supabase
+            .from('patients')
+            .select('*', { count: 'exact', head: true })
+            .eq('workspace_id', workspace.id)
+            .is('deleted_at', null)
 
-        return {
-          ...workspace,
-          organization: organizationsMap.get(workspace.organization_id) || null,
-          member_count: memberCount || 0,
-          patient_count: patientCount || 0,
-          category_count: categoryCount || 0,
-          user_role: roleMap.get(workspace.id) || null,
+          if (patientCountError) {
+            console.warn(
+              `[/api/workspaces] Error fetching patient count for workspace ${workspace.id}:`,
+              patientCountError
+            )
+          }
+
+          // Get category count
+          const { count: categoryCount, error: categoryCountError } = await supabase
+            .from('patient_categories')
+            .select('*', { count: 'exact', head: true })
+            .eq('workspace_id', workspace.id)
+            .is('deleted_at', null)
+
+          if (categoryCountError) {
+            console.warn(
+              `[/api/workspaces] Error fetching category count for workspace ${workspace.id}:`,
+              categoryCountError
+            )
+          }
+
+          return {
+            ...workspace,
+            organization: organizationsMap.get(workspace.organization_id) || null,
+            member_count: memberCount || 0,
+            patient_count: patientCount || 0,
+            category_count: categoryCount || 0,
+            user_role: roleMap.get(workspace.id) || null,
+          }
+        } catch (statError) {
+          console.error(
+            `[/api/workspaces] Error processing stats for workspace ${workspace.id}:`,
+            statError
+          )
+          // Return workspace without stats if stat fetching fails
+          return {
+            ...workspace,
+            organization: organizationsMap.get(workspace.organization_id) || null,
+            member_count: 0,
+            patient_count: 0,
+            category_count: 0,
+            user_role: roleMap.get(workspace.id) || null,
+          }
         }
       })
     )

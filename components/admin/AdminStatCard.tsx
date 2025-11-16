@@ -1,16 +1,47 @@
 'use client'
 
-import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  Building2,
+  Briefcase,
+  UserPlus,
+  Activity,
+  TrendingUp as TrendingUpIcon,
+  Database,
+  Zap,
+  Bell,
+  FileText,
+  AlertTriangle,
+  CheckCircle,
+  type LucideIcon,
+} from 'lucide-react'
 
 interface AdminStatCardProps {
   title: string
   value: string | number
-  icon: LucideIcon
+  icon: string // Icon name as string
   trend?: {
     value: number
     isPositive: boolean
   }
   color?: 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'emerald' | 'cyan' | 'amber'
+}
+
+const iconMap: Record<string, LucideIcon> = {
+  Users,
+  Building2,
+  Briefcase,
+  UserPlus,
+  Activity,
+  TrendingUp: TrendingUpIcon,
+  Database,
+  Zap,
+  Bell,
+  FileText,
+  AlertTriangle,
+  CheckCircle,
 }
 
 const colorClasses = {
@@ -24,7 +55,9 @@ const colorClasses = {
   amber: 'bg-amber-50 text-amber-600',
 }
 
-export function AdminStatCard({ title, value, icon: Icon, trend, color = 'blue' }: AdminStatCardProps) {
+export function AdminStatCard({ title, value, icon, trend, color = 'blue' }: AdminStatCardProps) {
+  const Icon = iconMap[icon] || Users // Fallback to Users if icon not found
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow">
       <div className="flex items-center justify-between">

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AdminOrganizationsTable } from '@/components/admin/organizations/AdminOrganizationsTable'
 import { AdminOrganizationsStats } from '@/components/admin/organizations/AdminOrganizationsStats'
-import { Building2, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminOrganizationsPage() {
@@ -15,17 +15,34 @@ export default async function AdminOrganizationsPage() {
     redirect('/login')
   }
 
-  // Fetch organizations with workspace count
-  const { data: organizations, error } = await supabase
+  // Fetch organizations
+  const { data: organizations } = await supabase
     .from('organizations')
-    .select(
-      `
-      *,
-      workspaces(count)
-    `
-    )
+    .select('*')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+
+  // Fetch workspace counts separately
+  if (organizations && organizations.length > 0) {
+    const orgIds = organizations.map((org) => org.id)
+    const { data: workspaceCounts } = await supabase
+      .from('workspaces')
+      .select('organization_id')
+      .in('organization_id', orgIds)
+      .is('deleted_at', null)
+
+    // Count workspaces per organization
+    const countsByOrg = new Map<string, number>()
+    workspaceCounts?.forEach((ws) => {
+      countsByOrg.set(ws.organization_id, (countsByOrg.get(ws.organization_id) || 0) + 1)
+    })
+
+    // Attach counts to organizations
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    organizations.forEach((org: any) => {
+      org.workspaces = [{ count: countsByOrg.get(org.id) || 0 }]
+    })
+  }
 
   // Get stats
   const [
@@ -34,7 +51,10 @@ export default async function AdminOrganizationsPage() {
     { count: trialOrgs },
     { count: enterpriseOrgs },
   ] = await Promise.all([
-    supabase.from('organizations').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    supabase
+      .from('organizations')
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null),
     supabase
       .from('organizations')
       .select('*', { count: 'exact', head: true })

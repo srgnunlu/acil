@@ -5,14 +5,16 @@
 
 'use client'
 
-import React, { useState } from 'react'
-import { X, Sparkles, Users, Calendar, Clock, FileText, AlertCircle, Loader2 } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { X, Sparkles, Users, FileText, AlertCircle, Loader2 } from 'lucide-react'
 import { useCreateHandoff, useGenerateHandoff } from '@/lib/hooks/useHandoffs'
 import { useHandoffTemplates } from '@/lib/hooks/useHandoffTemplates'
 import { useShifts } from '@/lib/hooks/useShifts'
 import { toast } from 'react-hot-toast'
 import type { CreateHandoffPayload } from '@/types/handoff.types'
-import { useWorkspace } from '@/contexts/WorkspaceContext'
+// import { useWorkspace } from '@/contexts/WorkspaceContext' // Reserved for future use
+import { createClient } from '@/lib/supabase/client'
+import type { User } from '@supabase/supabase-js'
 
 interface HandoffCreateModalProps {
   isOpen: boolean
@@ -21,14 +23,15 @@ interface HandoffCreateModalProps {
 }
 
 export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCreateModalProps) {
-  const { user } = useWorkspace()
+  const [user, setUser] = useState<User | null>(null)
+  const supabase = createClient()
   const [mode, setMode] = useState<'manual' | 'ai'>('ai')
   const [step, setStep] = useState(1)
 
   // Form state
   const [toUserId, setToUserId] = useState('')
   const [handoffDate, setHandoffDate] = useState(new Date().toISOString().split('T')[0])
-  const [handoffTime, setHandoffTime] = useState(new Date().toISOString())
+  const [handoffTime] = useState(new Date().toISOString())
   const [shiftId, setShiftId] = useState('')
   const [templateId, setTemplateId] = useState('')
   const [summary, setSummary] = useState('')
@@ -37,7 +40,14 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
   const [includeRecentChanges, setIncludeRecentChanges] = useState(true)
 
   // AI generated content
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [aiContent, setAiContent] = useState<any>(null)
+
+  // Workspace members state
+  const [workspaceMembers, setWorkspaceMembers] = useState<
+    Array<{ user_id: string; full_name: string | null; role: string }>
+  >([])
+  const [loadingMembers, setLoadingMembers] = useState(false)
 
   // Queries
   const { data: templates } = useHandoffTemplates({ workspace_id: workspaceId })
@@ -51,6 +61,57 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
   const createMutation = useCreateHandoff()
   const generateMutation = useGenerateHandoff()
 
+  // Get current user
+  useEffect(() => {
+    async function getUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      setUser(user)
+    }
+    if (isOpen) {
+      getUser()
+    }
+  }, [isOpen, supabase])
+
+  // Fetch workspace members
+  useEffect(() => {
+    async function fetchWorkspaceMembers() {
+      if (!workspaceId || !isOpen) return
+
+      try {
+        setLoadingMembers(true)
+        const response = await fetch(`/api/workspaces/${workspaceId}/members`)
+        if (!response.ok) {
+          throw new Error('Workspace members yüklenemedi')
+        }
+        const data = await response.json()
+        // Filter out current user from the list and map to correct format
+
+        const members = (data.members || [])
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .filter((member: any) => member.user_id !== user?.id)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((member: any) => ({
+            user_id: member.user_id,
+            full_name: member.profile?.full_name || null,
+            role: member.role,
+          }))
+        setWorkspaceMembers(members)
+        console.log('[HandoffCreateModal] Loaded workspace members:', members)
+      } catch (error) {
+        console.error('Error fetching workspace members:', error)
+        toast.error('Workspace üyeleri yüklenemedi')
+      } finally {
+        setLoadingMembers(false)
+      }
+    }
+
+    if (isOpen && workspaceId) {
+      fetchWorkspaceMembers()
+    }
+  }, [isOpen, workspaceId, user?.id])
+
   if (!isOpen) return null
 
   const handleGenerateAI = async () => {
@@ -59,10 +120,15 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
       return
     }
 
+    if (!user?.id) {
+      toast.error('Kullanıcı bilgisi alınamadı')
+      return
+    }
+
     try {
       const result = await generateMutation.mutateAsync({
         workspace_id: workspaceId,
-        from_user_id: user?.id || '',
+        from_user_id: user.id,
         to_user_id: toUserId,
         shift_id: shiftId || undefined,
         template_id: templateId || undefined,
@@ -75,6 +141,7 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
       setSummary(result.content.summary)
       setStep(2)
       toast.success('AI devir özeti başarıyla oluşturuldu!')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error(error.message || 'AI devir oluşturulurken hata oluştu')
     }
@@ -86,10 +153,15 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
       return
     }
 
+    if (!user?.id) {
+      toast.error('Kullanıcı bilgisi alınamadı')
+      return
+    }
+
     try {
       const payload: CreateHandoffPayload = {
         workspace_id: workspaceId,
-        from_user_id: user?.id || '',
+        from_user_id: user.id,
         to_user_id: toUserId,
         handoff_date: handoffDate,
         handoff_time: handoffTime,
@@ -97,6 +169,7 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
         template_id: templateId || undefined,
         summary,
         content: aiContent || {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         patient_ids: aiContent?.patient_summaries?.map((p: any) => p.patient_id) || [],
         checklist_items: aiContent?.checklist_items || [],
       }
@@ -105,6 +178,7 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
       toast.success('Vardiya devri başarıyla oluşturuldu!')
       onClose()
       resetForm()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error(error.message || 'Devir oluşturulurken hata oluştu')
     }
@@ -129,10 +203,7 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
             <FileText className="w-6 h-6" />
             Yeni Vardiya Devri
           </h2>
-          <button
-            onClick={onClose}
-            className="text-white hover:text-gray-200 transition-colors"
-          >
+          <button onClick={onClose} className="text-white hover:text-gray-200 transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -151,7 +222,9 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
                       : 'border-gray-200 hover:border-purple-300'
                   }`}
                 >
-                  <Sparkles className={`w-8 h-8 mb-3 ${mode === 'ai' ? 'text-purple-600' : 'text-gray-400'}`} />
+                  <Sparkles
+                    className={`w-8 h-8 mb-3 ${mode === 'ai' ? 'text-purple-600' : 'text-gray-400'}`}
+                  />
                   <h3 className="font-semibold text-gray-900 mb-2">AI Destekli Devir</h3>
                   <p className="text-sm text-gray-600">
                     Hasta verilerine göre otomatik devir özeti oluştur
@@ -166,11 +239,11 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
                       : 'border-gray-200 hover:border-blue-300'
                   }`}
                 >
-                  <FileText className={`w-8 h-8 mb-3 ${mode === 'manual' ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <FileText
+                    className={`w-8 h-8 mb-3 ${mode === 'manual' ? 'text-blue-600' : 'text-gray-400'}`}
+                  />
                   <h3 className="font-semibold text-gray-900 mb-2">Manuel Devir</h3>
-                  <p className="text-sm text-gray-600">
-                    Devir bilgilerini kendin oluştur
-                  </p>
+                  <p className="text-sm text-gray-600">Devir bilgilerini kendin oluştur</p>
                 </button>
               </div>
 
@@ -189,13 +262,21 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
                   <select
                     value={toUserId}
                     onChange={(e) => setToUserId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={loadingMembers}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    <option value="">Seçiniz...</option>
-                    {/* TODO: Fetch workspace members */}
-                    <option value="user1">Dr. Ahmet Yılmaz</option>
-                    <option value="user2">Dr. Ayşe Demir</option>
+                    <option value="">{loadingMembers ? 'Yükleniyor...' : 'Seçiniz...'}</option>
+                    {workspaceMembers.map((member) => (
+                      <option key={member.user_id} value={member.user_id}>
+                        {member.full_name || 'İsimsiz Kullanıcı'} ({member.role})
+                      </option>
+                    ))}
                   </select>
+                  {workspaceMembers.length === 0 && !loadingMembers && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      Bu workspace&apos;te devir alabilecek başka üye bulunmuyor.
+                    </p>
+                  )}
                 </div>
 
                 {/* Date */}
@@ -222,9 +303,11 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Seçiniz...</option>
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {shiftsData?.shifts?.map((shift: any) => (
                       <option key={shift.id} value={shift.id}>
-                        {shift.shift_definition?.name} - {new Date(shift.start_time).toLocaleTimeString('tr-TR')}
+                        {shift.shift_definition?.name} -{' '}
+                        {new Date(shift.start_time).toLocaleTimeString('tr-TR')}
                       </option>
                     ))}
                   </select>
@@ -353,9 +436,35 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
                     Kritik Uyarılar ({aiContent.critical_alerts.length})
                   </h4>
                   <ul className="space-y-1 bg-red-50 border border-red-200 rounded-lg p-3">
-                    {aiContent.critical_alerts.slice(0, 5).map((alert: string, idx: number) => (
-                      <li key={idx} className="text-sm text-red-900">• {alert}</li>
-                    ))}
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {aiContent.critical_alerts.slice(0, 5).map((alert: any, idx: number) => {
+                      // Support both string and object formats
+                      const alertText =
+                        typeof alert === 'string' ? alert : alert.alert || alert.message || 'Uyarı'
+                      const patientName =
+                        typeof alert === 'object' && alert.patient_name
+                          ? ` (${alert.patient_name})`
+                          : ''
+                      const severity =
+                        typeof alert === 'object' && alert.severity ? alert.severity : 'medium'
+
+                      const severityColors: Record<string, string> = {
+                        critical: 'text-red-900 font-semibold',
+                        high: 'text-red-800 font-medium',
+                        medium: 'text-red-700',
+                        low: 'text-red-600',
+                      }
+
+                      return (
+                        <li
+                          key={idx}
+                          className={`text-sm ${severityColors[severity] || 'text-red-900'}`}
+                        >
+                          • {alertText}
+                          {patientName}
+                        </li>
+                      )
+                    })}
                   </ul>
                 </div>
               )}
