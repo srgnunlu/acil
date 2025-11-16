@@ -15,6 +15,7 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle,
+  Table,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -42,6 +43,7 @@ const iconMap: Record<string, LucideIcon> = {
   FileText,
   AlertTriangle,
   CheckCircle,
+  Table,
 }
 
 const colorClasses = {

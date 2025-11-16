@@ -8,21 +8,21 @@ const quickActions = [
     title: 'Kullanıcı Ekle',
     description: 'Yeni kullanıcı oluştur',
     icon: UserPlus,
-    href: '/dashboard/admin/users?action=create',
+    href: '/dashboard/admin/users',
     color: 'blue',
   },
   {
     title: 'Organizasyon Ekle',
     description: 'Yeni organizasyon oluştur',
     icon: Building2,
-    href: '/dashboard/admin/organizations?action=create',
+    href: '/dashboard/admin/organizations/create',
     color: 'purple',
   },
   {
     title: 'Workspace Ekle',
     description: 'Yeni workspace oluştur',
     icon: Briefcase,
-    href: '/dashboard/admin/workspaces?action=create',
+    href: '/dashboard/admin/workspaces/create',
     color: 'green',
   },
   {
@@ -43,7 +43,7 @@ const quickActions = [
     title: 'AI Ayarları',
     description: 'AI servisleri yapılandırması',
     icon: Zap,
-    href: '/dashboard/admin/settings?tab=ai',
+    href: '/dashboard/admin/settings',
     color: 'amber',
   },
 ]

@@ -46,11 +46,19 @@ export function AdminSettingsTabs() {
 
       if (response.ok) {
         await fetchSettings()
-        alert('Ayarlar başarıyla kaydedildi')
+        // Import toast dynamically to avoid SSR issues
+        const { toast } = await import('@/components/admin/common/AdminToast')
+        toast.success('Ayarlar başarıyla kaydedildi')
+      } else {
+        const errorData = await response.json()
+        const { toast } = await import('@/components/admin/common/AdminToast')
+        toast.error(errorData.error || 'Ayarlar kaydedilemedi')
+        throw new Error(errorData.error || 'Ayarlar kaydedilemedi')
       }
     } catch (error) {
       console.error('Failed to save settings:', error)
-      alert('Ayarlar kaydedilemedi')
+      const { toast } = await import('@/components/admin/common/AdminToast')
+      toast.error(error instanceof Error ? error.message : 'Ayarlar kaydedilemedi')
     }
   }
 

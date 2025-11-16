@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const orgId = searchParams.get('org_id')
+    const search = searchParams.get('search')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = (page - 1) * limit
 
     // Get single organization
     if (orgId) {
@@ -77,8 +81,34 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // List handled by page
-    return NextResponse.json({ message: 'Use page for listing' })
+    // List all organizations with search support
+    let query = supabase
+      .from('organizations')
+      .select('*', { count: 'exact' })
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,slug.ilike.%${search}%`)
+    }
+
+    const { data: organizations, count, error: listError } = await query
+
+    if (listError) {
+      logger.error({ error: listError }, 'Failed to list organizations')
+      return NextResponse.json({ error: 'Failed to list organizations' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      organizations: organizations || [],
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    })
   } catch (error) {
     logger.error({ error }, 'Admin organizations API error')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

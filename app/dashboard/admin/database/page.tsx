@@ -13,60 +13,65 @@ export default async function AdminDatabasePage() {
     redirect('/login')
   }
 
-  // Get table counts
+  // Check admin access
+  const { data: memberships } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .in('role', ['owner', 'admin'])
+
+  if (!memberships || memberships.length === 0) {
+    redirect('/dashboard')
+  }
+
+  // Fetch table counts
+  const [
+    { count: profilesCount },
+    { count: organizationsCount },
+    { count: workspacesCount },
+    { count: patientsCount },
+    { count: aiLogsCount },
+    { count: aiAlertsCount },
+    { count: notificationsCount },
+    { count: stickyNotesCount },
+  ] = await Promise.all([
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('organizations').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    supabase.from('workspaces').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    supabase.from('patients').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    supabase.from('ai_usage_logs').select('*', { count: 'exact', head: true }),
+    supabase.from('ai_alerts').select('*', { count: 'exact', head: true }),
+    supabase.from('notifications').select('*', { count: 'exact', head: true }),
+    supabase.from('sticky_notes').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+  ])
+
   const tables = [
-    { name: 'profiles', label: 'Profiller' },
-    { name: 'organizations', label: 'Organizasyonlar' },
-    { name: 'workspaces', label: 'Workspace\'ler' },
-    { name: 'workspace_members', label: 'Workspace Üyeleri' },
-    { name: 'patients', label: 'Hastalar' },
-    { name: 'patient_data', label: 'Hasta Verileri' },
-    { name: 'patient_tests', label: 'Hasta Testleri' },
-    { name: 'patient_categories', label: 'Hasta Kategorileri' },
-    { name: 'patient_assignments', label: 'Hasta Atamaları' },
-    { name: 'ai_analyses', label: 'AI Analizleri' },
-    { name: 'ai_usage_logs', label: 'AI Kullanım Logları' },
-    { name: 'ai_comparisons', label: 'AI Karşılaştırmaları' },
-    { name: 'ai_alerts', label: 'AI Uyarıları' },
-    { name: 'chat_messages', label: 'Chat Mesajları' },
-    { name: 'sticky_notes', label: 'Sticky Notes' },
-    { name: 'notifications', label: 'Bildirimler' },
-    { name: 'user_activity_log', label: 'Aktivite Logları' },
-    { name: 'workspace_invitations', label: 'Davetiyeler' },
-    { name: 'reminders', label: 'Hatırlatıcılar' },
+    { name: 'profiles', label: 'Kullanıcı Profilleri', count: profilesCount || 0 },
+    { name: 'organizations', label: 'Organizasyonlar', count: organizationsCount || 0 },
+    { name: 'workspaces', label: 'Workspace\'ler', count: workspacesCount || 0 },
+    { name: 'patients', label: 'Hastalar', count: patientsCount || 0 },
+    { name: 'ai_usage_logs', label: 'AI Kullanım Logları', count: aiLogsCount || 0 },
+    { name: 'ai_alerts', label: 'AI Uyarıları', count: aiAlertsCount || 0 },
+    { name: 'notifications', label: 'Bildirimler', count: notificationsCount || 0 },
+    { name: 'sticky_notes', label: 'Sticky Notes', count: stickyNotesCount || 0 },
   ]
 
-  const tableCounts = await Promise.all(
-    tables.map(async (table) => {
-      const { count } = await supabase
-        .from(table.name as any)
-        .select('*', { count: 'exact', head: true })
-
-      return {
-        ...table,
-        count: count || 0,
-      }
-    })
-  )
-
-  // Calculate total records
-  const totalRecords = tableCounts.reduce((sum, table) => sum + table.count, 0)
+  const totalRecords = tables.reduce((sum, table) => sum + table.count, 0)
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Veritabanı Yönetimi</h1>
-        <p className="mt-2 text-gray-600">
-          Tüm veritabanı tablolarını ve kayıtlarını görüntüleyin
-        </p>
+        <p className="mt-2 text-gray-600">Veritabanı tablolarını ve istatistiklerini görüntüleyin</p>
       </div>
 
-      {/* Stats */}
-      <AdminDatabaseStats tables={tableCounts} totalRecords={totalRecords} />
+      {/* Database Stats */}
+      <AdminDatabaseStats tables={tables} totalRecords={totalRecords} />
 
-      {/* Tables */}
-      <AdminDatabaseTables tables={tableCounts} />
+      {/* Database Tables */}
+      <AdminDatabaseTables tables={tables} />
     </div>
   )
 }

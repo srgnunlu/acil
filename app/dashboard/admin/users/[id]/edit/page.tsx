@@ -1,67 +1,188 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
-import { AdminUserForm } from '@/components/admin/users/AdminUserForm'
-import { ArrowLeft } from 'lucide-react'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft, Loader2 } from 'lucide-react'
+import { toast } from '@/components/admin/common/AdminToast'
 
-export default async function AdminUserEditPage({
-  params,
-}: {
-  params: { id: string }
-}) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export default function AdminEditUserPage() {
+  const router = useRouter()
+  const params = useParams()
+  const userId = params.id as string
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState({
+    full_name: '',
+    specialty: '',
+    institution: '',
+    subscription_tier: 'free',
+    patient_limit: 3,
+  })
 
-  if (!user) {
-    redirect('/login')
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const response = await fetch(`/api/admin/users?user_id=${userId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setFormData({
+            full_name: data.full_name || '',
+            specialty: data.specialty || '',
+            institution: data.institution || '',
+            subscription_tier: data.subscription_tier || 'free',
+            patient_limit: data.patient_limit || 3,
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error)
+        toast.error('Kullanıcı bilgileri yüklenemedi')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (userId) {
+      fetchUser()
+    }
+  }, [userId])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          ...formData,
+        }),
+      })
+
+      if (response.ok) {
+        toast.success('Kullanıcı başarıyla güncellendi')
+        router.push(`/dashboard/admin/users/${userId}`)
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Kullanıcı güncellenemedi')
+      }
+    } catch (error) {
+      console.error('Failed to update user:', error)
+      toast.error('Kullanıcı güncellenemedi')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  // Check if user is admin/owner
-  const { data: memberships } = await supabase
-    .from('workspace_members')
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .in('role', ['owner', 'admin'])
-
-  if (!memberships || memberships.length === 0) {
-    redirect('/dashboard')
-  }
-
-  // Fetch user profile
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', params.id)
-    .single()
-
-  if (error || !profile) {
-    notFound()
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Back Button */}
-      <Link
-        href={`/dashboard/admin/users/${params.id}`}
-        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Kullanıcıya Geri Dön
-      </Link>
-
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Kullanıcı Düzenle</h1>
-        <p className="mt-2 text-gray-600">{profile.full_name || profile.user_id}</p>
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link
+          href={`/dashboard/admin/users/${userId}`}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Kullanıcı Düzenle</h1>
+          <p className="mt-1 text-gray-600">Kullanıcı bilgilerini güncelleyin</p>
+        </div>
       </div>
 
       {/* Form */}
-      <div className="max-w-3xl">
-        <AdminUserForm user={profile} />
-      </div>
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tam Ad <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.full_name}
+            onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Uzmanlık</label>
+            <input
+              type="text"
+              value={formData.specialty}
+              onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Örn: Kardiyoloji"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Kurum</label>
+            <input
+              type="text"
+              value={formData.institution}
+              onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Örn: Acıbadem Hastanesi"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Abonelik Seviyesi</label>
+            <select
+              value={formData.subscription_tier}
+              onChange={(e) => setFormData({ ...formData, subscription_tier: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="free">Ücretsiz</option>
+              <option value="pro">Pro</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hasta Limiti</label>
+            <input
+              type="number"
+              value={formData.patient_limit}
+              onChange={(e) =>
+                setFormData({ ...formData, patient_limit: parseInt(e.target.value) || 3 })
+              }
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              min="1"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
+          <Link
+            href={`/dashboard/admin/users/${userId}`}
+            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            İptal
+          </Link>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Kaydet
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

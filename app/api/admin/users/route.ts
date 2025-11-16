@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const userId = searchParams.get('user_id')
+    const search = searchParams.get('search')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = (page - 1) * limit
 
     // Get single user
     if (userId) {
@@ -50,8 +54,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ...profile, workspace_members: userMemberships || [] })
     }
 
-    // List all users (already handled by page)
-    return NextResponse.json({ message: 'Use page for listing' })
+    // List all users with search support
+    let query = supabase
+      .from('profiles')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (search) {
+      query = query.or(`full_name.ilike.%${search}%,user_id.ilike.%${search}%`)
+    }
+
+    const { data: profiles, count, error: listError } = await query
+
+    if (listError) {
+      logger.error({ error: listError }, 'Failed to list users')
+      return NextResponse.json({ error: 'Failed to list users' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      users: profiles || [],
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    })
   } catch (error) {
     logger.error({ error }, 'Admin users API error')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

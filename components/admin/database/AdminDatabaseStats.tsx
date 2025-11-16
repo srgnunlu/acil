@@ -1,6 +1,5 @@
 'use client'
 
-import { Database, Table, FileText, Activity } from 'lucide-react'
 import { AdminStatCard } from '../AdminStatCard'
 
 interface TableInfo {
@@ -20,25 +19,25 @@ export function AdminDatabaseStats({ tables, totalRecords }: AdminDatabaseStatsP
       <AdminStatCard
         title="Toplam Tablo"
         value={tables.length}
-        icon={Database}
+        icon="Database"
         color="blue"
       />
       <AdminStatCard
         title="Toplam Kayıt"
         value={totalRecords.toLocaleString('tr-TR')}
-        icon={FileText}
+        icon="FileText"
         color="green"
       />
       <AdminStatCard
         title="En Büyük Tablo"
-        value={Math.max(...tables.map((t) => t.count)).toLocaleString('tr-TR')}
-        icon={Table}
+        value={tables.length > 0 ? Math.max(...tables.map((t) => t.count)).toLocaleString('tr-TR') : '0'}
+        icon="Table"
         color="purple"
       />
       <AdminStatCard
         title="Aktif Tablolar"
         value={tables.filter((t) => t.count > 0).length}
-        icon={Activity}
+        icon="Activity"
         color="orange"
       />
     </div>
