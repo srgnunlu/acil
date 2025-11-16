@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Settings, Building2, TrendingUp, CheckSquare, FileText } from 'lucide-react'
+import { Users, Settings, Building2, TrendingUp, CheckSquare, FileText, ClipboardList } from 'lucide-react'
 
 const navItems = [
   { href: '/dashboard/patients', label: 'Hastalar', icon: Users },
   { href: '/dashboard/tasks', label: 'Görevler', icon: CheckSquare },
+  { href: '/dashboard/handoffs', label: 'Vardiya Devir', icon: ClipboardList },
   { href: '/dashboard/analytics', label: 'Analitik', icon: TrendingUp },
   { href: '/dashboard/protocols', label: 'Protokoller', icon: FileText },
   { href: '/dashboard/organizations', label: 'Organizasyonlar', icon: Building2 },

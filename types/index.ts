@@ -17,6 +17,7 @@ export * from './multi-tenant.types'
 export * from './realtime.types'
 export * from './protocol.types'
 export * from './calculator.types'
+export * from './handoff.types'
 
 export interface Patient {
   id: string
