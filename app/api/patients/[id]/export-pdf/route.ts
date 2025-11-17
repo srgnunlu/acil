@@ -82,6 +82,7 @@ export async function GET(request: NextRequest, context: { params: Promise<Param
         name: patient.name,
         age: patient.age,
         gender: patient.gender,
+        status: patient.workflow_state || 'unknown',
         category: (patient.category as { slug?: string; name?: string })?.name || 'Bilinmiyor',
         admission_date: patient.admission_date,
       },
