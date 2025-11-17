@@ -3,7 +3,7 @@
 // Browser Support Guide Component
 // Phase 12 - PWA Enhancement - Browser Compatibility
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AlertTriangle, Chrome, Globe, X, ExternalLink } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -76,16 +76,25 @@ function detectBrowser(): BrowserInfo {
 
 export function BrowserSupportGuide() {
   const [browserInfo] = useState(detectBrowser())
-  const [dismissed, setDismissed] = useState(() => {
+  const [dismissed, setDismissed] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Fix hydration mismatch by reading localStorage only after mount
+  useEffect(() => {
+    setMounted(true)
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('browser-support-dismissed') === 'true'
+      const isDismissed = localStorage.getItem('browser-support-dismissed') === 'true'
+      if (isDismissed) {
+        setDismissed(true)
+      }
     }
-    return false
-  })
+  }, [])
 
   const handleDismiss = () => {
     setDismissed(true)
-    localStorage.setItem('browser-support-dismissed', 'true')
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('browser-support-dismissed', 'true')
+    }
   }
 
   // Only show if browser is not fully supported or missing features
@@ -93,10 +102,8 @@ export function BrowserSupportGuide() {
     ([, supported]) => !supported
   )
 
-  if (
-    dismissed ||
-    (browserInfo.isSupported && missingFeatures.length === 0)
-  ) {
+  // Don't render until mounted to avoid hydration mismatch
+  if (!mounted || dismissed || (browserInfo.isSupported && missingFeatures.length === 0)) {
     return null
   }
 

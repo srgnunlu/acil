@@ -158,8 +158,10 @@ async function staleWhileRevalidateStrategy(request) {
 
   const fetchPromise = fetch(request).then((networkResponse) => {
     if (networkResponse && networkResponse.status === 200) {
+      // Clone the response BEFORE using it to avoid "Response body is already used" error
+      const responseToCache = networkResponse.clone()
       caches.open(RUNTIME_CACHE).then((cache) => {
-        cache.put(request, networkResponse.clone())
+        cache.put(request, responseToCache)
       })
     }
     return networkResponse
