@@ -38,7 +38,6 @@ interface Patient {
 interface PatientQuickGridProps {
   patients: Patient[]
   maxDisplay?: number
-  onPatientClick?: (patientId: string) => void
 }
 
 type FilterOption = 'all' | 'critical' | 'active' | 'recent'
@@ -46,7 +45,6 @@ type FilterOption = 'all' | 'critical' | 'active' | 'recent'
 export function PatientQuickGrid({
   patients,
   maxDisplay = 6,
-  onPatientClick,
 }: PatientQuickGridProps) {
   const [filter, setFilter] = useState<FilterOption>('all')
 
@@ -182,7 +180,6 @@ export function PatientQuickGrid({
                 variant="elevated"
                 interactive
                 className="group relative overflow-hidden hover:shadow-lg transition-shadow"
-                onClick={() => onPatientClick?.(patient.id)}
               >
                 {/* Risk indicator bar */}
                 {patient.riskScore && patient.riskScore > 40 && (

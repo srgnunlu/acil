@@ -206,7 +206,7 @@ export default async function DashboardHome() {
               sparklineData={last7Days}
               color="green"
               icon={Users}
-              onClick={() => (window.location.href = '/dashboard/patients')}
+              href="/dashboard/patients"
               realtime={true}
             />
 
@@ -217,7 +217,7 @@ export default async function DashboardHome() {
               trend={{ direction: 'down', percentage: 12, period: '7 gün' }}
               color="red"
               icon={AlertTriangle}
-              onClick={() => (window.location.href = '/dashboard/patients?filter=critical')}
+              href="/dashboard/patients?filter=critical"
               realtime={true}
             />
 
@@ -248,7 +248,7 @@ export default async function DashboardHome() {
               sparklineData={aiUsageTrend}
               color="purple"
               icon={Brain}
-              onClick={() => (window.location.href = '/dashboard/analytics')}
+              href="/dashboard/analytics"
               realtime={true}
             />
 
@@ -279,7 +279,6 @@ export default async function DashboardHome() {
           <PatientQuickGrid
             patients={patientsForGrid}
             maxDisplay={6}
-            onPatientClick={(id) => (window.location.href = `/dashboard/patients/${id}`)}
           />
         </TOCSection>
 
