@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, Briefcase } from 'lucide-react'
+import { Building2, Briefcase, Smartphone, Bell, Tag } from 'lucide-react'
 import { NotificationPreferencesClient } from './NotificationPreferencesClient'
 
 export default async function SettingsPage() {
@@ -158,6 +158,42 @@ export default async function SettingsPage() {
                 Workspace Ayarları
               </h3>
               <p className="text-sm text-gray-600">Workspace üyeleri ve davetler</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* App Settings */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Uygulama Ayarları</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link
+            href="/dashboard/settings/pwa"
+            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+              <Smartphone className="w-5 h-5 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-gray-900 group-hover:text-purple-600">
+                PWA Ayarları
+              </h3>
+              <p className="text-sm text-gray-600">Mobil uygulama özellikleri</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/dashboard/settings/categories"
+            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+              <Tag className="w-5 h-5 text-green-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-gray-900 group-hover:text-green-600">
+                Hasta Kategorileri
+              </h3>
+              <p className="text-sm text-gray-600">Kategori yönetimi</p>
             </div>
           </Link>
         </div>
