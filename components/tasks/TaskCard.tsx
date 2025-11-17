@@ -42,24 +42,24 @@ export function TaskCard({ task, onClick, onEdit, compact = false }: TaskCardPro
   const updateStatusMutation = useUpdateTaskStatus()
   const deleteMutation = useDeleteTask()
 
-  const priorityConfig = TASK_PRIORITY_CONFIG[task.priority as TaskPriority]
-  const statusConfig = TASK_STATUS_CONFIG[task.status as TaskStatus]
+  const priorityConfig = TASK_PRIORITY_CONFIG[(task as any).priority as TaskPriority]
+  const statusConfig = TASK_STATUS_CONFIG[(task as any).status as TaskStatus]
 
   const isOverdue =
-    task.due_date &&
-    new Date(task.due_date) < new Date() &&
-    !['completed', 'cancelled'].includes(task.status)
-  const isCompleted = task.status === 'completed'
-  const isCancelled = task.status === 'cancelled'
+    (task as any).due_date &&
+    new Date((task as any).due_date) < new Date() &&
+    !['completed', 'cancelled'].includes((task as any).status)
+  const isCompleted = (task as any).status === 'completed'
+  const isCancelled = (task as any).status === 'cancelled'
 
-  const checklistProgress = task._count
-    ? (task._count.completed_checklist_items || 0) / (task._count.checklist_items || 1)
+  const checklistProgress = (task as any)._count
+    ? ((task as any)._count.completed_checklist_items || 0) / ((task as any)._count.checklist_items || 1)
     : 0
 
   const handleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
-      await updateStatusMutation.mutateAsync({ id: task.id, status: 'completed' })
+      await updateStatusMutation.mutateAsync({ id: (task as any).id, status: 'completed' })
       setShowMenu(false)
     } catch (error) {
       console.error('Failed to complete task:', error)
@@ -69,7 +69,7 @@ export function TaskCard({ task, onClick, onEdit, compact = false }: TaskCardPro
   const handleCancel = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
-      await updateStatusMutation.mutateAsync({ id: task.id, status: 'cancelled' })
+      await updateStatusMutation.mutateAsync({ id: (task as any).id, status: 'cancelled' })
       setShowMenu(false)
     } catch (error) {
       console.error('Failed to cancel task:', error)
@@ -80,7 +80,7 @@ export function TaskCard({ task, onClick, onEdit, compact = false }: TaskCardPro
     e.stopPropagation()
     if (confirm('Bu görevi silmek istediğinizden emin misiniz?')) {
       try {
-        await deleteMutation.mutateAsync(task.id)
+        await deleteMutation.mutateAsync((task as any).id)
         setShowMenu(false)
       } catch (error) {
         console.error('Failed to delete task:', error)
@@ -126,10 +126,10 @@ export function TaskCard({ task, onClick, onEdit, compact = false }: TaskCardPro
             <h3
               className={`font-medium text-gray-900 line-clamp-2 ${compact ? 'text-sm' : 'text-base'}`}
             >
-              {task.title}
+              {(task as any).title}
             </h3>
-            {!compact && task.description && (
-              <p className="text-sm text-gray-600 mt-1 line-clamp-2">{task.description}</p>
+            {!compact && (task as any).description && (
+              <p className="text-sm text-gray-600 mt-1 line-clamp-2">{(task as any).description}</p>
             )}
           </div>
 
@@ -204,7 +204,7 @@ export function TaskCard({ task, onClick, onEdit, compact = false }: TaskCardPro
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          updateStatusMutation.mutateAsync({ id: task.id, status: 'pending' })
+                          updateStatusMutation.mutateAsync({ id: (task as any).id, status: 'pending' })
                           setShowMenu(false)
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2"
@@ -244,37 +244,37 @@ export function TaskCard({ task, onClick, onEdit, compact = false }: TaskCardPro
         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
           {/* Priority */}
           <div className="flex items-center gap-1">
-            {task.priority === 'urgent' ? (
+            {(task as any).priority === 'urgent' ? (
               <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-            ) : task.priority === 'high' ? (
+            ) : (task as any).priority === 'high' ? (
               <ArrowUp className="w-3.5 h-3.5 text-orange-500" />
-            ) : task.priority === 'low' ? (
+            ) : (task as any).priority === 'low' ? (
               <ArrowDown className="w-3.5 h-3.5 text-gray-400" />
             ) : (
               <Minus className="w-3.5 h-3.5 text-gray-400" />
             )}
-            <span className={task.priority === 'urgent' ? 'text-red-600 font-medium' : ''}>
+            <span className={(task as any).priority === 'urgent' ? 'text-red-600 font-medium' : ''}>
               {priorityConfig.label}
             </span>
           </div>
 
           {/* Assignee */}
-          {task.assigned_to_user && (
+          {(task as any).assigned_to_user && (
             <div className="flex items-center gap-1">
               <User className="w-3.5 h-3.5" />
-              <span>{task.assigned_to_user.full_name}</span>
+              <span>{(task as any).assigned_to_user.full_name}</span>
             </div>
           )}
 
           {/* Due date */}
-          {task.due_date && (
+          {(task as any).due_date && (
             <div
               className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 font-medium' : ''}`}
             >
               <Clock className="w-3.5 h-3.5" />
               <span>
                 {isOverdue && 'Gecikmiş: '}
-                {formatDistanceToNow(new Date(task.due_date), {
+                {formatDistanceToNow(new Date((task as any).due_date), {
                   addSuffix: true,
                   locale: tr,
                 })}
@@ -283,10 +283,10 @@ export function TaskCard({ task, onClick, onEdit, compact = false }: TaskCardPro
           )}
 
           {/* Patient */}
-          {task.patient && (
+          {(task as any).patient && (
             <div className="flex items-center gap-1">
               <span className="text-gray-500">Hasta:</span>
-              <span className="font-medium text-gray-700">{task.patient.name}</span>
+              <span className="font-medium text-gray-700">{(task as any).patient.name}</span>
             </div>
           )}
         </div>
@@ -295,7 +295,7 @@ export function TaskCard({ task, onClick, onEdit, compact = false }: TaskCardPro
         {!compact && (
           <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
             {/* Checklist progress */}
-            {task._count && task._count.checklist_items > 0 && (
+            {(task as any)._count && (task as any)._count.checklist_items > 0 && (
               <div className="flex items-center gap-2 flex-1">
                 <CheckSquare className="w-4 h-4 text-gray-400" />
                 <div className="flex-1 bg-gray-200 rounded-full h-2">
@@ -305,39 +305,39 @@ export function TaskCard({ task, onClick, onEdit, compact = false }: TaskCardPro
                   />
                 </div>
                 <span className="text-xs text-gray-600">
-                  {task._count.completed_checklist_items}/{task._count.checklist_items}
+                  {(task as any)._count.completed_checklist_items}/{(task as any)._count.checklist_items}
                 </span>
               </div>
             )}
 
             {/* Comments count */}
-            {task._count && task._count.comments > 0 && (
+            {(task as any)._count && (task as any)._count.comments > 0 && (
               <div className="flex items-center gap-1 text-gray-600">
                 <MessageSquare className="w-4 h-4" />
-                <span className="text-xs">{task._count.comments}</span>
+                <span className="text-xs">{(task as any)._count.comments}</span>
               </div>
             )}
 
             {/* Attachments count */}
-            {task._count && task._count.attachments > 0 && (
+            {(task as any)._count && (task as any)._count.attachments > 0 && (
               <div className="flex items-center gap-1 text-gray-600">
                 <Paperclip className="w-4 h-4" />
-                <span className="text-xs">{task._count.attachments}</span>
+                <span className="text-xs">{(task as any)._count.attachments}</span>
               </div>
             )}
           </div>
         )}
 
         {/* Tags */}
-        {!compact && task.tags && task.tags.length > 0 && (
+        {!compact && (task as any).tags && (task as any).tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {task.tags.slice(0, 3).map((tag, index) => (
+            {(task as any).tags.slice(0, 3).map((tag: any, index: number) => (
               <span key={index} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
                 {tag}
               </span>
             ))}
-            {task.tags.length > 3 && (
-              <span className="text-xs text-gray-500">+{task.tags.length - 3}</span>
+            {(task as any).tags.length > 3 && (
+              <span className="text-xs text-gray-500">+{(task as any).tags.length - 3}</span>
             )}
           </div>
         )}

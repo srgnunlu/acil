@@ -78,7 +78,7 @@ export function NotesTab({ patientId, workspaceId, currentUserId }: NotesTabProp
               avatar_url: profile.avatar_url,
             }
           })
-          .filter((s): s is MentionSuggestion => s !== null) as MentionSuggestion[]
+          .filter((s) => s !== null) as MentionSuggestion[]
 
         setWorkspaceMembers(suggestions)
       } catch (error) {
