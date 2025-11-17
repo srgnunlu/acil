@@ -16,14 +16,14 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
-  return handleUpdateMember(request, params)
+  return handleUpdateMember(request, { params })
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
-  return handleUpdateMember(request, params)
+  return handleUpdateMember(request, { params })
 }
 
 async function handleUpdateMember(
