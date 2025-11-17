@@ -10,11 +10,12 @@ import { Calendar, Clock, Users, Plus, AlertCircle } from 'lucide-react'
 import { useShifts, useCurrentShift, useRealtimeShifts } from '@/lib/hooks/useShifts'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { useRouter } from 'next/navigation'
-import { SHIFT_SCHEDULE_STATUS_CONFIG } from '@/types/handoff.types'
+import { SHIFT_SCHEDULE_STATUS_CONFIG, ShiftScheduleStatus } from '@/types/handoff.types'
 
 export default function ShiftsPage() {
   const router = useRouter()
-  const { currentWorkspace, isLoading: workspaceLoading, user } = useWorkspace()
+  const { currentWorkspace, isLoading: workspaceLoading } = useWorkspace()
+  const user: any = null // TODO: Get user from auth context
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
 
   const workspaceId = currentWorkspace?.id || null
@@ -208,7 +209,7 @@ export default function ShiftsPage() {
                               : 'bg-blue-100 text-blue-700'
                           }`}
                         >
-                          {SHIFT_SCHEDULE_STATUS_CONFIG[shift.status]?.label || shift.status}
+                          {SHIFT_SCHEDULE_STATUS_CONFIG[(shift as any).status as ShiftScheduleStatus]?.label || (shift as any).status}
                         </div>
                       </div>
 

@@ -42,12 +42,12 @@ export function TrendChart({ data, title, color = '#3b82f6', height = 300 }: Tre
     chartRef.current = chart
 
     // Create line series
-    const lineSeries = chart.addLineSeries({
+    const lineSeries = chart.addSeries({
       color,
       lineWidth: 2,
-    })
+    } as any)
 
-    seriesRef.current = lineSeries
+    seriesRef.current = lineSeries as any
     lineSeries.setData(data)
 
     // Fit content

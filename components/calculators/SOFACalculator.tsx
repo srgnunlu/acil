@@ -110,7 +110,7 @@ export default function SOFACalculator({
         patient_id: patientId,
         calculator_type: 'sofa',
         input_data: input,
-      })
+      } as any)
     } catch (error) {
       console.error('Calculation failed:', error)
     }

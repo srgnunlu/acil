@@ -325,8 +325,8 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
                   >
                     <option value="">Varsayılan Şablon</option>
                     {templates?.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name}
+                      <option key={(template as any).id} value={(template as any).id}>
+                        {(template as any).name}
                       </option>
                     ))}
                   </select>

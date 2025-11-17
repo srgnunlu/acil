@@ -130,13 +130,13 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        const { count } = await supabase
+        const { data } = await supabase
           .from('patients')
           .update({ category_id: updateData.category_id })
           .in('id', patient_ids)
-          .select('*', { count: 'exact' })
+          .select('*')
 
-        updateCount = count || 0
+        updateCount = data?.length || 0
         break
       }
 
@@ -174,13 +174,13 @@ export async function POST(request: NextRequest) {
           updatePayload.discharge_date = new Date().toISOString()
         }
 
-        const { count } = await supabase
+        const { data } = await supabase
           .from('patients')
           .update(updatePayload)
           .in('id', patient_ids)
-          .select('*', { count: 'exact' })
+          .select('*')
 
-        updateCount = count || 0
+        updateCount = data?.length || 0
         break
       }
 
@@ -201,12 +201,12 @@ export async function POST(request: NextRequest) {
           is_active: true
         }))
 
-        const { count } = await supabase
+        const { data } = await supabase
           .from('patient_assignments')
           .insert(assignments)
-          .select('*', { count: 'exact' })
+          .select('*')
 
-        updateCount = count || 0
+        updateCount = data?.length || 0
 
         // If primary assignment, also update patients.assigned_to
         if (updateData.assignment_type === 'primary') {
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        const { count } = await supabase
+        const { data } = await supabase
           .from('patient_assignments')
           .update({
             is_active: false,
@@ -236,9 +236,9 @@ export async function POST(request: NextRequest) {
           .in('patient_id', patient_ids)
           .eq('user_id', updateData.doctor_id)
           .eq('is_active', true)
-          .select('*', { count: 'exact' })
+          .select('*')
 
-        updateCount = count || 0
+        updateCount = data?.length || 0
 
         // Clear assigned_to if it was a primary assignment
         await supabase

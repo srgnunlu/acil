@@ -39,8 +39,7 @@ export default async function AdminActivityLogsPage({
       `
       *,
       profiles(full_name, avatar_url)
-    `,
-      { count: 'exact' }
+    `
     )
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
@@ -53,26 +52,25 @@ export default async function AdminActivityLogsPage({
     query = query.eq('user_id', searchParams.user_id)
   }
 
-  const { data: activities, count, error } = await query
+  const { data: activities, error } = await query
 
   // Fallback to user_activity_log if activity_logs fails
   let finalActivities = activities
-  let finalCount = count
+  let finalCount = activities?.length || 0
   if (error) {
-    const { data: userActivities, count: userCount } = await supabase
+    const { data: userActivities } = await supabase
       .from('user_activity_log')
       .select(
         `
         *,
         profiles(full_name, avatar_url)
-      `,
-        { count: 'exact' }
+      `
       )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
     finalActivities = userActivities
-    finalCount = userCount
+    finalCount = userActivities?.length || 0
   }
 
   // Get statistics (commented out unused variable)
@@ -82,13 +80,14 @@ export default async function AdminActivityLogsPage({
   //   .catch(() => ({ count: 0 }))
 
   const todayStart = new Date().toISOString().split('T')[0]
-  const { count: todayActivities } = await supabase
+  const result = await supabase
     .from('activity_logs')
-    .select('*', { count: 'exact', head: true })
+    .select('*')
     .gte('created_at', todayStart)
-    .catch(() => ({ count: 0 }))
 
-  interface ActivityItem {
+  const todayActivities = result.data?.length || 0
+
+  interface ActivityItem extends Record<string, unknown> {
     id: string
     activity_type: string
     description: string | null
@@ -174,10 +173,10 @@ export default async function AdminActivityLogsPage({
       {/* Activity Table */}
       {finalActivities && finalActivities.length > 0 ? (
         <>
-          <AdminTable
+          <AdminTable<ActivityItem>
             columns={columns}
             data={finalActivities as ActivityItem[]}
-            keyExtractor={(item: ActivityItem) => item.id}
+            keyExtractor={(item) => item.id}
             emptyMessage="Aktivite bulunamadı"
           />
           {finalCount && finalCount > limit && (

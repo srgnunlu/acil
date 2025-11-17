@@ -202,8 +202,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       note_type: string
       color: string
       is_pinned: boolean
-      position_x: number
-      position_y: number
+      position_x: number | null
+      position_y: number | null
+      sort_order: number | null
+      is_resolved: boolean
+      resolved_at: string | null
+      resolved_by: string | null
     }> = {}
 
     if (body.content !== undefined) {

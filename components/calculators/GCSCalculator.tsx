@@ -53,7 +53,7 @@ export default function GCSCalculator({
         patient_id: patientId,
         calculator_type: 'gcs',
         input_data: input,
-      })
+      } as any)
     } catch (error) {
       console.error('Calculation failed:', error)
     }

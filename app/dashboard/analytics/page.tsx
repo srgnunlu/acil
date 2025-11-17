@@ -58,8 +58,8 @@ export default function AnalyticsPage() {
   const workspaceId = workspaceIdFromUrl || currentWorkspace?.id || null
 
   const [analytics, setAnalytics] = useState<WorkspaceAnalytics | null>(null)
-  const [teamData, setTeamData] = useState<unknown>(null)
-  const [clinicalData, setClinicalData] = useState<unknown>(null)
+  const [teamData, setTeamData] = useState<any>(null)
+  const [clinicalData, setClinicalData] = useState<any>(null)
   const [detailedData, setDetailedData] = useState<{
     statusCounts: { active: number; discharged: number; consultation: number }
     testCounts: {

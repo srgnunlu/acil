@@ -22,7 +22,7 @@ import {
 interface AdminStatCardProps {
   title: string
   value: string | number
-  icon: string // Icon name as string
+  icon: any // Icon component or string
   trend?: {
     value: number
     isPositive: boolean

@@ -58,7 +58,7 @@ export default function HASBLEDCalculator({
         patient_id: patientId,
         calculator_type: 'hasbled',
         input_data: input,
-      })
+      } as any)
     } catch (error) {
       console.error('Calculation failed:', error)
     }

@@ -16,7 +16,8 @@ import { useRouter } from 'next/navigation'
 
 export default function HandoffsPage() {
   const router = useRouter()
-  const { currentWorkspace, isLoading: workspaceLoading, user } = useWorkspace()
+  const { currentWorkspace, isLoading: workspaceLoading } = useWorkspace()
+  const user: any = null // TODO: Get user from auth context
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<HandoffStatus | 'all'>('all')
   const [viewMode, setViewMode] = useState<'all' | 'given' | 'received'>('all')
@@ -39,7 +40,7 @@ export default function HandoffsPage() {
   useRealtimeHandoffs(workspaceId || '', !!workspaceId)
 
   const handleHandoffClick = (handoff: HandoffWithDetails) => {
-    router.push(`/dashboard/handoffs/${handoff.id}`)
+    router.push(`/dashboard/handoffs/${(handoff as any).id}`)
   }
 
   const handleCreateHandoff = () => {

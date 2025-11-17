@@ -63,10 +63,10 @@ export default function CHADS2VAScCalculator({
     try {
       await calculateMutation.mutateAsync({
         workspace_id: workspaceId,
-        patient_id: patientId,
+        patient_id: patientId ?? null,
         calculator_type: 'chads2vasc',
         input_data: input,
-      })
+      } as any)
     } catch (error) {
       console.error('Calculation failed:', error)
     }

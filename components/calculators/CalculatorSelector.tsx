@@ -45,7 +45,7 @@ export default function CalculatorSelector({
           .limit(100)
 
         if (error) throw error
-        setPatients(data || [])
+        setPatients((data || []) as any)
       } catch (error) {
         console.error('Failed to load patients:', error)
       } finally {
