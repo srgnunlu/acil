@@ -164,8 +164,8 @@ export default function WorkflowStateManager({ patientId, currentState }: Workfl
                     } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                     style={{
                       backgroundColor: isActive ? state.color + '20' : 'transparent',
-                      ringColor: isActive ? state.color : 'transparent'
-                    }}
+                      borderColor: isActive ? state.color : 'transparent'
+                    } as any}
                   >
                     {/* State Icon */}
                     <div

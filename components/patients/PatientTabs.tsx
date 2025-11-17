@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { PatientData, PatientTest, AIAnalysis } from '@/types'
+import { Patient, PatientData, PatientTest, AIAnalysis } from '@/types'
 import { OverviewTab } from './tabs/OverviewTab'
 import { DataTab } from './tabs/DataTab'
 import { TestsTab } from './tabs/TestsTab'

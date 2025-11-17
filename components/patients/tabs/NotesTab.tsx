@@ -67,7 +67,7 @@ export function NotesTab({ patientId, workspaceId, currentUserId }: NotesTabProp
         const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]))
 
         // Transform to MentionSuggestion format
-        const suggestions: MentionSuggestion[] = members
+        const suggestions = members
           .map((m) => {
             const profile = profileMap.get(m.user_id)
             if (!profile) return null
@@ -78,7 +78,7 @@ export function NotesTab({ patientId, workspaceId, currentUserId }: NotesTabProp
               avatar_url: profile.avatar_url,
             }
           })
-          .filter((s): s is MentionSuggestion => s !== null)
+          .filter((s): s is MentionSuggestion => s !== null) as MentionSuggestion[]
 
         setWorkspaceMembers(suggestions)
       } catch (error) {
