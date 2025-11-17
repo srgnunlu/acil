@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, Minus, LucideIcon } from 'lucide-react'
+import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { MiniSparkline } from '@/components/charts/MiniSparkline'
 
@@ -20,6 +21,7 @@ interface StatCardWithTrendProps {
   color?: 'green' | 'blue' | 'purple' | 'red' | 'indigo' | 'amber'
   icon?: LucideIcon
   onClick?: () => void
+  href?: string // Add href prop for navigation
   isLoading?: boolean
   realtime?: boolean
   unit?: string
@@ -73,11 +75,13 @@ export function StatCardWithTrend({
   color = 'blue',
   icon: Icon,
   onClick,
+  href,
   isLoading = false,
   realtime = false,
   unit,
 }: StatCardWithTrendProps) {
   const colors = colorClasses[color]
+  const isInteractive = !!(onClick || href)
 
   const getTrendIcon = () => {
     if (!trend) return null
@@ -103,13 +107,13 @@ export function StatCardWithTrend({
     )
   }
 
-  return (
+  const cardContent = (
     <Card
       variant="elevated"
-      interactive={!!onClick}
-      onClick={onClick}
+      interactive={isInteractive}
+      onClick={href ? undefined : onClick}
       className={`group relative overflow-hidden transition-all duration-300 ${
-        onClick ? 'cursor-pointer' : ''
+        isInteractive ? 'cursor-pointer' : ''
       }`}
     >
       {/* Real-time indicator */}
@@ -192,6 +196,13 @@ export function StatCardWithTrend({
       />
     </Card>
   )
+
+  // Wrap in Link if href is provided
+  if (href) {
+    return <Link href={href}>{cardContent}</Link>
+  }
+
+  return cardContent
 }
 
 // Loading Skeleton

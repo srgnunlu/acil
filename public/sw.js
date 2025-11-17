@@ -5,10 +5,9 @@ const IMAGE_CACHE = 'acil-images-v2'
 const API_CACHE = 'acil-api-v2'
 
 // Critical resources to cache on install
+// Note: Only cache public/static resources during install
+// Do NOT cache authenticated routes as they will fail without auth cookies
 const urlsToCache = [
-  '/',
-  '/dashboard',
-  '/dashboard/patients',
   '/manifest.json',
   '/offline.html',
 ]
