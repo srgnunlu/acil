@@ -21,6 +21,9 @@ export function OfflineIndicator() {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -100, opacity: 0 }}
         className="fixed top-0 left-0 right-0 z-50"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
       >
         <div
           className={`${
@@ -34,14 +37,14 @@ export function OfflineIndicator() {
           <div className="container mx-auto flex items-center justify-center gap-2">
             {isOffline ? (
               <>
-                <WifiOff className="h-4 w-4" />
+                <WifiOff className="h-4 w-4" aria-hidden="true" />
                 <span className="text-sm font-medium">
                   İnternet bağlantısı yok - Offline moddasınız
                 </span>
               </>
             ) : isSlow ? (
               <>
-                <WifiLow className="h-4 w-4" />
+                <WifiLow className="h-4 w-4" aria-hidden="true" />
                 <span className="text-sm font-medium">
                   Yavaş bağlantı tespit edildi
                   {info.effectiveType && ` (${info.effectiveType})`}
@@ -49,7 +52,7 @@ export function OfflineIndicator() {
               </>
             ) : (
               <>
-                <Wifi className="h-4 w-4" />
+                <Wifi className="h-4 w-4" aria-hidden="true" />
                 <span className="text-sm font-medium">Bağlantı yeniden sağlandı</span>
               </>
             )}
