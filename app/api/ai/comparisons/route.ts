@@ -138,7 +138,7 @@ export async function POST(request: Request) {
       // First, check how many analyses exist for this patient
       const { data: analysesCheck, error: checkError, count } = await supabase
         .from('ai_analyses')
-        .select('id', { count: 'exact', head: false })
+        .select('*', { count: 'exact', head: false })
         .eq('patient_id', patient_id)
 
       if (checkError) {
