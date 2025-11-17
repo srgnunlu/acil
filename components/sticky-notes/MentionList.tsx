@@ -133,11 +133,11 @@ export default class MentionList {
     const { createElement } = require('react');
     const { createRoot } = require('react-dom/client');
 
-    if (!this.element._reactRoot) {
-      this.element._reactRoot = createRoot(this.element);
+    if (!(this.element as any)._reactRoot) {
+      (this.element as any)._reactRoot = createRoot(this.element);
     }
 
-    this.element._reactRoot.render(
+    (this.element as any)._reactRoot.render(
       createElement(MentionListComponent, {
         ...this.props,
         ref: (ref: MentionListHandle) => {
@@ -148,8 +148,8 @@ export default class MentionList {
   }
 
   destroy() {
-    if (this.element._reactRoot) {
-      this.element._reactRoot.unmount();
+    if ((this.element as any)._reactRoot) {
+      (this.element as any)._reactRoot.unmount();
     }
     this.element.remove();
   }

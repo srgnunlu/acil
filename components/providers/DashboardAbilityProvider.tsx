@@ -30,17 +30,17 @@ export function DashboardAbilityProvider({ children }: DashboardAbilityProviderP
       try {
         console.log(
           '[DashboardAbilityProvider] Fetching member permissions for workspace:',
-          currentWorkspace.id
+          currentWorkspace!.id
         )
 
         // Use the new /me endpoint to get current user's membership
-        const response = await fetch(`/api/workspaces/${currentWorkspace.id}/members/me`)
+        const response = await fetch(`/api/workspaces/${currentWorkspace!.id}/members/me`)
 
         if (!response.ok) {
           console.warn('[DashboardAbilityProvider] Failed to fetch member permissions:', {
             status: response.status,
             statusText: response.statusText,
-            workspaceId: currentWorkspace.id,
+            workspaceId: currentWorkspace!.id,
           })
 
           // 403 hatası workspace'te üye olmadığımız anlamına gelebilir
