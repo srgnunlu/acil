@@ -161,10 +161,10 @@ export function autoFillCHADS2VASc(data: PatientDataForCalculators): Partial<CHA
 
   return {
     age: patient.age || undefined,
-    gender: patient.gender === 'Kadın' ? 'female' : patient.gender === 'Erkek' ? 'male' : undefined,
+    sex: patient.gender === 'Kadın' ? 'female' : patient.gender === 'Erkek' ? 'male' : undefined,
     congestive_heart_failure: hasHistory('kalp yetmezliği') || hasHistory('heart failure'),
     hypertension: hasHistory('hipertansiyon') || hasHistory('hypertension'),
-    stroke_tia: hasHistory('inme') || hasHistory('stroke') || hasHistory('tia'),
+    prior_stroke_tia: hasHistory('inme') || hasHistory('stroke') || hasHistory('tia'),
     vascular_disease: hasHistory('vasküler') || hasHistory('vascular'),
     diabetes: hasHistory('diyabet') || hasHistory('diabetes'),
   }
@@ -199,14 +199,15 @@ export function autoFillHASBLED(data: PatientDataForCalculators): Partial<HASBLE
   const labResults = data.latestLabResults
 
   return {
-    hypertension: hasHistory('hipertansiyon') || hasHistory('hypertension'),
-    abnormal_renal_function: labResults?.creatinine ? labResults.creatinine > 2.3 : undefined,
-    abnormal_liver_function: labResults?.bilirubin ? labResults.bilirubin > 2 : undefined,
-    stroke: hasHistory('inme') || hasHistory('stroke'),
-    bleeding: hasHistory('kanama') || hasHistory('bleeding'),
+    hypertension_uncontrolled: hasHistory('hipertansiyon') || hasHistory('hypertension'),
+    renal_disease: labResults?.creatinine ? labResults.creatinine > 2.3 : undefined,
+    liver_disease: labResults?.bilirubin ? labResults.bilirubin > 2 : undefined,
+    stroke_history: hasHistory('inme') || hasHistory('stroke'),
+    prior_bleeding: hasHistory('kanama') || hasHistory('bleeding'),
     labile_inr: undefined, // Would need INR test results
     elderly: data.patient.age ? data.patient.age > 65 : undefined,
-    drugs_alcohol: hasMedication('warfarin') || hasMedication('aspirin') || hasMedication('clopidogrel'),
+    drugs_predisposing: hasMedication('warfarin') || hasMedication('aspirin') || hasMedication('clopidogrel'),
+    alcohol_excess: undefined, // Would need specific alcohol history
   }
 }
 

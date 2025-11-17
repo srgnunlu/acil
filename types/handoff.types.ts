@@ -9,29 +9,50 @@ import { Database } from './database.types'
 // DATABASE TYPES
 // =====================================================
 
-export type ShiftDefinition = Database['public']['Tables']['shift_definitions']['Row']
-export type ShiftDefinitionInsert = Database['public']['Tables']['shift_definitions']['Insert']
-export type ShiftDefinitionUpdate = Database['public']['Tables']['shift_definitions']['Update']
+// TODO: Phase 11 - Uncomment these when shift_definitions and related tables are added to database
+// export type ShiftDefinition = Database['public']['Tables']['shift_definitions']['Row']
+// export type ShiftDefinitionInsert = Database['public']['Tables']['shift_definitions']['Insert']
+// export type ShiftDefinitionUpdate = Database['public']['Tables']['shift_definitions']['Update']
 
-export type ShiftSchedule = Database['public']['Tables']['shift_schedules']['Row']
-export type ShiftScheduleInsert = Database['public']['Tables']['shift_schedules']['Insert']
-export type ShiftScheduleUpdate = Database['public']['Tables']['shift_schedules']['Update']
+// export type ShiftSchedule = Database['public']['Tables']['shift_schedules']['Row']
+// export type ShiftScheduleInsert = Database['public']['Tables']['shift_schedules']['Insert']
+// export type ShiftScheduleUpdate = Database['public']['Tables']['shift_schedules']['Update']
 
-export type HandoffTemplate = Database['public']['Tables']['handoff_templates']['Row']
-export type HandoffTemplateInsert = Database['public']['Tables']['handoff_templates']['Insert']
-export type HandoffTemplateUpdate = Database['public']['Tables']['handoff_templates']['Update']
+// export type HandoffTemplate = Database['public']['Tables']['handoff_templates']['Row']
+// export type HandoffTemplateInsert = Database['public']['Tables']['handoff_templates']['Insert']
+// export type HandoffTemplateUpdate = Database['public']['Tables']['handoff_templates']['Update']
 
-export type Handoff = Database['public']['Tables']['handoffs']['Row']
-export type HandoffInsert = Database['public']['Tables']['handoffs']['Insert']
-export type HandoffUpdate = Database['public']['Tables']['handoffs']['Update']
+// export type Handoff = Database['public']['Tables']['handoffs']['Row']
+// export type HandoffInsert = Database['public']['Tables']['handoffs']['Insert']
+// export type HandoffUpdate = Database['public']['Tables']['handoffs']['Update']
 
-export type HandoffPatient = Database['public']['Tables']['handoff_patients']['Row']
-export type HandoffPatientInsert = Database['public']['Tables']['handoff_patients']['Insert']
-export type HandoffPatientUpdate = Database['public']['Tables']['handoff_patients']['Update']
+// export type HandoffPatient = Database['public']['Tables']['handoff_patients']['Row']
+// export type HandoffPatientInsert = Database['public']['Tables']['handoff_patients']['Insert']
+// export type HandoffPatientUpdate = Database['public']['Tables']['handoff_patients']['Update']
 
-export type HandoffChecklistItem = Database['public']['Tables']['handoff_checklist_items']['Row']
-export type HandoffChecklistItemInsert = Database['public']['Tables']['handoff_checklist_items']['Insert']
-export type HandoffChecklistItemUpdate = Database['public']['Tables']['handoff_checklist_items']['Update']
+// export type HandoffChecklistItem = Database['public']['Tables']['handoff_checklist_items']['Row']
+// export type HandoffChecklistItemInsert = Database['public']['Tables']['handoff_checklist_items']['Insert']
+// export type HandoffChecklistItemUpdate = Database['public']['Tables']['handoff_checklist_items']['Update']
+
+// Temporary placeholder types until Phase 11 tables are created
+export type ShiftDefinition = any
+export type ShiftDefinitionInsert = any
+export type ShiftDefinitionUpdate = any
+export type ShiftSchedule = any
+export type ShiftScheduleInsert = any
+export type ShiftScheduleUpdate = any
+export type HandoffTemplate = any
+export type HandoffTemplateInsert = any
+export type HandoffTemplateUpdate = any
+export type Handoff = any
+export type HandoffInsert = any
+export type HandoffUpdate = any
+export type HandoffPatient = any
+export type HandoffPatientInsert = any
+export type HandoffPatientUpdate = any
+export type HandoffChecklistItem = any
+export type HandoffChecklistItemInsert = any
+export type HandoffChecklistItemUpdate = any
 
 // =====================================================
 // ENUMS

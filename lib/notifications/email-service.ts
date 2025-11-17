@@ -110,7 +110,7 @@ export class EmailService {
       toName,
       `${data.mentioned_by_name} sizi etiketledi`,
       'mention',
-      data
+      data as unknown as Record<string, unknown>
     )
   }
 
@@ -122,7 +122,7 @@ export class EmailService {
     to: string,
     toName: string
   ): Promise<boolean> {
-    return this.sendTemplateEmail(to, toName, `Yeni hasta atandı: ${data.patient_name}`, 'assignment', data)
+    return this.sendTemplateEmail(to, toName, `Yeni hasta atandı: ${data.patient_name}`, 'assignment', data as unknown as Record<string, unknown>)
   }
 
   /**
@@ -133,7 +133,7 @@ export class EmailService {
     to: string,
     toName: string
   ): Promise<boolean> {
-    return this.sendTemplateEmail(to, toName, `🚨 Kritik Uyarı: ${data.patient_name}`, 'critical_alert', data)
+    return this.sendTemplateEmail(to, toName, `🚨 Kritik Uyarı: ${data.patient_name}`, 'critical_alert', data as unknown as Record<string, unknown>)
   }
 
   /**
@@ -144,14 +144,14 @@ export class EmailService {
     to: string,
     toName: string
   ): Promise<boolean> {
-    return this.sendTemplateEmail(to, toName, `Hasta Güncellendi: ${data.patient_name}`, 'patient_update', data)
+    return this.sendTemplateEmail(to, toName, `Hasta Güncellendi: ${data.patient_name}`, 'patient_update', data as unknown as Record<string, unknown>)
   }
 
   /**
    * Send AI alert email
    */
   static async sendAIAlertEmail(data: AIAlertEmailData, to: string, toName: string): Promise<boolean> {
-    return this.sendTemplateEmail(to, toName, `AI Uyarısı: ${data.patient_name}`, 'ai_alert', data)
+    return this.sendTemplateEmail(to, toName, `AI Uyarısı: ${data.patient_name}`, 'ai_alert', data as unknown as Record<string, unknown>)
   }
 
   /**
@@ -199,7 +199,7 @@ export class EmailService {
     // Template-specific content
     switch (templateName) {
       case 'mention':
-        const mentionData = data as MentionEmailData
+        const mentionData = data as unknown as MentionEmailData
         return baseTemplate(`
           <h2>💬 Etiketlendiniz</h2>
           <p><strong>${mentionData.mentioned_by_name}</strong> sizi bir notta etiketledi.</p>
@@ -211,7 +211,7 @@ export class EmailService {
         `)
 
       case 'assignment':
-        const assignmentData = data as AssignmentEmailData
+        const assignmentData = data as unknown as AssignmentEmailData
         return baseTemplate(`
           <h2>👨‍⚕️ Yeni Hasta Atandı</h2>
           <p><strong>${assignmentData.assigned_by_name}</strong> size yeni bir hasta atadı.</p>
@@ -223,7 +223,7 @@ export class EmailService {
         `)
 
       case 'critical_alert':
-        const criticalData = data as CriticalAlertEmailData
+        const criticalData = data as unknown as CriticalAlertEmailData
         return baseTemplate(`
           <span class="badge">🚨 KRİTİK UYARI</span>
           <h2>${criticalData.alert_type}</h2>
@@ -236,7 +236,7 @@ export class EmailService {
         `)
 
       case 'patient_update':
-        const updateData = data as PatientUpdateEmailData
+        const updateData = data as unknown as PatientUpdateEmailData
         return baseTemplate(`
           <h2>📝 Hasta Güncellendi</h2>
           <p><strong>${updateData.patient_name}</strong> için ${updateData.update_type} güncellendi.</p>
@@ -245,7 +245,7 @@ export class EmailService {
         `)
 
       case 'ai_alert':
-        const aiData = data as AIAlertEmailData
+        const aiData = data as unknown as AIAlertEmailData
         return baseTemplate(`
           <h2>🤖 AI Uyarısı</h2>
           <span class="badge" style="background: #fef3c7; color: #92400e;">⚠️ ${aiData.alert_severity.toUpperCase()}</span>

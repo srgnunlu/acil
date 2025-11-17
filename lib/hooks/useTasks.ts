@@ -36,7 +36,12 @@ export const taskKeys = {
 // FETCH FUNCTIONS
 // =====================================================
 
-async function fetchTasks(filters: TaskFilters) {
+async function fetchTasks(
+  filters: TaskFilters
+): Promise<{
+  tasks: TaskWithDetails[]
+  pagination?: { total: number; page: number; limit: number; total_pages: number }
+}> {
   const params = new URLSearchParams()
 
   Object.entries(filters).forEach(([key, value]) => {

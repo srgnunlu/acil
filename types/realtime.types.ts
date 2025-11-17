@@ -163,7 +163,7 @@ export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'er
 /**
  * Realtime subscription status
  */
-export interface SubscriptionStatus {
+export interface RealtimeSubscriptionStatus {
   channel: RealtimeChannel
   status: ConnectionStatus
   subscribedAt?: Date

@@ -113,10 +113,10 @@ export function TaskFormModal({
         await updateMutation.mutateAsync({ id: task.id, data: payload })
       } else {
         await createMutation.mutateAsync({
+          ...payload,
           workspace_id: workspaceId,
           patient_id: patientId || undefined,
-          ...payload,
-        })
+        } as any)
       }
 
       onSuccess?.()
