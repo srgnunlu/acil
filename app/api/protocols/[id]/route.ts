@@ -7,7 +7,7 @@ import type { ProtocolUpdate } from '@/types/protocol.types'
  * GET /api/protocols/[id]
  * Get a specific protocol with details
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const protocolId = params.id
+    const { id: protocolId } = await params
 
     // Fetch protocol with category
     const { data: protocol, error } = await supabase
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  * PATCH /api/protocols/[id]
  * Update a protocol
  */
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
 
@@ -141,7 +141,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const protocolId = params.id
+    const { id: protocolId } = await params
     const updates = (await request.json()) as ProtocolUpdate
 
     // Fetch existing protocol
@@ -212,7 +212,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
  * DELETE /api/protocols/[id]
  * Soft delete a protocol
  */
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
 
@@ -226,7 +226,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const protocolId = params.id
+    const { id: protocolId } = await params
 
     // Fetch existing protocol
     const { data: existingProtocol, error: fetchError } = await supabase
