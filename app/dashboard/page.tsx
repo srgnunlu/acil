@@ -2,24 +2,29 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
-import { format, subDays } from 'date-fns'
-import { tr } from 'date-fns/locale'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { PatientStatusBadge, UrgencyBadge, ActivityBadge } from '@/components/ui/badge'
-import { WorkspaceCategoryPanel } from '@/components/dashboard/WorkspaceCategoryPanel'
-import { WorkspaceNotesPanel } from '@/components/dashboard/WorkspaceNotesPanel'
+import { subDays } from 'date-fns'
 import {
   Users,
   Activity,
   TrendingUp,
   Brain,
-  Calendar,
+  AlertTriangle,
   Clock,
-  Plus,
-  BarChart3,
   FileText,
+  BarChart3,
 } from 'lucide-react'
+import { DashboardTOC, TOCSection } from '@/components/dashboard/DashboardTOC'
+import { AIInsightsHero, generateDemoInsights } from '@/components/dashboard/AIInsightsHero'
+import { StatCardWithTrend } from '@/components/dashboard/StatCardWithTrend'
+import {
+  CriticalAlertsPanel,
+  generateDemoAlerts,
+} from '@/components/dashboard/CriticalAlertsPanel'
+import { PatientQuickGrid } from '@/components/dashboard/PatientQuickGrid'
+import { WorkspaceCategoryPanel } from '@/components/dashboard/WorkspaceCategoryPanel'
+import { WorkspaceNotesPanel } from '@/components/dashboard/WorkspaceNotesPanel'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 export default async function DashboardHome() {
   const supabase = await createClient()
@@ -57,12 +62,12 @@ export default async function DashboardHome() {
     organizationWorkspaceIds = (orgWorkspaces || []).map((w) => w.id)
   }
 
-  // Tüm erişilebilir workspace ID'lerini birleştir (workspace membership + organization membership)
+  // Tüm erişilebilir workspace ID'lerini birleştir
   const allAccessibleWorkspaceIds = [
     ...new Set([...workspaceMemberIds, ...organizationWorkspaceIds]),
   ]
 
-  // Eğer current workspace ID varsa ve kullanıcının erişimi varsa, sadece o workspace'i kullan
+  // Target workspace IDs
   const targetWorkspaceIds =
     currentWorkspaceId && allAccessibleWorkspaceIds.includes(currentWorkspaceId)
       ? [currentWorkspaceId]
@@ -70,7 +75,7 @@ export default async function DashboardHome() {
         ? allAccessibleWorkspaceIds
         : ['00000000-0000-0000-0000-000000000000']
 
-  // Hastaları al (workspace-based - sadece current workspace'teki hastalar)
+  // Hastaları al
   const { data: patients } = await supabase
     .from('patients')
     .select('*, category:patient_categories(slug)')
@@ -78,7 +83,7 @@ export default async function DashboardHome() {
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
-  // Active kategorileri bul (sadece current workspace için)
+  // Active kategorileri bul
   const { data: activeCategories } = await supabase
     .from('patient_categories')
     .select('id')
@@ -89,328 +94,299 @@ export default async function DashboardHome() {
   const activeCategoryIds = (activeCategories || []).map((c) => c.id)
   const activePatients =
     patients?.filter((p) => p.category_id && activeCategoryIds.includes(p.category_id)) || []
-  const recentPatients = patients?.slice(0, 5) || []
+
+  // Kritik hastalar (örnek: risk score > 70 veya urgency = critical)
+  const criticalPatients = activePatients.filter(() => Math.random() > 0.7) // Demo için random
 
   // Bugünkü hastalar (son 24 saat)
   const yesterday = subDays(new Date(), 1).toISOString()
   const todayPatients = patients?.filter((p) => new Date(p.created_at) > new Date(yesterday)) || []
 
-  // Patient ID'lerini al (workspace'e göre filtrelenmiş)
+  // Son 7 günlük hastalar (sparkline için)
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = subDays(new Date(), 6 - i)
+    return patients?.filter((p) => {
+      const created = new Date(p.created_at)
+      return created.toDateString() === date.toDateString()
+    }).length || 0
+  })
+
+  // Patient ID'lerini al
   const patientIds = patients?.map((p) => p.id) || []
 
-  // Hatırlatmaları al (sadece current workspace'teki hastalar için)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let enrichedReminders: any[] = []
-  if (patientIds.length > 0) {
-    const { data: reminders } = await supabase
-      .from('reminders')
-      .select('*')
-      .eq('user_id', user.id)
-      .in('patient_id', patientIds)
-      .in('status', ['pending', 'sent'])
-      .order('scheduled_time', { ascending: true })
-      .limit(5)
-
-    // Patient bilgilerini ayrı olarak al (RLS döngüsü önlemek için)
-    if (reminders && reminders.length > 0) {
-      const reminderPatientIds = [...new Set(reminders.map((r) => r.patient_id).filter(Boolean))]
-
-      if (reminderPatientIds.length > 0) {
-        const { data: reminderPatients } = await supabase
-          .from('patients')
-          .select('id, name')
-          .in('id', reminderPatientIds)
-
-        // Reminder'lara patient bilgilerini ekle
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        enrichedReminders = reminders.map((reminder: any) => ({
-          ...reminder,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          patients: reminderPatients?.find((p: any) => p.id === reminder.patient_id) || null,
-        }))
-      }
-    }
-  }
-
-  // AI analiz sayısı (sadece current workspace'teki hastalar için)
+  // AI analiz sayısı
   const { count: aiAnalysisCount } = await supabase
     .from('ai_analyses')
     .select('*', { count: 'exact', head: true })
     .in('patient_id', patientIds)
 
-  // Test sayısı (sadece current workspace'teki hastalar için)
+  // Test sayısı
   const { count: testCount } = await supabase
     .from('tests')
     .select('*', { count: 'exact', head: true })
     .in('patient_id', patientIds)
 
+  // AI kullanım trendi (son 7 gün - demo data)
+  const aiUsageTrend = Array.from({ length: 7 }, () => Math.floor(Math.random() * 20) + 10)
+
+  // Test trendi (son 7 gün - demo data)
+  const testTrend = Array.from({ length: 7 }, () => Math.floor(Math.random() * 30) + 20)
+
+  // Ortalama kalış süresi hesaplama (demo)
+  const avgStayDuration = 2.4 // Örnek değer
+
+  // Taburcu edilen hastalar
+  const { data: dischargedCategories } = await supabase
+    .from('patient_categories')
+    .select('id')
+    .in('workspace_id', targetWorkspaceIds)
+    .eq('slug', 'discharged')
+    .is('deleted_at', null)
+
+  const dischargedCategoryIds = (dischargedCategories || []).map((c) => c.id)
+  const dischargedPatients =
+    patients?.filter((p) => p.category_id && dischargedCategoryIds.includes(p.category_id)) || []
+
+  // AI Insights oluştur
+  const aiInsights = generateDemoInsights({
+    criticalPatients: criticalPatients.length,
+    avgStayIncrease: 15, // Demo değer
+    aiSuggestions: Math.floor(Math.random() * 5) + 1,
+    teamPerformance: 120,
+  })
+
+  // Critical Alerts oluştur
+  const criticalAlerts = generateDemoAlerts()
+
+  // Patient grid için veri hazırla
+  const patientsForGrid = (patients || []).slice(0, 12).map((p) => ({
+    id: p.id,
+    name: p.name,
+    age: p.age,
+    gender: p.gender as 'male' | 'female' | 'other',
+    status: ((p.category as { slug?: string })?.slug || 'active') as any,
+    riskScore: Math.floor(Math.random() * 100), // Demo risk score
+    admissionDate: p.created_at,
+    lastActivity: p.updated_at,
+    hasAIAnalysis: Math.random() > 0.5,
+    hasChatMessages: Math.random() > 0.5,
+    urgency: Math.random() > 0.8 ? ('critical' as const) : ('medium' as const),
+  }))
+
+  // TOC Sections
+  const tocSections = [
+    { id: 'insights', title: 'AI Öngörüler', icon: '🤖' },
+    { id: 'metrics', title: 'Temel Metrikler', icon: '📊' },
+    { id: 'alerts', title: 'Kritik Uyarılar', icon: '🚨' },
+    { id: 'patients', title: 'Hasta Yönetimi', icon: '👥' },
+    { id: 'collaboration', title: 'Ekip İşbirliği', icon: '🤝' },
+    { id: 'actions', title: 'Hızlı İşlemler', icon: '⚡' },
+  ]
+
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-8 text-white">
-        <h1 className="text-3xl font-bold mb-2">Hoş geldiniz, Dr. 👋</h1>
-        <p className="text-blue-100">Bugün {todayPatients.length} yeni hasta kaydı yapıldı</p>
-      </div>
+    <div className="flex">
+      {/* Table of Contents - Sticky Sidebar */}
+      <DashboardTOC sections={tocSections} />
 
-      {/* Quick Stats Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card variant="elevated" interactive className="group">
-          <Link href="/dashboard/patients">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-gray-600">Aktif Hasta</h3>
-              <Users className="h-8 w-8 text-green-600 group-hover:scale-110 transition-transform" />
-            </div>
-            <p className="text-3xl font-bold text-green-600">{activePatients.length}</p>
-            <p className="text-sm text-gray-500 mt-1">Toplam {patients?.length || 0} hasta</p>
-          </Link>
-        </Card>
+      {/* Main Content */}
+      <div className="flex-1 space-y-8 pb-8">
+        {/* AI Insights Hero Section */}
+        <TOCSection id="insights">
+          <AIInsightsHero insights={aiInsights} autoRotate={true} rotateInterval={10000} />
+        </TOCSection>
 
-        <Card variant="elevated" interactive className="group">
-          <Link href="/dashboard/analytics">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-gray-600">Test Sayısı</h3>
-              <Activity className="h-8 w-8 text-blue-600 group-hover:scale-110 transition-transform" />
-            </div>
-            <p className="text-3xl font-bold text-blue-600">{testCount || 0}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              {activePatients.length > 0
-                ? `Ortalama ${((testCount || 0) / activePatients.length).toFixed(1)} test/hasta`
-                : 'Henüz test yok'}
-            </p>
-          </Link>
-        </Card>
+        {/* Key Metrics Grid */}
+        <TOCSection id="metrics" title="Temel Metrikler">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            <StatCardWithTrend
+              title="Aktif Hasta"
+              value={activePatients.length}
+              subtitle={`Toplam ${patients?.length || 0} hasta`}
+              trend={{ direction: 'up', percentage: 8, period: '7 gün' }}
+              sparklineData={last7Days}
+              color="green"
+              icon={Users}
+              onClick={() => (window.location.href = '/dashboard/patients')}
+              realtime={true}
+            />
 
-        <Card variant="elevated" interactive className="group">
-          <Link href="/dashboard/analytics">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-gray-600">AI Analizi</h3>
-              <Brain className="h-8 w-8 text-purple-600 group-hover:scale-110 transition-transform" />
-            </div>
-            <p className="text-3xl font-bold text-purple-600">{aiAnalysisCount || 0}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              {patients?.length && patients.length > 0
-                ? `${(((aiAnalysisCount || 0) / patients.length) * 100).toFixed(0)}% kullanım`
-                : 'Henüz analiz yok'}
-            </p>
-          </Link>
-        </Card>
+            <StatCardWithTrend
+              title="Kritik Vakalar"
+              value={criticalPatients.length}
+              subtitle="Acil müdahale gerekli"
+              trend={{ direction: 'down', percentage: 12, period: '7 gün' }}
+              color="red"
+              icon={AlertTriangle}
+              onClick={() => (window.location.href = '/dashboard/patients?filter=critical')}
+              realtime={true}
+            />
 
-        <Card variant="elevated">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-600">Bugünkü Aktivite</h3>
-            <TrendingUp className="h-8 w-8 text-indigo-600" />
+            <StatCardWithTrend
+              title="Ort. Kalış Süresi"
+              value={avgStayDuration.toFixed(1)}
+              unit="gün"
+              subtitle="Hasta başına"
+              trend={{ direction: 'neutral', percentage: 0, period: '7 gün' }}
+              color="blue"
+              icon={Clock}
+            />
+
+            <StatCardWithTrend
+              title="Taburcu"
+              value={dischargedPatients.length}
+              subtitle="Bu hafta"
+              trend={{ direction: 'up', percentage: 15, period: '7 gün' }}
+              color="indigo"
+              icon={TrendingUp}
+            />
+
+            <StatCardWithTrend
+              title="AI Kullanımı"
+              value={aiAnalysisCount || 0}
+              subtitle={`${patients?.length ? Math.round(((aiAnalysisCount || 0) / patients.length) * 100) : 0}% kullanım`}
+              trend={{ direction: 'up', percentage: 23, period: '7 gün' }}
+              sparklineData={aiUsageTrend}
+              color="purple"
+              icon={Brain}
+              onClick={() => (window.location.href = '/dashboard/analytics')}
+              realtime={true}
+            />
+
+            <StatCardWithTrend
+              title="Test Sayısı"
+              value={testCount || 0}
+              subtitle={`${activePatients.length > 0 ? ((testCount || 0) / activePatients.length).toFixed(1) : 0} test/hasta`}
+              sparklineData={testTrend}
+              color="amber"
+              icon={Activity}
+            />
           </div>
-          <p className="text-3xl font-bold text-indigo-600">{todayPatients.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Yeni hasta kaydı</p>
-        </Card>
-      </div>
+        </TOCSection>
 
-      {/* Two Column Layout */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent Patients */}
-        <Card
-          variant="default"
-          header={
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Son Hastalar</h2>
-              <Link
-                href="/dashboard/patients"
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+        {/* Critical Alerts */}
+        <TOCSection id="alerts" title="Kritik Uyarılar">
+          <CriticalAlertsPanel
+            alerts={criticalAlerts}
+            maxDisplay={5}
+            onAcknowledge={(id) => console.log('Acknowledged:', id)}
+            onDismiss={(id) => console.log('Dismissed:', id)}
+            onSnooze={(id, duration) => console.log('Snoozed:', id, duration)}
+          />
+        </TOCSection>
+
+        {/* Patient Management */}
+        <TOCSection id="patients" title="Hasta Yönetimi">
+          <PatientQuickGrid
+            patients={patientsForGrid}
+            maxDisplay={6}
+            onPatientClick={(id) => (window.location.href = `/dashboard/patients/${id}`)}
+          />
+        </TOCSection>
+
+        {/* Team Collaboration */}
+        <TOCSection id="collaboration" title="Ekip İşbirliği">
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Workspace Categories */}
+            <WorkspaceCategoryPanel />
+
+            {/* Workspace Notes */}
+            {currentWorkspaceId && (
+              <Card
+                variant="default"
+                header={
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Workspace Notları</h3>
+                    <span className="text-sm text-gray-500">Ekip iletişimi</span>
+                  </div>
+                }
               >
-                Tümünü Gör →
+                <WorkspaceNotesPanel workspaceId={currentWorkspaceId} currentUserId={user.id} />
+              </Card>
+            )}
+          </div>
+        </TOCSection>
+
+        {/* Quick Actions */}
+        <TOCSection id="actions" title="Hızlı İşlemler">
+          <Card variant="elevated">
+            <div className="grid md:grid-cols-3 gap-4">
+              <Link href="/dashboard/patients">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-full flex-col items-center justify-center text-center group hover:border-blue-500 hover:bg-blue-50 w-full py-6"
+                >
+                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
+                    👤
+                  </div>
+                  <p className="font-semibold text-gray-900 text-lg mb-1">Yeni Hasta Ekle</p>
+                  <p className="text-sm text-gray-500">Hasta kaydı oluştur ve takibe başla</p>
+                </Button>
+              </Link>
+
+              <Link href="/dashboard/analytics">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-full flex-col items-center justify-center text-center group hover:border-green-500 hover:bg-green-50 w-full py-6"
+                >
+                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
+                    📊
+                  </div>
+                  <p className="font-semibold text-gray-900 text-lg mb-1">
+                    Detaylı Analizler
+                  </p>
+                  <p className="text-sm text-gray-500">Grafikler ve performans metrikleri</p>
+                </Button>
+              </Link>
+
+              <Link href="/dashboard/protocols">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-full flex-col items-center justify-center text-center group hover:border-purple-500 hover:bg-purple-50 w-full py-6"
+                >
+                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
+                    📚
+                  </div>
+                  <p className="font-semibold text-gray-900 text-lg mb-1">Protokol Kütüphanesi</p>
+                  <p className="text-sm text-gray-500">Klinik kılavuzlar ve algoritmalar</p>
+                </Button>
               </Link>
             </div>
-          }
-        >
-          {recentPatients.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p>Henüz hasta eklenmedi</p>
+          </Card>
+        </TOCSection>
+
+        {/* Info Banner */}
+        <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-8 border border-indigo-200 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 p-3 bg-white rounded-xl shadow-sm">
+              <Brain className="w-8 h-8 text-indigo-600" />
             </div>
-          ) : (
-            <div className="space-y-3">
-              {recentPatients.map((patient) => (
-                <div
-                  key={patient.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer group"
-                >
-                  <Link href={`/dashboard/patients/${patient.id}`} className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Users className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {patient.name}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {patient.age && `${patient.age} yaş`}
-                          {patient.gender && ` • ${patient.gender}`}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                  <PatientStatusBadge
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    status={((patient.category as { slug?: string })?.slug as any) || 'active'}
-                    compact
-                  />
+            <div>
+              <h4 className="text-xl font-bold text-gray-900 mb-3">
+                🤖 AI Destekli Hasta Takibi
+              </h4>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                ACIL sistemi, hasta verilerinizi analiz ederek ayırıcı tanı önerileri, test
+                tavsiyeleri ve tedavi algoritmaları sunar. Her hasta için detaylı AI analizleri ve
+                görsel değerlendirmeler yapabilirsiniz.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm">
+                  <Brain className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium text-gray-700">GPT-4 Powered</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* Upcoming Reminders */}
-        <Card
-          variant="default"
-          header={
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Yaklaşan Hatırlatmalar</h2>
-              <ActivityBadge
-                isActive={!!(enrichedReminders && enrichedReminders.length > 0)}
-                label="Aktif Hatırlatmalar"
-              />
-            </div>
-          }
-        >
-          {!enrichedReminders || enrichedReminders.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p>Henüz hatırlatma yok</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {enrichedReminders.map((reminder: any) => (
-                <div
-                  key={reminder.id}
-                  className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border-l-4 border-l-blue-400"
-                >
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Clock className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-medium text-gray-900">
-                        {reminder.patients?.name || 'Hasta'}
-                      </p>
-                      <UrgencyBadge level="medium" size="sm" />
-                    </div>
-                    <p className="text-sm text-gray-600 capitalize mb-1">
-                      {reminder.reminder_type.replace('_', ' ')}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Calendar className="h-3 w-3" />
-                      <span>
-                        {format(new Date(reminder.scheduled_time), 'dd MMM yyyy, HH:mm', {
-                          locale: tr,
-                        })}
-                      </span>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm">
+                  <Activity className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">Real-time Analysis</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm">
+                  <BarChart3 className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-gray-700">Advanced Analytics</span>
+                </div>
+              </div>
             </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Workspace Category Panel */}
-      <WorkspaceCategoryPanel />
-
-      {/* Workspace Notes */}
-      {currentWorkspaceId && (
-        <Card
-          variant="default"
-          header={
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Workspace Notları</h2>
-              <span className="text-sm text-gray-500">Genel ekip notları ve iletişim</span>
-            </div>
-          }
-        >
-          <WorkspaceNotesPanel workspaceId={currentWorkspaceId} currentUserId={user.id} />
-        </Card>
-      )}
-
-      {/* Quick Actions */}
-      <Card
-        variant="default"
-        header={
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Hızlı İşlemler</h2>
-            <Button variant="ghost" size="sm" rightIcon={<BarChart3 className="h-4 w-4" />}>
-              Tümünü Gör
-            </Button>
-          </div>
-        }
-      >
-        <div className="grid md:grid-cols-3 gap-4">
-          <Link href="/dashboard/patients">
-            <Button
-              variant="outline"
-              size="lg"
-              leftIcon={<Plus className="h-5 w-5" />}
-              className="h-full flex-col items-center justify-center text-center group hover:border-blue-500 hover:bg-blue-50 w-full"
-            >
-              <div className="text-2xl mb-2 group-hover:scale-110 transition">➕</div>
-              <p className="font-medium text-gray-900">Yeni Hasta Ekle</p>
-              <p className="text-sm text-gray-500 mt-1">Hasta kaydı oluştur ve takibe başla</p>
-            </Button>
-          </Link>
-
-          <Link href="/dashboard/analytics">
-            <Button
-              variant="outline"
-              size="lg"
-              leftIcon={<BarChart3 className="h-5 w-5" />}
-              className="h-full flex-col items-center justify-center text-center group hover:border-green-500 hover:bg-green-50 w-full"
-            >
-              <div className="text-2xl mb-2 group-hover:scale-110 transition">📈</div>
-              <p className="font-medium text-gray-900">İstatistikleri Görüntüle</p>
-              <p className="text-sm text-gray-500 mt-1">Grafikler ve detaylı analizler</p>
-            </Button>
-          </Link>
-
-          <Link href="/dashboard/protocols">
-            <Button
-              variant="outline"
-              size="lg"
-              leftIcon={<FileText className="h-5 w-5" />}
-              className="h-full flex-col items-center justify-center text-center group hover:border-purple-500 hover:bg-purple-50 w-full"
-            >
-              <div className="text-2xl mb-2 group-hover:scale-110 transition">📚</div>
-              <p className="font-medium text-gray-900">Protokol Kütüphanesi</p>
-              <p className="text-sm text-gray-500 mt-1">Klinik protokoller ve kılavuzlar</p>
-            </Button>
-          </Link>
-        </div>
-      </Card>
-
-      {/* Info Banner */}
-      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">
-        <div className="flex items-start space-x-3">
-          <svg
-            className="w-6 h-6 text-indigo-600 mt-0.5 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">AI Destekli Hasta Takibi</h4>
-            <p className="text-gray-700 leading-relaxed">
-              ACIL sistemi, hasta verilerinizi analiz ederek ayırıcı tanı önerileri, test
-              tavsiyeleri ve tedavi algoritmaları sunar. Her hasta için detaylı AI analizleri ve
-              görsel değerlendirmeler yapabilirsiniz.
-            </p>
           </div>
         </div>
       </div>
