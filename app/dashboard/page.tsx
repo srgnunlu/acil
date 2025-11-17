@@ -122,7 +122,7 @@ export default async function DashboardHome() {
 
   // Test sayısı
   const { count: testCount } = await supabase
-    .from('tests')
+    .from('patient_tests')
     .select('*', { count: 'exact', head: true })
     .in('patient_id', patientIds)
 
