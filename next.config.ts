@@ -41,9 +41,11 @@ const sentryWebpackPluginOptions = {
   // Auth token for uploading source maps
   authToken: process.env.SENTRY_AUTH_TOKEN,
 
-  // Disable source map upload in development
-  disableServerWebpackPlugin: process.env.NODE_ENV !== 'production',
-  disableClientWebpackPlugin: process.env.NODE_ENV !== 'production',
+  // Disable source map upload in development or when Sentry is not configured
+  disableServerWebpackPlugin:
+    process.env.NODE_ENV !== 'production' || !process.env.SENTRY_AUTH_TOKEN,
+  disableClientWebpackPlugin:
+    process.env.NODE_ENV !== 'production' || !process.env.SENTRY_AUTH_TOKEN,
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
   widenClientFileUpload: true,
@@ -56,6 +58,6 @@ const sentryWebpackPluginOptions = {
 }
 
 // Export config with Sentry
-// Sentry plugins are already disabled in development mode
+// Sentry plugins are already disabled in development mode or when auth token is not available
 // Sentry initialization in config files will be skipped if DSN is not provided
 export default withSentryConfig(nextConfig, sentryWebpackPluginOptions)
