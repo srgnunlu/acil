@@ -25,10 +25,10 @@ export async function GET() {
     console.log('🔍 Environment Debug Info:', debugInfo)
 
     return NextResponse.json(debugInfo)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Debug endpoint error:', error)
     return NextResponse.json(
-      { error: error.message || 'Debug error' },
+      { error: error instanceof Error ? error.message : 'Debug error' },
       { status: 500 }
     )
   }

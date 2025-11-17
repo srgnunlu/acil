@@ -128,9 +128,12 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ config })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching monitoring config:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -182,9 +185,12 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({ success: true, config })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating monitoring config:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -247,8 +253,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, config }, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating monitoring config:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

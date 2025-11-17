@@ -41,15 +41,15 @@ export async function GET() {
       usage: response.usage,
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ OpenAI Test Error:', error)
-    
+
     return NextResponse.json({
       success: false,
-      error: error.message,
-      type: error.type,
-      code: error.code,
-      status: error.status,
+      error: error instanceof Error ? error.message : String(error),
+      type: error && typeof error === 'object' && 'type' in error ? (error as { type: unknown }).type : undefined,
+      code: error && typeof error === 'object' && 'code' in error ? (error as { code: unknown }).code : undefined,
+      status: error && typeof error === 'object' && 'status' in error ? (error as { status: unknown }).status : undefined,
     }, { status: 500 })
   }
 }

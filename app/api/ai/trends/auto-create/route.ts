@@ -241,8 +241,11 @@ export async function POST(request: Request) {
             }
           }
         }
-      } catch (error: any) {
-        failed.push({ metric: metricName, error: error.message })
+      } catch (error: unknown) {
+        failed.push({
+          metric: metricName,
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
     }
 
@@ -255,10 +258,10 @@ export async function POST(request: Request) {
       updated_metrics: updated,
       failed_metrics: failed,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error auto-creating trends:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     )
   }

@@ -141,9 +141,10 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
       setSummary(result.content.summary)
       setStep(2)
       toast.success('AI devir özeti başarıyla oluşturuldu!')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      toast.error(error.message || 'AI devir oluşturulurken hata oluştu')
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : 'AI devir oluşturulurken hata oluştu'
+      )
     }
   }
 
@@ -178,9 +179,8 @@ export function HandoffCreateModal({ isOpen, onClose, workspaceId }: HandoffCrea
       toast.success('Vardiya devri başarıyla oluşturuldu!')
       onClose()
       resetForm()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      toast.error(error.message || 'Devir oluşturulurken hata oluştu')
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Devir oluşturulurken hata oluştu')
     }
   }
 

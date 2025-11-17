@@ -145,10 +145,12 @@ export async function GET() {
         },
       },
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Statistics error:', error)
-    return NextResponse.json({ error: error.message || 'İstatistikler alınamadı' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'İstatistikler alınamadı' },
+      { status: 500 }
+    )
   }
 }
 

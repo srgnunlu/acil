@@ -769,7 +769,12 @@ JSON formatında yanıt ver (TÜM METİNLER TÜRKÇE):
       return NextResponse.json(
         {
           error: 'AI yanıtı işlenemedi',
-          details: process.env.NODE_ENV === 'development' ? parseError.message : undefined,
+          details:
+            process.env.NODE_ENV === 'development'
+              ? parseError instanceof Error
+                ? parseError.message
+                : String(parseError)
+              : undefined,
         },
         { status: 500 }
       )
@@ -803,13 +808,12 @@ JSON formatında yanıt ver (TÜM METİNLER TÜRKÇE):
         tokens_used: completion.usage?.total_tokens,
       },
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(
       {
-        error: error.message || error,
-        stack: error.stack,
-        name: error.name,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
       },
       'Unexpected error in POST /api/handoffs/generate'
     )
@@ -827,7 +831,7 @@ JSON formatında yanıt ver (TÜM METİNLER TÜRKÇE):
           model: 'gpt-4-turbo-preview',
           operation: 'handoff_generation',
           success: false,
-          error: error.message || String(error),
+          error: error instanceof Error ? error.message : String(error),
         })
       }
     } catch (logError) {
@@ -835,11 +839,12 @@ JSON formatında yanıt ver (TÜM METİNLER TÜRKÇE):
     }
 
     // Return user-friendly error message
-    const errorMessage = error.message || 'Devir notu oluşturulurken bir hata oluştu'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Devir notu oluşturulurken bir hata oluştu'
     return NextResponse.json(
       {
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
     )

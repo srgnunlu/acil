@@ -91,9 +91,12 @@ export async function PATCH(request: Request, context: RouteContext) {
       .single()
 
     return NextResponse.json({ success: true, alert: updatedAlert })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating alert:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -148,8 +151,11 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting alert:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
