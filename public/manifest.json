@@ -1,45 +1,134 @@
 {
   "name": "ACIL - Acil Tıp Asistanı",
   "short_name": "ACIL",
-  "description": "AI destekli acil tıp karar destek sistemi",
-  "start_url": "/",
+  "description": "AI destekli acil tıp karar destek sistemi - Multi-tenant hastane ve servis yönetimi",
+  "start_url": "/dashboard/patients",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "scope": "/",
-  "icons": [],
-  "screenshots": [
+  "icons": [
     {
-      "src": "/screenshot-mobile.png",
-      "sizes": "390x844",
+      "src": "/icons/icon-48.png",
+      "sizes": "48x48",
       "type": "image/png",
-      "form_factor": "narrow"
+      "purpose": "any"
     },
     {
-      "src": "/screenshot-desktop.png",
-      "sizes": "1920x1080",
+      "src": "/icons/icon-72.png",
+      "sizes": "72x72",
       "type": "image/png",
-      "form_factor": "wide"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["medical", "health", "productivity"],
-  "shortcuts": [
+  "screenshots": [
     {
-      "name": "Yeni Hasta",
-      "short_name": "Yeni Hasta",
-      "description": "Yeni hasta kaydı oluştur",
-      "url": "/patients?action=new"
+      "src": "/screenshots/mobile-patient-list.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Hasta Listesi"
     },
+    {
+      "src": "/screenshots/mobile-patient-detail.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Hasta Detayı"
+    },
+    {
+      "src": "/screenshots/desktop-dashboard.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Dashboard"
+    }
+  ],
+  "categories": ["medical", "health", "productivity", "business"],
+  "shortcuts": [
     {
       "name": "Hastalar",
       "short_name": "Hastalar",
       "description": "Hasta listesine git",
-      "url": "/patients"
+      "url": "/dashboard/patients",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Yeni Hasta",
+      "short_name": "Yeni Hasta",
+      "description": "Yeni hasta kaydı oluştur",
+      "url": "/dashboard/patients?action=new",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Bildirimler",
+      "short_name": "Bildirimler",
+      "description": "Bildirimleri görüntüle",
+      "url": "/dashboard/notifications",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Workspace",
+      "short_name": "Workspace",
+      "description": "Workspace'leri yönet",
+      "url": "/dashboard/workspace",
+      "icons": [
+        {
+          "src": "/icons/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ],
   "related_applications": [],
   "prefer_related_applications": false,
   "lang": "tr",
-  "dir": "ltr"
+  "dir": "ltr",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }
