@@ -59,9 +59,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
                       ACIL
                     </Link>
 
-                    {/* Mobile: Compact Workspace Switcher Only */}
-                    <div className="md:hidden flex items-center gap-1 flex-shrink min-w-0 max-w-[140px]">
-                      <WorkspaceSwitcher />
+                    {/* Mobile: Super Compact Organization + Workspace */}
+                    <div className="md:hidden flex items-center gap-1 flex-shrink min-w-0 max-w-[200px] overflow-hidden">
+                      <div className="w-[95px] min-w-0 flex-shrink-0 overflow-visible">
+                        <div className="scale-[0.85] origin-left">
+                          <OrganizationSwitcher />
+                        </div>
+                      </div>
+                      <div className="w-[95px] min-w-0 flex-shrink-0 overflow-visible">
+                        <div className="scale-[0.85] origin-left">
+                          <WorkspaceSwitcher />
+                        </div>
+                      </div>
                     </div>
 
                     {/* Desktop: Organization + Workspace switchers */}
