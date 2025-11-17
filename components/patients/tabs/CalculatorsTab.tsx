@@ -64,7 +64,7 @@ export function CalculatorsTab({
               patient_id: patientId,
               calculator_type: calc.type,
               input_data: autoFilledData,
-            })
+            } as any)
 
             setAutoCalculated((prev) => new Set(prev).add(calc.type))
 
@@ -228,7 +228,7 @@ export function CalculatorsTab({
               {/* Status Badge */}
               {isAutoCalculated && (
                 <div className="absolute top-2 right-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" title="Otomatik hesaplandı" />
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
               )}
               {isAutoCalculating && (
@@ -279,11 +279,11 @@ export function CalculatorsTab({
       </div>
 
       {/* Calculation History */}
-      {history && history.length > 0 && (
+      {history && history.results && history.results.length > 0 && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Hesaplama Geçmişi</h3>
           <div className="space-y-3">
-            {history.slice(0, 10).map((result) => {
+            {history.results.slice(0, 10).map((result) => {
               const calcMeta = CALCULATOR_METADATA[result.calculator_type as CalculatorType]
               return (
                 <div

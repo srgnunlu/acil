@@ -8,7 +8,7 @@
 import React from 'react'
 import { Clock, User, Users, FileText, CheckCircle, AlertCircle, Sparkles } from 'lucide-react'
 import type { HandoffWithDetails } from '@/types/handoff.types'
-import { HANDOFF_STATUS_CONFIG } from '@/types/handoff.types'
+import { HANDOFF_STATUS_CONFIG, HandoffStatus } from '@/types/handoff.types'
 import { formatDistanceToNow } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -60,7 +60,7 @@ export function HandoffList({ handoffs, isLoading, onHandoffClick }: HandoffList
       <div className="divide-y divide-gray-200">
         {handoffs.map((handoff) => (
           <HandoffListItem
-            key={handoff.id}
+            key={(handoff as any).id}
             handoff={handoff}
             onClick={() => onHandoffClick(handoff)}
           />
@@ -76,10 +76,10 @@ interface HandoffListItemProps {
 }
 
 function HandoffListItem({ handoff, onClick }: HandoffListItemProps) {
-  const statusConfig = HANDOFF_STATUS_CONFIG[handoff.status]
-  const patientCount = handoff._count?.patients || 0
-  const completedChecklist = handoff._count?.completed_checklist_items || 0
-  const totalChecklist = handoff._count?.checklist_items || 0
+  const statusConfig = HANDOFF_STATUS_CONFIG[(handoff as any).status as HandoffStatus]
+  const patientCount = (handoff as any)._count?.patients || 0
+  const completedChecklist = (handoff as any)._count?.completed_checklist_items || 0
+  const totalChecklist = (handoff as any)._count?.checklist_items || 0
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -106,11 +106,11 @@ function HandoffListItem({ handoff, onClick }: HandoffListItemProps) {
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-center gap-3 mb-3">
-            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getStatusColor(handoff.status)}`}>
+            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getStatusColor((handoff as any).status)}`}>
               {statusConfig.label}
             </div>
 
-            {handoff.is_ai_generated && (
+            {(handoff as any).is_ai_generated && (
               <div className="px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-700 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 AI Destekli
@@ -118,7 +118,7 @@ function HandoffListItem({ handoff, onClick }: HandoffListItemProps) {
             )}
 
             <span className="text-sm text-gray-500">
-              {new Date(handoff.handoff_date).toLocaleDateString('tr-TR', {
+              {new Date((handoff as any).handoff_date).toLocaleDateString('tr-TR', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
@@ -126,7 +126,7 @@ function HandoffListItem({ handoff, onClick }: HandoffListItemProps) {
             </span>
 
             <span className="text-sm text-gray-400">
-              {formatDistanceToNow(new Date(handoff.created_at), {
+              {formatDistanceToNow(new Date((handoff as any).created_at), {
                 addSuffix: true,
                 locale: tr,
               })}
@@ -139,7 +139,7 @@ function HandoffListItem({ handoff, onClick }: HandoffListItemProps) {
               <User className="w-4 h-4 text-gray-400" />
               <span className="text-sm text-gray-600">Veren:</span>
               <span className="text-sm font-medium text-gray-900">
-                {handoff.from_user?.full_name || 'Bilinmiyor'}
+                {(handoff as any).from_user?.full_name || 'Bilinmiyor'}
               </span>
             </div>
 
@@ -149,15 +149,15 @@ function HandoffListItem({ handoff, onClick }: HandoffListItemProps) {
               <User className="w-4 h-4 text-gray-400" />
               <span className="text-sm text-gray-600">Alan:</span>
               <span className="text-sm font-medium text-gray-900">
-                {handoff.to_user?.full_name || 'Bilinmiyor'}
+                {(handoff as any).to_user?.full_name || 'Bilinmiyor'}
               </span>
             </div>
           </div>
 
           {/* Summary */}
-          {handoff.summary && (
+          {(handoff as any).summary && (
             <p className="text-sm text-gray-700 line-clamp-2 mb-3">
-              {handoff.summary}
+              {(handoff as any).summary}
             </p>
           )}
 
@@ -177,15 +177,15 @@ function HandoffListItem({ handoff, onClick }: HandoffListItemProps) {
               </div>
             )}
 
-            {handoff.shift?.shift_definition && (
+            {(handoff as any).shift?.shift_definition && (
               <div
                 className="px-2 py-1 rounded text-xs font-medium"
                 style={{
-                  backgroundColor: `${handoff.shift.shift_definition.color}20`,
-                  color: handoff.shift.shift_definition.color,
+                  backgroundColor: `${(handoff as any).shift.shift_definition.color}20`,
+                  color: (handoff as any).shift.shift_definition.color,
                 }}
               >
-                {handoff.shift.shift_definition.name}
+                {(handoff as any).shift.shift_definition.name}
               </div>
             )}
           </div>
@@ -193,9 +193,9 @@ function HandoffListItem({ handoff, onClick }: HandoffListItemProps) {
 
         {/* Right side - Status icon */}
         <div className="ml-4">
-          {handoff.status === 'completed' ? (
+          {(handoff as any).status === 'completed' ? (
             <CheckCircle className="w-6 h-6 text-green-500" />
-          ) : handoff.status === 'pending_review' ? (
+          ) : (handoff as any).status === 'pending_review' ? (
             <AlertCircle className="w-6 h-6 text-yellow-500" />
           ) : (
             <Clock className="w-6 h-6 text-gray-400" />
