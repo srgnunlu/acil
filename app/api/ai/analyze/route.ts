@@ -87,11 +87,13 @@ export async function POST(request: Request) {
       success: true,
       analysis: savedAnalysis,
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('AI analiz hatası:', error)
     return NextResponse.json(
-      { error: error.message || 'Analiz yapılırken bir hata oluştu' },
+      {
+        error:
+          error instanceof Error ? error.message : 'Analiz yapılırken bir hata oluştu',
+      },
       { status: 500 }
     )
   }

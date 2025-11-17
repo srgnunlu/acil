@@ -67,9 +67,12 @@ export async function GET(request: Request) {
       total: comparisons.length,
       latest_comparison: comparisons[0] || null,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching comparisons:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -252,8 +255,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, comparison }, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating comparison:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

@@ -95,9 +95,11 @@ export function LesionImageCard({ test }: LesionImageCardProps) {
 
       // Refresh immediately
       router.refresh()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Lezyon analizi silinirken hata:', error)
-      alert(`Silme işlemi başarısız: ${error.message || 'Bilinmeyen hata'}`)
+      alert(
+        `Silme işlemi başarısız: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`
+      )
       setIsDeleting(false)
     }
   }

@@ -72,9 +72,12 @@ export async function GET(request: Request) {
       trends: trends || [],
       total: trends?.length || 0,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching trends:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -254,8 +257,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, trend }, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error calculating trend:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

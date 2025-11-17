@@ -46,10 +46,12 @@ export async function GET() {
       success: true,
       reminders: enrichedReminders,
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get reminders error:', error)
-    return NextResponse.json({ error: error.message || 'Bildirimler alınamadı' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Bildirimler alınamadı' },
+      { status: 500 }
+    )
   }
 }
 
@@ -118,11 +120,10 @@ export async function POST(request: Request) {
       success: true,
       reminder,
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Create reminder error:', error)
     return NextResponse.json(
-      { error: error.message || 'Hatırlatma oluşturulamadı' },
+      { error: error instanceof Error ? error.message : 'Hatırlatma oluşturulamadı' },
       { status: 500 }
     )
   }
@@ -161,11 +162,10 @@ export async function PATCH(request: Request) {
       success: true,
       reminder,
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Update reminder error:', error)
     return NextResponse.json(
-      { error: error.message || 'Hatırlatma güncellenemedi' },
+      { error: error instanceof Error ? error.message : 'Hatırlatma güncellenemedi' },
       { status: 500 }
     )
   }

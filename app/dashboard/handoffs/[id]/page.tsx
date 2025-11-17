@@ -98,8 +98,8 @@ export default function HandoffDetailPage() {
     try {
       await acknowledgeMutation.mutateAsync(handoffId)
       toast.success('Devir onaylandı!')
-    } catch (error: any) {
-      toast.error(error.message || 'Devir onaylanırken hata oluştu')
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Devir onaylanırken hata oluştu')
     }
   }
 
@@ -122,8 +122,8 @@ export default function HandoffDetailPage() {
       await deleteMutation.mutateAsync(handoffId)
       toast.success('Devir silindi')
       router.push('/dashboard/handoffs')
-    } catch (error: any) {
-      toast.error(error.message || 'Devir silinirken hata oluştu')
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Devir silinirken hata oluştu')
     }
   }
 

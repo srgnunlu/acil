@@ -89,10 +89,13 @@ export async function POST(request: Request) {
       success: true,
       comparison,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Comparison API error:', error)
     return NextResponse.json(
-      { error: error.message || 'Karşılaştırma yapılırken hata oluştu' },
+      {
+        error:
+          error instanceof Error ? error.message : 'Karşılaştırma yapılırken hata oluştu',
+      },
       { status: 500 }
     )
   }

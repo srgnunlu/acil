@@ -111,9 +111,12 @@ export async function POST(request: Request) {
       alerts_created: alertsCreated.length,
       alert_ids: alertsCreated,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error checking vital signs:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 

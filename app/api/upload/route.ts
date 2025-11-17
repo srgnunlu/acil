@@ -109,10 +109,10 @@ export async function POST(request: Request) {
       url: publicUrl,
       path: fileName,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Upload error:', error)
     return NextResponse.json(
-      { error: error.message || 'Dosya yüklenirken hata oluştu' },
+      { error: error instanceof Error ? error.message : 'Dosya yüklenirken hata oluştu' },
       { status: 500 }
     )
   }
