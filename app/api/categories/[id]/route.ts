@@ -204,7 +204,7 @@ export async function DELETE(
     // Check if any patients are using this category
     const { count } = await supabase
       .from('patients')
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('category_id', id)
       .is('deleted_at', null)
 
