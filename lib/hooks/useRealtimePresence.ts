@@ -160,9 +160,9 @@ export function useRealtimePresence({
           status: initialStatus,
           viewing_patient_id: null,
           online_at: new Date().toISOString(),
-          full_name: profileData?.full_name || null,
-          avatar_url: profileData?.avatar_url || null,
-          title: profileData?.title || null,
+          full_name: profileData?.full_name || undefined,
+          avatar_url: profileData?.avatar_url || undefined,
+          title: profileData?.title || undefined,
         }
 
         currentStateRef.current = initialState

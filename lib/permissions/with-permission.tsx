@@ -24,7 +24,7 @@ export function withPermission<P extends object>(options: RouteGuardOptions) {
   return function <T extends ComponentType<P>>(Component: T): T {
     const ProtectedComponent = async (props: P) => {
       await requireRoutePermission(options)
-      return <Component {...props} />
+      return <Component {...(props as any)} />
     }
 
     ProtectedComponent.displayName = `withPermission(${Component.displayName || Component.name})`
@@ -52,7 +52,7 @@ export function withRole<P extends object>(
         ...options,
         permission: undefined,
       })
-      return <Component {...props} />
+      return <Component {...(props as any)} />
     }
 
     ProtectedComponent.displayName = `withRole(${Component.displayName || Component.name})`

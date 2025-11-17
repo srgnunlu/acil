@@ -50,7 +50,7 @@ export function useStickyNotes({
           workspace_id: workspaceId,
           ...filters,
           ...(patientId !== undefined && { patient_id: patientId || 'null' }),
-        } as Record<string, unknown>)
+        } as any)
 
         const response = await fetch(`/api/sticky-notes?${params}`, {
           signal: abortSignal,
@@ -184,10 +184,19 @@ export function useStickyNotes({
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
               author: null,
+              author_id: '',
               mentions: [],
               reactions: [],
               replies: [],
               replies_count: 0,
+              position_x: null,
+              position_y: null,
+              sort_order: 0,
+              is_pinned: false,
+              is_resolved: false,
+              resolved_at: null,
+              resolved_by: null,
+              deleted_at: null,
             } as StickyNoteWithDetails,
             ...previousNotes.notes,
           ],

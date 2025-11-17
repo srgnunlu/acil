@@ -48,7 +48,7 @@ export function createChannelName(config: ChannelConfig): string {
 /**
  * Subscribe to table changes
  */
-export function subscribeToTable<T = unknown>(
+export function subscribeToTable<T extends Record<string, any> = any>(
   channel: RealtimeChannel,
   table: string,
   filter?: string,
@@ -104,15 +104,15 @@ export function subscribeToPresence(
 
   if (onJoin) {
     channel.on('presence', { event: 'join' }, ({ key, currentPresences, newPresences }) => {
-      const current = newPresences[0] as PresencePayload
-      onJoin(key, current, currentPresences as Record<string, PresencePayload[]>)
+      const current = newPresences[0] as unknown as PresencePayload
+      onJoin(key, current, currentPresences as unknown as Record<string, PresencePayload[]>)
     })
   }
 
   if (onLeave) {
     channel.on('presence', { event: 'leave' }, ({ key, currentPresences, leftPresences }) => {
-      const current = leftPresences[0] as PresencePayload
-      onLeave(key, current, currentPresences as Record<string, PresencePayload[]>)
+      const current = leftPresences[0] as unknown as PresencePayload
+      onLeave(key, current, currentPresences as unknown as Record<string, PresencePayload[]>)
     })
   }
 
@@ -126,7 +126,7 @@ export async function trackPresence(
   channel: RealtimeChannel,
   state: PresencePayload
 ): Promise<'ok' | 'timed_out' | 'error'> {
-  return channel.track(state)
+  return channel.track(state) as Promise<'ok' | 'timed_out' | 'error'>
 }
 
 /**
@@ -135,7 +135,7 @@ export async function trackPresence(
 export async function untrackPresence(
   channel: RealtimeChannel
 ): Promise<'ok' | 'timed_out' | 'error'> {
-  return channel.untrack()
+  return channel.untrack() as Promise<'ok' | 'timed_out' | 'error'>
 }
 
 /**

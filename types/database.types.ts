@@ -644,6 +644,300 @@ export interface Database {
           created_at?: string
         }
       }
+      tasks: {
+        Row: {
+          id: string
+          workspace_id: string
+          patient_id: string | null
+          title: string
+          description: string | null
+          priority: 'urgent' | 'high' | 'medium' | 'low'
+          status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold'
+          assigned_to: string | null
+          assigned_by: string | null
+          due_date: string | null
+          started_at: string | null
+          completed_at: string | null
+          category: string | null
+          tags: string[] | null
+          template_id: string | null
+          reminder_enabled: boolean
+          reminder_before_minutes: number | null
+          reminder_sent_at: string | null
+          blocked_by: string | null
+          progress_percentage: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          patient_id?: string | null
+          title: string
+          description?: string | null
+          priority?: 'urgent' | 'high' | 'medium' | 'low'
+          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold'
+          assigned_to?: string | null
+          assigned_by?: string | null
+          due_date?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          category?: string | null
+          tags?: string[] | null
+          template_id?: string | null
+          reminder_enabled?: boolean
+          reminder_before_minutes?: number | null
+          reminder_sent_at?: string | null
+          blocked_by?: string | null
+          progress_percentage?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          patient_id?: string | null
+          title?: string
+          description?: string | null
+          priority?: 'urgent' | 'high' | 'medium' | 'low'
+          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold'
+          assigned_to?: string | null
+          assigned_by?: string | null
+          due_date?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          category?: string | null
+          tags?: string[] | null
+          template_id?: string | null
+          reminder_enabled?: boolean
+          reminder_before_minutes?: number | null
+          reminder_sent_at?: string | null
+          blocked_by?: string | null
+          progress_percentage?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+      }
+      task_templates: {
+        Row: {
+          id: string
+          workspace_id: string | null
+          organization_id: string | null
+          name: string
+          description: string | null
+          category: string | null
+          default_priority: 'urgent' | 'high' | 'medium' | 'low'
+          default_duration_minutes: number | null
+          default_reminder_before_minutes: number | null
+          title_template: string
+          description_template: string | null
+          checklist_items: Json
+          default_tags: string[] | null
+          is_system: boolean
+          is_active: boolean
+          usage_count: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          workspace_id?: string | null
+          organization_id?: string | null
+          name: string
+          description?: string | null
+          category?: string | null
+          default_priority?: 'urgent' | 'high' | 'medium' | 'low'
+          default_duration_minutes?: number | null
+          default_reminder_before_minutes?: number | null
+          title_template: string
+          description_template?: string | null
+          checklist_items?: Json
+          default_tags?: string[] | null
+          is_system?: boolean
+          is_active?: boolean
+          usage_count?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          workspace_id?: string | null
+          organization_id?: string | null
+          name?: string
+          description?: string | null
+          category?: string | null
+          default_priority?: 'urgent' | 'high' | 'medium' | 'low'
+          default_duration_minutes?: number | null
+          default_reminder_before_minutes?: number | null
+          title_template?: string
+          description_template?: string | null
+          checklist_items?: Json
+          default_tags?: string[] | null
+          is_system?: boolean
+          is_active?: boolean
+          usage_count?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+      }
+      task_checklist_items: {
+        Row: {
+          id: string
+          task_id: string
+          title: string
+          description: string | null
+          order_index: number
+          is_completed: boolean
+          completed_at: string | null
+          completed_by: string | null
+          assigned_to: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          task_id: string
+          title: string
+          description?: string | null
+          order_index?: number
+          is_completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          title?: string
+          description?: string | null
+          order_index?: number
+          is_completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      task_comments: {
+        Row: {
+          id: string
+          task_id: string
+          content: string
+          mentions: Json
+          created_by: string
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          task_id: string
+          content: string
+          mentions?: Json
+          created_by: string
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          content?: string
+          mentions?: Json
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+      }
+      task_attachments: {
+        Row: {
+          id: string
+          task_id: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          storage_path: string | null
+          uploaded_by: string
+          uploaded_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          task_id: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          storage_path?: string | null
+          uploaded_by: string
+          uploaded_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          storage_path?: string | null
+          uploaded_by?: string
+          uploaded_at?: string
+          deleted_at?: string | null
+        }
+      }
+      task_activity_log: {
+        Row: {
+          id: string
+          task_id: string
+          activity_type: string
+          field_name: string | null
+          old_value: string | null
+          new_value: string | null
+          metadata: Json
+          performed_by: string | null
+          performed_at: string
+        }
+        Insert: {
+          id?: string
+          task_id: string
+          activity_type: string
+          field_name?: string | null
+          old_value?: string | null
+          new_value?: string | null
+          metadata?: Json
+          performed_by?: string | null
+          performed_at?: string
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          activity_type?: string
+          field_name?: string | null
+          old_value?: string | null
+          new_value?: string | null
+          metadata?: Json
+          performed_by?: string | null
+          performed_at?: string
+        }
+      }
     }
   }
 }

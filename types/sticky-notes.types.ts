@@ -376,37 +376,4 @@ export interface UnreadMentionsSummary {
 }
 
 // ============================================
-// EXPORT ALL
-// ============================================
-
-export type {
-  // Database types
-  StickyNote,
-  NoteMention,
-  NoteReaction,
-  // Extended types
-  StickyNoteWithAuthor,
-  StickyNoteWithDetails,
-  MentionWithNote,
-  // API types
-  CreateStickyNoteRequest,
-  UpdateStickyNoteRequest,
-  StickyNotesResponse,
-  CreateReactionRequest,
-  ReactionGroup,
-  // Filter types
-  StickyNotesFilters,
-  StickyNotesQuery,
-  // UI types
-  StickyNoteFormState,
-  MentionSuggestion,
-  NoteEditorState,
-  // Realtime types
-  RealtimeStickyNoteEvent,
-  RealtimeMentionEvent,
-  RealtimeReactionEvent,
-  // Utility types
-  OptimisticStickyNote,
-  NoteThread,
-  UnreadMentionsSummary,
-};
+// All types are already exported inline above, no need for redundant export block

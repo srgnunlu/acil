@@ -84,9 +84,9 @@ export function useRealtimePatients({
                 queryClient.invalidateQueries({ queryKey: ['patients', workspaceId] })
 
                 // Call callback
-                if (callbacksRef.current.onInsert) {
+                if (callbacksRef.current.onInsert && payload.new) {
                   try {
-                    callbacksRef.current.onInsert(payload.new)
+                    callbacksRef.current.onInsert(payload.new as Patient)
                   } catch (callbackErr) {
                     console.error('[useRealtimePatients] Insert callback error:', callbackErr)
                   }
@@ -110,12 +110,14 @@ export function useRealtimePatients({
 
                 // Invalidate queries
                 queryClient.invalidateQueries({ queryKey: ['patients', workspaceId] })
-                queryClient.invalidateQueries({ queryKey: ['patient', payload.new.id] })
+                if (payload.new && (payload.new as Patient).id) {
+                  queryClient.invalidateQueries({ queryKey: ['patient', (payload.new as Patient).id] })
+                }
 
                 // Call callback
-                if (callbacksRef.current.onUpdate) {
+                if (callbacksRef.current.onUpdate && payload.new) {
                   try {
-                    callbacksRef.current.onUpdate(payload.new)
+                    callbacksRef.current.onUpdate(payload.new as Patient)
                   } catch (callbackErr) {
                     console.error('[useRealtimePatients] Update callback error:', callbackErr)
                   }
@@ -141,9 +143,9 @@ export function useRealtimePatients({
                 queryClient.invalidateQueries({ queryKey: ['patients', workspaceId] })
 
                 // Call callback
-                if (callbacksRef.current.onDelete && payload.old.id) {
+                if (callbacksRef.current.onDelete && payload.old && (payload.old as Patient).id) {
                   try {
-                    callbacksRef.current.onDelete(payload.old.id)
+                    callbacksRef.current.onDelete((payload.old as Patient).id)
                   } catch (callbackErr) {
                     console.error('[useRealtimePatients] Delete callback error:', callbackErr)
                   }

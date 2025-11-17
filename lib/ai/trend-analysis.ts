@@ -195,11 +195,12 @@ export async function generateTrendInterpretation(
   }
 
   // Build patient context string for prompt
-  const patientInfo = patientContext?.demographics
+  const demographics = patientContext?.demographics as any
+  const patientInfo = demographics
     ? `Hasta Bilgileri:
-- İsim: ${patientContext.demographics.name || 'Bilinmiyor'}
-- Yaş: ${patientContext.demographics.age || 'Bilinmiyor'}
-- Cinsiyet: ${patientContext.demographics.gender || 'Bilinmiyor'}
+- İsim: ${demographics.name || 'Bilinmiyor'}
+- Yaş: ${demographics.age || 'Bilinmiyor'}
+- Cinsiyet: ${demographics.gender || 'Bilinmiyor'}
 `
     : `Hasta Bilgileri:
 - Genel hasta profili (detaylı bilgi mevcut değil)
@@ -656,7 +657,7 @@ export async function extractTrendDataPoints(
           context: { record_id: record.id, data_type: 'vital_signs' },
         }
       })
-      .filter((dp): dp is TrendDataPoint => dp !== null)
+      .filter((dp: TrendDataPoint | null): dp is TrendDataPoint => dp !== null)
 
     console.log(`[extractTrendDataPoints] Extracted ${dataPoints.length} valid data points for metric "${metricName}"`)
     if (dataPoints.length > 0) {
