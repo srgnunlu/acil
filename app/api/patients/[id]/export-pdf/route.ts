@@ -56,7 +56,7 @@ export async function GET(request: NextRequest, context: { params: Promise<Param
 
     // Testleri al
     const { data: tests } = await supabase
-      .from('tests')
+      .from('patient_tests')
       .select('*')
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false })

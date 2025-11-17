@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     // Get test type distribution
     const { data: tests } = await supabase
-      .from('tests')
+      .from('patient_tests')
       .select('test_type')
       .in('patient_id', patientIds)
 

@@ -48,7 +48,7 @@ export async function GET() {
 
     // Test türleri dağılımı
     const { data: tests } = await supabase
-      .from('tests')
+      .from('patient_tests')
       .select('test_type, patient_id')
       .in('patient_id', patients?.map((p) => p.id) || [])
 
