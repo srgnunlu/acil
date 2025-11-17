@@ -20,6 +20,21 @@ interface BrowserInfo {
 }
 
 function detectBrowser(): BrowserInfo {
+  // Return default values if running on server
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return {
+      name: 'Unknown',
+      version: 'Unknown',
+      isSupported: true,
+      features: {
+        serviceWorker: false,
+        pushNotifications: false,
+        webRTC: false,
+        speechRecognition: false,
+      },
+    }
+  }
+
   const ua = navigator.userAgent
   const isChrome = /Chrome/.test(ua) && /Google Inc/.test(navigator.vendor)
   const isSafari = /Safari/.test(ua) && /Apple Computer/.test(navigator.vendor)

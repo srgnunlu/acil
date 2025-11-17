@@ -12,7 +12,7 @@ export interface ConnectionInfo {
 }
 
 export function getConnectionInfo(): ConnectionInfo {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return { status: 'online' }
   }
 
@@ -45,11 +45,11 @@ export function getConnectionInfo(): ConnectionInfo {
 }
 
 export function isOnline(): boolean {
-  return typeof window !== 'undefined' && navigator.onLine
+  return typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine
 }
 
 export function isOffline(): boolean {
-  return typeof window !== 'undefined' && !navigator.onLine
+  return typeof window !== 'undefined' && typeof navigator !== 'undefined' && !navigator.onLine
 }
 
 export function isSlowConnection(): boolean {
@@ -61,7 +61,7 @@ export function isSlowConnection(): boolean {
 export function addConnectionListener(
   callback: (status: ConnectionStatus, info: ConnectionInfo) => void
 ): () => void {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return () => {}
   }
 
