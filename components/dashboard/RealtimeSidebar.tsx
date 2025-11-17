@@ -196,20 +196,10 @@ export function RealtimeSidebarToggle() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-[9999] bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full p-4 shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center group relative"
+          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full p-3 md:p-4 shadow-2xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center group relative"
           aria-label="Canlı durumu aç"
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            zIndex: 9999,
-            width: '56px',
-            height: '56px',
-            minWidth: '56px',
-            minHeight: '56px',
-          }}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -221,8 +211,7 @@ export function RealtimeSidebarToggle() {
           {/* Online users badge */}
           {onlineCount > 0 && (
             <span
-              className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center border-2 border-white shadow-md"
-              style={{ zIndex: 10000 }}
+              className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 md:h-6 md:w-6 flex items-center justify-center border-2 border-white shadow-md"
             >
               {onlineCount}
             </span>
@@ -232,6 +221,11 @@ export function RealtimeSidebarToggle() {
           {status === 'connected' && (
             <span className="absolute inset-0 rounded-full bg-blue-600 animate-ping opacity-20" />
           )}
+
+          {/* Tooltip hint */}
+          <span className="absolute left-0 -translate-x-full mr-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none hidden md:block">
+            Canlı Durum
+          </span>
         </button>
       )}
 

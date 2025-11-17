@@ -9,6 +9,7 @@ import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus'
 import { PWAInstallPrompt } from './PWAInstallPrompt'
 import { OfflineIndicator } from './OfflineIndicator'
 import { UpdatePrompt } from './UpdatePrompt'
+import { BrowserSupportGuide } from './BrowserSupportGuide'
 
 interface PWAContextValue extends PWAState {
   install: () => Promise<{ outcome: 'accepted' | 'dismissed' | 'not-available'; platform?: string }>
@@ -35,6 +36,7 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   return (
     <PWAContext.Provider value={value}>
       {children}
+      <BrowserSupportGuide />
       <PWAInstallPrompt />
       <OfflineIndicator />
       <UpdatePrompt />

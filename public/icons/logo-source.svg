@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="180" fill="#2563EB"/>
+
+  <!-- Medical Cross -->
+  <g transform="translate(512, 512)">
+    <!-- Vertical bar -->
+    <rect x="-80" y="-320" width="160" height="640" rx="20" fill="white"/>
+
+    <!-- Horizontal bar -->
+    <rect x="-320" y="-80" width="640" height="160" rx="20" fill="white"/>
+
+    <!-- Center circle (pulse/heartbeat indicator) -->
+    <circle cx="0" cy="0" r="100" fill="#EF4444"/>
+    <circle cx="0" cy="0" r="60" fill="white"/>
+
+    <!-- Pulse line in center -->
+    <path d="M -30 0 L -15 0 L -10 -20 L 0 20 L 10 -15 L 15 0 L 30 0"
+          stroke="#EF4444"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none"/>
+  </g>
+
+  <!-- ACIL Text -->
+  <text x="512" y="880"
+        font-family="Arial, sans-serif"
+        font-size="120"
+        font-weight="bold"
+        fill="white"
+        text-anchor="middle">
+    ACIL
+  </text>
+</svg>
