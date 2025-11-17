@@ -4,7 +4,7 @@
 // Phase 12 - PWA Enhancement - Browser Compatibility
 
 import { useState } from 'react'
-import { AlertTriangle, Chrome, Safari, X, ExternalLink } from 'lucide-react'
+import { AlertTriangle, Chrome, Globe, X, ExternalLink } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface BrowserInfo {
@@ -169,7 +169,7 @@ export function BrowserSupportGuide() {
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors text-xs"
                   aria-label="Safari tarayıcısını indir (yeni sekmede açılır)"
                 >
-                  <Safari className="h-3.5 w-3.5 text-amber-600" aria-hidden="true" />
+                  <Globe className="h-3.5 w-3.5 text-amber-600" aria-hidden="true" />
                   <span>Safari</span>
                   <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 </a>

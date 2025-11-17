@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, Briefcase, Smartphone, Bell, Tag } from 'lucide-react'
+import { Building2, Briefcase, Smartphone, Bell, Tag, LayoutGrid } from 'lucide-react'
 import { NotificationPreferencesClient } from './NotificationPreferencesClient'
 
 export default async function SettingsPage() {
