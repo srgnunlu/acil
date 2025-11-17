@@ -137,7 +137,7 @@ export function useLongPress<T extends HTMLElement>(
 ) {
   const { delay = 500 } = options
   const ref = useRef<T>(null)
-  const timerRef = useRef<NodeJS.Timeout>()
+  const timerRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const [isPressed, setIsPressed] = useState(false)
 
   useEffect(() => {

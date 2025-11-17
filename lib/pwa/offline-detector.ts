@@ -52,7 +52,7 @@ export function isOffline(): boolean {
   return typeof window !== 'undefined' && !navigator.onLine
 }
 
-export function isSlow Connection(): boolean {
+export function isSlowConnection(): boolean {
   const info = getConnectionInfo()
   return info.status === 'slow'
 }
