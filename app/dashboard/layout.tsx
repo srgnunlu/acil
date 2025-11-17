@@ -59,7 +59,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
                       ACIL
                     </Link>
 
-                    {/* Organization ve Workspace switcher'ları - hidden on small screens */}
+                    {/* Mobile: Compact Workspace Switcher Only */}
+                    <div className="md:hidden flex items-center gap-1 flex-shrink min-w-0 max-w-[140px]">
+                      <WorkspaceSwitcher />
+                    </div>
+
+                    {/* Desktop: Organization + Workspace switchers */}
                     <div className="hidden md:flex items-center gap-1.5 lg:gap-2 flex-shrink min-w-0">
                       <div className="w-[120px] lg:w-[150px] min-w-0 flex-shrink-0 overflow-visible">
                         <OrganizationSwitcher />
