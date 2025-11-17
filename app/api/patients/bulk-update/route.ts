@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
           .from('patients')
           .update({ category_id: updateData.category_id })
           .in('id', patient_ids)
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact' })
 
         updateCount = count || 0
         break
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
           .from('patients')
           .update(updatePayload)
           .in('id', patient_ids)
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact' })
 
         updateCount = count || 0
         break
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
         const { count } = await supabase
           .from('patient_assignments')
           .insert(assignments)
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact' })
 
         updateCount = count || 0
 
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
           .in('patient_id', patient_ids)
           .eq('user_id', updateData.doctor_id)
           .eq('is_active', true)
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'exact' })
 
         updateCount = count || 0
 
