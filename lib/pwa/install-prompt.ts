@@ -71,7 +71,7 @@ export function isInstallPromptAvailable(): boolean {
 }
 
 export function isPWAInstalled(): boolean {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return false
   }
 
@@ -85,7 +85,7 @@ export function isPWAInstalled(): boolean {
 }
 
 export function getPWADisplayMode(): 'browser' | 'standalone' | 'fullscreen' | 'minimal-ui' {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return 'browser'
   }
 
@@ -106,7 +106,7 @@ export function getPWADisplayMode(): 'browser' | 'standalone' | 'fullscreen' | '
 
 // Check if device is iOS
 export function isIOS(): boolean {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return false
   }
 
@@ -118,7 +118,7 @@ export function isIOS(): boolean {
 
 // Check if device is Android
 export function isAndroid(): boolean {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return false
   }
 
