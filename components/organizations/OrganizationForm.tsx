@@ -10,7 +10,7 @@ import type {
 
 interface OrganizationFormProps {
   organization?: Organization
-  onSubmit: (data: CreateOrganizationInput | Partial<Organization>) => Promise<void>
+  onSubmit: (data: any) => Promise<void>
   onCancel?: () => void
 }
 

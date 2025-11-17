@@ -56,7 +56,7 @@ export default function QSOFACalculator({
         patient_id: patientId,
         calculator_type: 'qsofa',
         input_data: input,
-      })
+      } as any)
     } catch (error) {
       console.error('Calculation failed:', error)
     }
