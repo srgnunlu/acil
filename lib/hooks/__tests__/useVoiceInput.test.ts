@@ -13,10 +13,10 @@ class MockSpeechRecognition {
   lang = 'en-US'
   maxAlternatives = 1
 
-  onresult: any = null
-  onerror: any = null
-  onend: any = null
-  onstart: any = null
+  onresult: ((event: unknown) => void) | null = null
+  onerror: ((event: unknown) => void) | null = null
+  onend: (() => void) | null = null
+  onstart: (() => void) | null = null
 
   start = vi.fn(() => {
     this.onstart?.()
@@ -58,17 +58,19 @@ describe('useVoiceInput Hook', () => {
   beforeEach(() => {
     mockRecognition = new MockSpeechRecognition()
 
-    // @ts-ignore
-    global.window.SpeechRecognition = vi.fn(() => mockRecognition)
-    // @ts-ignore
+    // @ts-expect-error - Mocking global window property
+    global.window.SpeechRecognition = function () {
+      return mockRecognition
+    }
+    // @ts-expect-error - Mocking global window property
     global.window.webkitSpeechRecognition = undefined
   })
 
   afterEach(() => {
     vi.clearAllMocks()
-    // @ts-ignore
+    // @ts-expect-error - Deleting global window property
     delete global.window.SpeechRecognition
-    // @ts-ignore
+    // @ts-expect-error - Deleting global window property
     delete global.window.webkitSpeechRecognition
   })
 
@@ -83,7 +85,7 @@ describe('useVoiceInput Hook', () => {
   })
 
   it('should detect when speech recognition is not supported', () => {
-    // @ts-ignore
+    // @ts-expect-error - Deleting global window property for testing
     delete global.window.SpeechRecognition
 
     const { result } = renderHook(() => useVoiceInput())
@@ -92,10 +94,12 @@ describe('useVoiceInput Hook', () => {
   })
 
   it('should use webkitSpeechRecognition as fallback', () => {
-    // @ts-ignore
+    // @ts-expect-error - Deleting global window property for testing
     delete global.window.SpeechRecognition
-    // @ts-ignore
-    global.window.webkitSpeechRecognition = vi.fn(() => mockRecognition)
+    // @ts-expect-error - Mocking global window property
+    global.window.webkitSpeechRecognition = function () {
+      return mockRecognition
+    }
 
     const { result } = renderHook(() => useVoiceInput())
 
@@ -247,7 +251,7 @@ describe('useVoiceInput Hook', () => {
   })
 
   it('should handle start listening when not supported', () => {
-    // @ts-ignore
+    // @ts-expect-error - Deleting global window property for testing
     delete global.window.SpeechRecognition
 
     const { result } = renderHook(() => useVoiceInput())

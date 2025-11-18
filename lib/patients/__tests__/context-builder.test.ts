@@ -6,6 +6,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 const createMockSupabaseClient = () => {
   const mockSelect = vi.fn().mockReturnThis()
   const mockEq = vi.fn().mockReturnThis()
+  const mockIs = vi.fn().mockReturnThis()
   const mockOrder = vi.fn().mockReturnThis()
   const mockLimit = vi.fn().mockReturnThis()
   const mockSingle = vi.fn()
@@ -14,6 +15,7 @@ const createMockSupabaseClient = () => {
     from: vi.fn(() => ({
       select: mockSelect,
       eq: mockEq,
+      is: mockIs,
       order: mockOrder,
       limit: mockLimit,
       single: mockSingle,
@@ -21,11 +23,12 @@ const createMockSupabaseClient = () => {
     _mocks: {
       select: mockSelect,
       eq: mockEq,
+      is: mockIs,
       order: mockOrder,
       limit: mockLimit,
       single: mockSingle,
     },
-  } as unknown as SupabaseClient & { _mocks: any }
+  } as unknown as SupabaseClient & { _mocks: Record<string, unknown> }
 }
 
 describe('Context Builder', () => {
@@ -85,14 +88,14 @@ describe('Context Builder', () => {
       ]
 
       // Setup mock responses
-      mockSupabase._mocks.single
-        .mockResolvedValueOnce({ data: mockPatient, error: null })
+      mockSupabase._mocks.single.mockResolvedValueOnce({ data: mockPatient, error: null })
 
       // Mock Promise.all responses
       vi.spyOn(Promise, 'all').mockResolvedValueOnce([
         { data: mockPatientData },
         { data: mockTests },
         { data: mockAnalyses },
+        { data: [] }, // calculatorResults
       ])
 
       const result = await buildPatientContext(mockSupabase, mockPatientId, mockUserId)
@@ -145,6 +148,7 @@ describe('Context Builder', () => {
         { data: [] },
         { data: [] },
         { data: [] },
+        { data: [] }, // calculatorResults
       ])
 
       const result = await buildPatientContext(mockSupabase, mockPatientId, mockUserId)

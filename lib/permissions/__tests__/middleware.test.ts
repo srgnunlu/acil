@@ -4,22 +4,33 @@ import { checkPermission, requirePermission, requireRole } from '../middleware'
 import type { Permission, WorkspaceRole } from '@/types/multi-tenant.types'
 
 // Mock Supabase client
+const mockGetUser = vi.fn()
+const mockSingle = vi.fn()
+const mockEq = vi.fn()
+const mockSelect = vi.fn()
+
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(() => ({
     auth: {
-      getUser: vi.fn(),
+      getUser: mockGetUser,
     },
     from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn(),
-          })),
-        })),
-      })),
+      select: mockSelect,
     })),
   })),
 }))
+
+// Setup mock chain properly
+mockSelect.mockReturnValue({
+  eq: mockEq,
+})
+
+const chainMethods = {
+  eq: mockEq,
+  single: mockSingle,
+}
+
+mockEq.mockReturnValue(chainMethods)
 
 describe('Permission Middleware', () => {
   beforeEach(() => {
@@ -28,11 +39,7 @@ describe('Permission Middleware', () => {
 
   describe('checkPermission', () => {
     it('should return allowed: false if user is not authenticated', async () => {
-      const { createClient } = await import('@/lib/supabase/server')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockClient = createClient() as any
-
-      mockClient.auth.getUser.mockResolvedValue({
+      mockGetUser.mockResolvedValue({
         data: { user: null },
         error: { message: 'Not authenticated' },
       })
@@ -44,27 +51,14 @@ describe('Permission Middleware', () => {
     })
 
     it('should return allowed: false if user is not a workspace member', async () => {
-      const { createClient } = await import('@/lib/supabase/server')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockClient = createClient() as any
-
-      mockClient.auth.getUser.mockResolvedValue({
+      mockGetUser.mockResolvedValue({
         data: { user: { id: 'user-id' } },
         error: null,
       })
 
-      const mockFrom = mockClient.from('workspace_members')
-      mockFrom.select.mockReturnValue({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({
-                data: null,
-                error: { message: 'Not found' },
-              }),
-            })),
-          })),
-        })),
+      mockSingle.mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
       })
 
       const result = await checkPermission('workspace-id', 'patients.create')
@@ -74,30 +68,17 @@ describe('Permission Middleware', () => {
     })
 
     it('should return allowed: true if user has permission', async () => {
-      const { createClient } = await import('@/lib/supabase/server')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockClient = createClient() as any
-
-      mockClient.auth.getUser.mockResolvedValue({
+      mockGetUser.mockResolvedValue({
         data: { user: { id: 'user-id' } },
         error: null,
       })
 
-      const mockFrom = mockClient.from('workspace_members')
-      mockFrom.select.mockReturnValue({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  role: 'owner',
-                  permissions: [],
-                },
-                error: null,
-              }),
-            })),
-          })),
-        })),
+      mockSingle.mockResolvedValue({
+        data: {
+          role: 'owner',
+          permissions: [],
+        },
+        error: null,
       })
 
       const result = await checkPermission('workspace-id', 'patients.create')
@@ -110,60 +91,34 @@ describe('Permission Middleware', () => {
 
   describe('requirePermission', () => {
     it('should throw error if user does not have permission', async () => {
-      const { createClient } = await import('@/lib/supabase/server')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockClient = createClient() as any
-
-      mockClient.auth.getUser.mockResolvedValue({
+      mockGetUser.mockResolvedValue({
         data: { user: { id: 'user-id' } },
         error: null,
       })
 
-      const mockFrom = mockClient.from('workspace_members')
-      mockFrom.select.mockReturnValue({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  role: 'nurse',
-                  permissions: [],
-                },
-                error: null,
-              }),
-            })),
-          })),
-        })),
+      mockSingle.mockResolvedValue({
+        data: {
+          role: 'nurse',
+          permissions: [],
+        },
+        error: null,
       })
 
       await expect(requirePermission('workspace-id', 'patients.create')).rejects.toThrow()
     })
 
     it('should return user info if user has permission', async () => {
-      const { createClient } = await import('@/lib/supabase/server')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockClient = createClient() as any
-
-      mockClient.auth.getUser.mockResolvedValue({
+      mockGetUser.mockResolvedValue({
         data: { user: { id: 'user-id' } },
         error: null,
       })
 
-      const mockFrom = mockClient.from('workspace_members')
-      mockFrom.select.mockReturnValue({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  role: 'owner',
-                  permissions: [],
-                },
-                error: null,
-              }),
-            })),
-          })),
-        })),
+      mockSingle.mockResolvedValue({
+        data: {
+          role: 'owner',
+          permissions: [],
+        },
+        error: null,
       })
 
       const result = await requirePermission('workspace-id', 'patients.create')
@@ -175,30 +130,17 @@ describe('Permission Middleware', () => {
 
   describe('requireRole', () => {
     it('should throw error if user does not have required role', async () => {
-      const { createClient } = await import('@/lib/supabase/server')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockClient = createClient() as any
-
-      mockClient.auth.getUser.mockResolvedValue({
+      mockGetUser.mockResolvedValue({
         data: { user: { id: 'user-id' } },
         error: null,
       })
 
-      const mockFrom = mockClient.from('workspace_members')
-      mockFrom.select.mockReturnValue({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  role: 'nurse',
-                  permissions: [],
-                },
-                error: null,
-              }),
-            })),
-          })),
-        })),
+      mockSingle.mockResolvedValue({
+        data: {
+          role: 'nurse',
+          permissions: [],
+        },
+        error: null,
       })
 
       await expect(requireRole('workspace-id', ['owner', 'admin'])).rejects.toThrow(
@@ -207,30 +149,17 @@ describe('Permission Middleware', () => {
     })
 
     it('should return user info if user has required role', async () => {
-      const { createClient } = await import('@/lib/supabase/server')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockClient = createClient() as any
-
-      mockClient.auth.getUser.mockResolvedValue({
+      mockGetUser.mockResolvedValue({
         data: { user: { id: 'user-id' } },
         error: null,
       })
 
-      const mockFrom = mockClient.from('workspace_members')
-      mockFrom.select.mockReturnValue({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({
-                data: {
-                  role: 'admin',
-                  permissions: [],
-                },
-                error: null,
-              }),
-            })),
-          })),
-        })),
+      mockSingle.mockResolvedValue({
+        data: {
+          role: 'admin',
+          permissions: [],
+        },
+        error: null,
       })
 
       const result = await requireRole('workspace-id', ['owner', 'admin'])

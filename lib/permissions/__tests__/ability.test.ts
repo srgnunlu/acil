@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { describe, it, expect, beforeEach } from 'vitest'
-import { defineAbility, hasPermission, ROLE_PERMISSIONS } from '../ability'
+import { defineAbilityFor, hasPermission, ROLE_PERMISSIONS } from '../ability'
 import type { WorkspaceRole, Permission } from '@/types/multi-tenant.types'
 
 describe('Permission System', () => {
@@ -74,16 +74,16 @@ describe('Permission System', () => {
     })
   })
 
-  describe('defineAbility', () => {
+  describe('defineAbilityFor', () => {
     it('should create ability with owner role', () => {
-      const ability = defineAbility('owner', [])
+      const ability = defineAbilityFor({ role: 'owner' })
       expect(ability.can('create', 'Patient')).toBe(true)
       expect(ability.can('delete', 'Patient')).toBe(true)
       expect(ability.can('update', 'Workspace')).toBe(true)
     })
 
     it('should create ability with doctor role', () => {
-      const ability = defineAbility('doctor', [])
+      const ability = defineAbilityFor({ role: 'doctor' })
       expect(ability.can('create', 'Patient')).toBe(true)
       expect(ability.can('read', 'Patient')).toBe(true)
       expect(ability.can('update', 'Patient')).toBe(true)
@@ -92,14 +92,14 @@ describe('Permission System', () => {
 
     it('should create ability with custom permissions', () => {
       const customPermissions: Permission[] = ['patients.delete']
-      const ability = defineAbility('nurse', customPermissions)
+      const ability = defineAbilityFor({ role: 'nurse', customPermissions })
       // Nurse normally can't delete, but custom permission allows it
       expect(ability.can('delete', 'Patient')).toBe(true)
     })
 
     it('should respect custom permissions over role permissions', () => {
       const customPermissions: Permission[] = ['patients.delete']
-      const ability = defineAbility('owner', customPermissions)
+      const ability = defineAbilityFor({ role: 'owner', customPermissions })
       // Owner already has delete permission, but custom permissions are additive
       expect(ability.can('delete', 'Patient')).toBe(true)
     })
