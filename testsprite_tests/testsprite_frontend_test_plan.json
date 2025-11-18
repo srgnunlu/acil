@@ -1,0 +1,501 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Registration and Workspace Bootstrapping",
+    "description": "Verify that new users can register successfully, triggering automatic workspace creation and redirect to the dashboard with proper authentication.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Fill in valid user details including email and password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm registration success message is displayed."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that a new workspace is automatically created for the user."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the user is redirected to the dashboard page."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure user is authenticated and middleware rejects unauthenticated access."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Login with Valid Credentials and Middleware Protection Enforcement",
+    "description": "Verify that existing users can login successfully and that all dashboard and API routes enforce authentication via middleware.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Input a valid registered email and password."
+      },
+      {
+        "type": "action",
+        "description": "Click the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Check the user is redirected to the dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify middleware permits access to protected routes for authenticated users."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access a protected API endpoint without authentication."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied with appropriate HTTP status code."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Role-Based Access Control Enforced by CASL Permissions",
+    "description": "Validate that users can only perform actions allowed by their roles and workspace membership as defined by CASL permission enforcement.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a user with read-only permissions in a workspace."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to add or update patient information."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the action is blocked and a permission denied message is shown."
+      },
+      {
+        "type": "action",
+        "description": "Login as a user with full permissions."
+      },
+      {
+        "type": "action",
+        "description": "Add, update, and delete patient records successfully."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm no errors occur and changes persist."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Dashboard Workspace and Organization Switching",
+    "description": "Confirm users can switch between multiple organizations and workspaces via dashboard controls and that content updates accordingly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login and navigate to the dashboard shell."
+      },
+      {
+        "type": "action",
+        "description": "Use the organization switcher to change organizations."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard context updates to the selected organization."
+      },
+      {
+        "type": "action",
+        "description": "Use the workspace switcher to change workspaces within the organization."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm workspace context updates and patient usage limits adjust accordingly."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Real-time Sticky Notes Synchronization Across Users",
+    "description": "Verify that when one user adds or updates a sticky note, other users see the changes immediately via Supabase realtime subscriptions and optimistic UI updates.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "User A adds a new sticky note in a workspace."
+      },
+      {
+        "type": "assertion",
+        "description": "User A sees the sticky note added immediately (optimistic UI)."
+      },
+      {
+        "type": "assertion",
+        "description": "User B, connected to the same workspace, sees the sticky note appear without refreshing."
+      },
+      {
+        "type": "action",
+        "description": "User B edits the sticky note."
+      },
+      {
+        "type": "assertion",
+        "description": "User A's view updates in real-time with the changes."
+      },
+      {
+        "type": "action",
+        "description": "Simulate a sticky note update failure (e.g., server error)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify optimistic update rolls back and error is surfaced to the user."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Notification Center Real-time Alerts and Updates",
+    "description": "Validate that notifications are created, updated, and displayed in real-time across clients and that notification preferences are respected.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger a new notification for a user in the notification center."
+      },
+      {
+        "type": "assertion",
+        "description": "NotificationBell control displays a badge for the new alert."
+      },
+      {
+        "type": "assertion",
+        "description": "All connected client instances receive the notification in real-time."
+      },
+      {
+        "type": "action",
+        "description": "User updates notification preferences to mute certain alerts."
+      },
+      {
+        "type": "assertion",
+        "description": "Muted notification types do not trigger alerts or badges."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "AI Monitoring Dashboard Data Accuracy and Auto-refresh",
+    "description": "Ensure the AI monitoring dashboard surfaces correct patient deterioration scores, trends, and alert counts, refreshing data automatically at expected intervals.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the Patient Monitoring Dashboard for a workspace."
+      },
+      {
+        "type": "assertion",
+        "description": "Displayed deterioration scores and trends match backend computed alert-service data."
+      },
+      {
+        "type": "assertion",
+        "description": "Alert counts correspond with actual telemetry data."
+      },
+      {
+        "type": "action",
+        "description": "Generate a new alert in telemetry data."
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard updates automatically without page refresh showing new alert data."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Task and Assignment Management CRUD and Filtering",
+    "description": "Validate task creation, update, deletion, assignment, and filtering with statistics reflecting workspace-specific metadata.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create a new task with required fields in a workspace."
+      },
+      {
+        "type": "assertion",
+        "description": "New task appears in the task list with default metadata."
+      },
+      {
+        "type": "action",
+        "description": "Assign the task to a team member."
+      },
+      {
+        "type": "assertion",
+        "description": "Assignment metadata updates correctly and reflects in statistics."
+      },
+      {
+        "type": "action",
+        "description": "Update the task status and priority."
+      },
+      {
+        "type": "assertion",
+        "description": "Changes persist and display correctly in the UI."
+      },
+      {
+        "type": "action",
+        "description": "Filter tasks by status and assigned user."
+      },
+      {
+        "type": "assertion",
+        "description": "Filtered result matches expected tasks only."
+      },
+      {
+        "type": "action",
+        "description": "Delete a task."
+      },
+      {
+        "type": "assertion",
+        "description": "Task is removed from UI and backend."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Clinical Handoff Report Generation and AI Draft Assistance",
+    "description": "Test clinical handoff creation flow including AI-powered content drafting, review, and submission procedures.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Initiate creation of a new clinical handoff report for a patient."
+      },
+      {
+        "type": "action",
+        "description": "Request AI-generated draft content for the handoff."
+      },
+      {
+        "type": "assertion",
+        "description": "AI draft is returned and populated in the handoff editor."
+      },
+      {
+        "type": "action",
+        "description": "User edits and reviews the handoff content."
+      },
+      {
+        "type": "action",
+        "description": "Submit the finalized handoff."
+      },
+      {
+        "type": "assertion",
+        "description": "Handoff report is saved and visible in the handoff list."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify role-based permission enforcement blocks unauthorized handoff creation."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Analytics Dashboard Accuracy for Patient and AI Usage Metrics",
+    "description": "Confirm analytics dashboards display correct and up-to-date patient volumes, AI usage, and clinical trend data using server-driven widgets.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the workspace analytics dashboard page."
+      },
+      {
+        "type": "assertion",
+        "description": "PatientCountWidget shows accurate patient counts for the workspace."
+      },
+      {
+        "type": "assertion",
+        "description": "AIUsageWidget displays current AI usage statistics."
+      },
+      {
+        "type": "assertion",
+        "description": "Clinical trends widgets reflect recent data accurately."
+      },
+      {
+        "type": "action",
+        "description": "Introduce test data changes in the backend."
+      },
+      {
+        "type": "assertion",
+        "description": "Widgets update to reflect new data accurately after refresh."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "API Input Validation and Rate Limiting Enforcement",
+    "description": "Verify that APIs validate inputs using Zod schemas, enforce rate limits, and return appropriate HTTP status codes for invalid or excessive requests.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send a well-formed request to an API endpoint."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the request is processed successfully with a 200-series status code."
+      },
+      {
+        "type": "action",
+        "description": "Send a request with invalid or missing required fields."
+      },
+      {
+        "type": "assertion",
+        "description": "API returns a 400 Bad Request with descriptive error message."
+      },
+      {
+        "type": "action",
+        "description": "Send a large number of requests rapidly exceeding the rate limit."
+      },
+      {
+        "type": "assertion",
+        "description": "API responds with 429 Too Many Requests status until limit resets."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Optimistic UI Updates with Rollback on Failure",
+    "description": "Confirm optimistic UI updates for sticky notes and task management provide immediate feedback and correctly roll back when server operations fail.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform an update action on a sticky note or task that immediately reflects in the UI."
+      },
+      {
+        "type": "assertion",
+        "description": "UI updates instantly before server response is received."
+      },
+      {
+        "type": "action",
+        "description": "Simulate a server error response for the update."
+      },
+      {
+        "type": "assertion",
+        "description": "UI rolls back to previous state and an error notification is shown."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Real-time Presence and Connection Health Visualization",
+    "description": "Test that real-time presence status and connection health indicators update accurately and reflect users’ online/offline states in the UI sidebar and header.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Multiple users connect to the same workspace simultaneously."
+      },
+      {
+        "type": "assertion",
+        "description": "RealtimeSidebar and RealtimeStatusHeader components display accurate presence indicators for all users."
+      },
+      {
+        "type": "action",
+        "description": "Simulate a user's connection loss."
+      },
+      {
+        "type": "assertion",
+        "description": "Connection health displays degraded status and user presence updates to offline."
+      },
+      {
+        "type": "action",
+        "description": "User reconnects."
+      },
+      {
+        "type": "assertion",
+        "description": "Presence and connection health indicators update to online and healthy states."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Security Best Practices Verification",
+    "description": "Ensure no sensitive data is exposed in client or API, row-level security policies enforce data isolation per tenant, and environment variables are validated.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Inspect network requests and responses from client to backend."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm no sensitive information (e.g. secrets, passwords) is exposed."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access data across organizations/workspaces without proper rights."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied honoring RLS policies."
+      },
+      {
+        "type": "action",
+        "description": "Check server environment validation logic on startup and config loads."
+      },
+      {
+        "type": "assertion",
+        "description": "Invalid environment variable configurations prevent server from running."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Error Handling and User-Friendly Messaging",
+    "description": "Validate the system logs internal errors securely without data leaks and surfaces consistent and clear error messages to end users across the platform.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Cause various failures (e.g., failed API calls, permission denied, input validation errors)."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm appropriate error messages are shown in the UI."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify internal errors are logged securely on the server without exposing sensitive information."
+      },
+      {
+        "type": "assertion",
+        "description": "UI error messages are consistent in style and user-friendly."
+      }
+    ]
+  }
+]

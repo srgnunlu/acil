@@ -28,7 +28,8 @@
   // Terminal çıktı ayarları
   "terminal.integrated.scrollback": 10000,
   "terminal.integrated.cursorBlinking": true,
-  "terminal.integrated.cursorStyle": "line"
+  "terminal.integrated.cursorStyle": "line",
+  "chatgpt.openOnStartup": true
 }
 
 

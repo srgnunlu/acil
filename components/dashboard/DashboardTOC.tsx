@@ -17,8 +17,23 @@ interface DashboardTOCProps {
 
 export function DashboardTOC({ sections }: DashboardTOCProps) {
   const [activeSection, setActiveSection] = useState<string>(sections[0]?.id || '')
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(true)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const showLabels = !isCollapsed || isMobileOpen
+
+  // Close mobile drawer automatically on desktop breakpoints
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+
+    const handleChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        setIsMobileOpen(false)
+      }
+    }
+
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
 
   // Scrollspy - aktif section'ı tespit et
   useEffect(() => {
@@ -110,21 +125,23 @@ export function DashboardTOC({ sections }: DashboardTOCProps) {
       <motion.aside
         initial={false}
         animate={{
-          width: isCollapsed ? '3rem' : '16rem',
-          x: isMobileOpen ? 0 : '-100%',
+          width: showLabels ? '16rem' : '4.5rem',
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         className={`
-          fixed left-0 top-20 h-[calc(100vh-5rem)] z-50
-          bg-white border-r border-gray-200 shadow-sm
-          overflow-hidden
+          fixed top-20 left-2 z-50
+          lg:left-6 lg:top-28
+          bg-white/80 backdrop-blur-xl border border-white/70 shadow-2xl
+          rounded-3xl overflow-hidden
+          transition-transform duration-300
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0 lg:z-30
         `}
       >
-        <div className="h-full flex flex-col">
+        <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            {!isCollapsed && (
+          <div className="flex items-center justify-between gap-2 p-4 border-b border-white/60">
+            {showLabels ? (
               <motion.h2
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -133,6 +150,8 @@ export function DashboardTOC({ sections }: DashboardTOCProps) {
               >
                 İçindekiler
               </motion.h2>
+            ) : (
+              <span className="text-sm font-semibold text-gray-500">TOC</span>
             )}
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
@@ -149,8 +168,8 @@ export function DashboardTOC({ sections }: DashboardTOCProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto py-4 px-2">
-            <ul className="space-y-1">
+          <nav className="flex-1 overflow-y-auto py-5 px-3">
+            <ul className="flex flex-col gap-2">
               {sections.map((section) => {
                 const isActive = activeSection === section.id
                 const hasActiveSubsection = section.subsections?.some(
@@ -163,32 +182,43 @@ export function DashboardTOC({ sections }: DashboardTOCProps) {
                     <button
                       onClick={() => scrollToSection(section.id)}
                       className={`
-                        w-full flex items-center gap-3 px-3 py-2 rounded-lg
-                        text-sm font-medium transition-all
+                        w-full flex items-center gap-3 px-3 py-2 rounded-2xl
+                        text-sm font-medium transition-all shadow-sm
                         ${
                           isActive
-                            ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-600'
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                            ? 'bg-gradient-to-br from-blue-50/80 to-blue-100/90 text-blue-700 border border-blue-100'
+                            : 'text-gray-700 hover:bg-white hover:text-gray-900 border border-transparent hover:border-gray-100'
                         }
-                        ${isCollapsed ? 'justify-center' : ''}
+                        ${showLabels ? '' : 'justify-center'}
                       `}
                       title={isCollapsed ? section.title : undefined}
                     >
                       {section.icon && (
-                        <span className="text-lg flex-shrink-0">{section.icon}</span>
+                        <span
+                          className={`
+                            text-lg flex-shrink-0 rounded-full p-2
+                            ${
+                              isActive
+                                ? 'bg-white text-blue-700 shadow-inner'
+                                : 'bg-white/80 text-gray-600'
+                            }
+                          `}
+                        >
+                          {section.icon}
+                        </span>
                       )}
-                      {!isCollapsed && <span className="truncate">{section.title}</span>}
-                      {!isCollapsed && isActive && (
+                      {showLabels && <span className="truncate">{section.title}</span>}
+                      {showLabels && isActive && (
                         <motion.div
                           layoutId="activeIndicator"
-                          className="ml-auto w-2 h-2 bg-blue-600 rounded-full"
+                          className="ml-auto w-2 h-2 bg-blue-600 rounded-full shadow"
                           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                         />
                       )}
                     </button>
 
                     {/* Subsections */}
-                    {!isCollapsed && section.subsections && (isActive || hasActiveSubsection) && (
+                    {showLabels && section.subsections && (isActive || hasActiveSubsection) && (
                       <motion.ul
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
@@ -225,11 +255,12 @@ export function DashboardTOC({ sections }: DashboardTOCProps) {
           </nav>
 
           {/* Footer */}
-          {!isCollapsed && (
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
+          {showLabels && (
+            <div className="p-4 border-t border-white/60 bg-white/60 backdrop-blur">
               <p className="text-xs text-gray-500 text-center">
                 Klavye: <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded">↑</kbd>{' '}
-                <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded">↓</kbd> ile gezin
+                <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded">↓</kbd> ile
+                gezin
               </p>
             </div>
           )}

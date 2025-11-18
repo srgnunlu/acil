@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "loginUser": "srgnunlu@icloud.com",
+  "loginPassword": "Sergen79@",
+  "executionArgs": {
+    "projectName": "acil",
+    "projectPath": "/Users/sergenunlu/Desktop/kodlar/acilyeni/acil",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-cQC6hPDqWXRWjxKBM2wIGUzTAPnUA8bnn2YoOZFQxtRWr4lqsspEmydtb6y--45ajoMHqY1t5pE2DbyGB-YPo5gBZ60KFIF7d5_hwG7yDG8SwGfuCUg3FXWb9IaTYZrpPZg"
+    }
+  },
+  "proxy": "http://54a66533-38fb-41ba-8406-a4a9ec799320:3wQuRouMXow9rbjMIjQD0HsiaDY5X0W8@tun.testsprite.com:8080"
+}

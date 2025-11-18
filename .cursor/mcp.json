@@ -2,7 +2,20 @@
   "mcpServers": {
     "supabase": {
       "url": "https://mcp.supabase.com/mcp"
+    },
+    "TestSprite": {
+      "command": "npx",
+      "args": ["-y", "@testsprite/testsprite-mcp@latest"],
+      "env": {
+        "API_KEY": "BURAYA_TESTSPRITE_API_ANAHTARINIZI_GIRIN"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": "ctx7sk-f930743b-d2e8-40b1-b67b-fe2fbe3799ff"
+      }
     }
   }
 }
-

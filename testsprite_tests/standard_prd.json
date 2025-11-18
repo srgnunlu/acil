@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "project": "ACIL Patient Management Platform",
+    "date": "2025-11-14",
+    "prepared_by": "ACIL Team"
+  },
+  "product_overview": "ACIL is a multi-tenant, AI-powered patient tracking and management platform designed for emergency medicine specialists and hospital departments, enabling efficient workflow management and real-time clinical collaboration.",
+  "core_goals": [
+    "Provide isolated multi-tenant support for organizations and workspaces to ensure data security and role-based access control.",
+    "Enable seamless authentication and workspace provisioning with robust middleware and setup flows.",
+    "Deliver real-time collaboration features including presence, notifications, and sticky notes synchronized across users.",
+    "Integrate AI-powered analytics, monitoring, and clinical handoff generation to assist clinicians in patient assessment and trend detection.",
+    "Offer comprehensive task, assignment management, and analytics dashboards to improve clinical workflow and decision-making.",
+    "Maintain high standards of security, performance, and accessibility with thorough validation and error handling."
+  ],
+  "key_features": [
+    "Multi-tenant architecture supporting organizations and workspace isolation with row level security policies.",
+    "Authentication system with email/password backed by Supabase and middleware route protection.",
+    "Dashboard with workspace/organization context, navigation, and patient usage limit awareness.",
+    "Real-time collaboration features: presence detection, sticky notes with optimistic updates, notification center with real-time alerts.",
+    "AI monitoring and alert services aggregating telemetry and surfacing patient deterioration scores and trends.",
+    "Task and assignment management with filters, statistics, and assignment metadata per workspace.",
+    "Clinical handoff report generation including AI-powered draft assistance and review flows.",
+    "Analytics dashboards visualizing patient volumes, AI usage, and clinical trends by workspace.",
+    "Comprehensive API adherence with rate limiting and permission enforcement via CASL roles.",
+    "Advanced testing strategy covering unit, component, and end-to-end tests with Vitest and Playwright."
+  ],
+  "user_flow_summary": [
+    "Users register or log in via secure authentication flows, with automatic workspace bootstrapping on first login.",
+    "Users select or switch between organizations and workspaces via dashboard shell components.",
+    "Clinicians view patient lists, add or update patient information with role-based permissions enforced.",
+    "Team members collaborate through real-time sticky notes and receive notifications via the alerts center.",
+    "Clinicians generate and review clinical handoffs, assisted by AI-generated content suggestions.",
+    "Users monitor AI usage, review alerts and patient deterioration trends on dedicated dashboards.",
+    "Tasks are managed with creation, assignment, filtering, and statistical monitoring within workspaces.",
+    "Real-time presence status and connection health are visualized to enhance synchronous collaboration."
+  ],
+  "validation_criteria": [
+    "Authentication flow correctly creates and protects workspaces, enforcing auth via middleware.",
+    "Role-based access control correctly restricts actions based on CASL permissions and workspace membership.",
+    "Real-time updates for patients, sticky notes, and notifications synchronize across all clients.",
+    "AI monitoring dashboards accurately reflect telemetry data and alert computations with auto-refresh.",
+    "API endpoints validate inputs with Zod schemas, enforce rate limiting, and return appropriate HTTP status codes.",
+    "Optimistic UI updates provide immediate feedback with rollback on failure for sticky notes and tasks.",
+    "Analytics dashboards display accurate and up-to-date patient and AI usage metrics.",
+    "Comprehensive automated tests cover critical features including authentication, permissions, API routes, and real-time collaboration.",
+    "Error handling logs internal errors securely and surfaces user-friendly messages consistently.",
+    "Security best-practices followed: no sensitive data exposure, RLS enabled, environment variables validated."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript + React 19",
+      "Next.js 16 App Router",
+      "Supabase (PostgreSQL, Auth, Realtime)",
+      "Tailwind CSS, TanStack Query, Zustand, Vitest/Playwright"
+    ],
+    "features": [
+      {
+        "name": "Authentication & Workspace Provisioning",
+        "description": "Server actions backed by Supabase handle login, registration, and workspace bootstrapping before redirecting users into the dashboard, enforcing auth via middleware and setup flows that auto-create an initial workspace.",
+        "files": [
+          "app/(auth)/actions.ts",
+          "app/(auth)/login/page.tsx",
+          "app/(auth)/register/page.tsx",
+          "app/setup/page.tsx",
+          "app/setup/SetupContent.tsx",
+          "middleware.ts"
+        ]
+      },
+      {
+        "name": "Dashboard Shell & Multi-Organization Context",
+        "description": "The dashboard layout wires Workspace/Organization switchers, navigation, realtime providers, and ability checks so every page renders inside a responsive shell aware of the active workspace and patient usage limits.",
+        "files": [
+          "app/dashboard/layout.tsx",
+          "components/dashboard/DashboardNav.tsx",
+          "components/dashboard/UserMenu.tsx",
+          "components/workspace/WorkspaceSwitcher.tsx",
+          "components/organizations/OrganizationSwitcher.tsx",
+          "contexts/WorkspaceContext.tsx"
+        ]
+      },
+      {
+        "name": "Realtime Presence & Connection Health",
+        "description": "RealtimeContext coordinates Supabase channels, connection heartbeats, and UI surfacing of collaboration status through sidebar/status header components built on the ConnectionManager utility.",
+        "files": [
+          "contexts/RealtimeContext.tsx",
+          "lib/realtime/connection-manager.ts",
+          "components/dashboard/RealtimeSidebar.tsx",
+          "components/dashboard/RealtimeStatusHeader.tsx"
+        ]
+      },
+      {
+        "name": "AI Monitoring & Alert Services",
+        "description": "Server routes aggregate Supabase AI telemetry, alert-service helpers compute risk, and the PatientMonitoringDashboard surfaces deterioration scores, recent trends, and alert counts with auto-refresh.",
+        "files": [
+          "app/api/ai/monitoring/route.ts",
+          "lib/ai/alert-service.ts",
+          "lib/ai/comparison-service.ts",
+          "components/ai-monitoring/PatientMonitoringDashboard.tsx"
+        ]
+      },
+      {
+        "name": "Sticky Notes Collaboration",
+        "description": "Sticky note APIs plus TanStack Query hooks provide CRUD + optimistic updates, with Supabase realtime subscriptions keeping StickyNotesPanel components synchronized across users.",
+        "files": [
+          "app/api/sticky-notes/route.ts",
+          "app/api/sticky-notes/[id]/route.ts",
+          "lib/hooks/useStickyNotes.ts",
+          "lib/hooks/useRealtimeStickyNotes.ts",
+          "components/sticky-notes/StickyNotesPanel.tsx"
+        ]
+      },
+      {
+        "name": "Task & Assignment Management",
+        "description": "REST endpoints for tasks feed React Query hooks and task board UI elements, covering filters, statistics, create/update/delete flows, and assignment metadata per workspace.",
+        "files": [
+          "app/api/tasks/route.ts",
+          "app/api/tasks/[id]/route.ts",
+          "app/api/tasks/statistics/route.ts",
+          "lib/hooks/useTasks.ts",
+          "components/tasks/TaskList.tsx",
+          "components/tasks/TaskFormModal.tsx"
+        ]
+      },
+      {
+        "name": "Clinical Handoff Generation",
+        "description": "Handoff APIs (including AI-powered generate route) query Supabase for patients and compile structured reports while UI hooks/components allow clinicians to draft, review, and deliver shift handoffs.",
+        "files": [
+          "app/api/handoffs/route.ts",
+          "app/api/handoffs/[id]/route.ts",
+          "app/api/handoffs/generate/route.ts",
+          "lib/hooks/useHandoffs.ts",
+          "components/handoffs/HandoffList.tsx",
+          "components/handoffs/HandoffCreateModal.tsx"
+        ]
+      },
+      {
+        "name": "Notifications & Alerts Center",
+        "description": "Notification REST endpoints plus the useNotifications hook manage Supabase-backed alerts with realtime updates, surfaced through the NotificationBell control and dashboard header badges.",
+        "files": [
+          "app/api/notifications/route.ts",
+          "app/api/notifications/[id]/route.ts",
+          "app/api/notifications/preferences/route.ts",
+          "lib/hooks/useNotifications.ts",
+          "components/ui/NotificationBell.tsx"
+        ]
+      },
+      {
+        "name": "Analytics Dashboards & Widgets",
+        "description": "Workspace analytics pages orchestrate multiple chart widgets fed by server routes and widget data providers to visualize patient volumes, AI usage, and clinical trends per workspace.",
+        "files": [
+          "app/dashboard/analytics/page.tsx",
+          "app/api/analytics/workspace/route.ts",
+          "app/api/analytics/widgets/route.ts",
+          "components/analytics/widgets/PatientCountWidget.tsx",
+          "components/analytics/widgets/AIUsageWidget.tsx",
+          "lib/widgets/widget-data-providers.ts"
+        ]
+      }
+    ]
+  }
+}

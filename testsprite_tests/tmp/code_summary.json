@@ -1,0 +1,112 @@
+{
+  "tech_stack": [
+    "TypeScript + React 19",
+    "Next.js 16 App Router",
+    "Supabase (PostgreSQL, Auth, Realtime)",
+    "Tailwind CSS, TanStack Query, Zustand, Vitest/Playwright"
+  ],
+  "features": [
+    {
+      "name": "Authentication & Workspace Provisioning",
+      "description": "Server actions backed by Supabase handle login, registration, and workspace bootstrapping before redirecting users into the dashboard, enforcing auth via middleware and setup flows that auto-create an initial workspace.",
+      "files": [
+        "app/(auth)/actions.ts",
+        "app/(auth)/login/page.tsx",
+        "app/(auth)/register/page.tsx",
+        "app/setup/page.tsx",
+        "app/setup/SetupContent.tsx",
+        "middleware.ts"
+      ]
+    },
+    {
+      "name": "Dashboard Shell & Multi-Organization Context",
+      "description": "The dashboard layout wires Workspace/Organization switchers, navigation, realtime providers, and ability checks so every page renders inside a responsive shell aware of the active workspace and patient usage limits.",
+      "files": [
+        "app/dashboard/layout.tsx",
+        "components/dashboard/DashboardNav.tsx",
+        "components/dashboard/UserMenu.tsx",
+        "components/workspace/WorkspaceSwitcher.tsx",
+        "components/organizations/OrganizationSwitcher.tsx",
+        "contexts/WorkspaceContext.tsx"
+      ]
+    },
+    {
+      "name": "Realtime Presence & Connection Health",
+      "description": "RealtimeContext coordinates Supabase channels, connection heartbeats, and UI surfacing of collaboration status through sidebar/status header components built on the ConnectionManager utility.",
+      "files": [
+        "contexts/RealtimeContext.tsx",
+        "lib/realtime/connection-manager.ts",
+        "components/dashboard/RealtimeSidebar.tsx",
+        "components/dashboard/RealtimeStatusHeader.tsx"
+      ]
+    },
+    {
+      "name": "AI Monitoring & Alert Services",
+      "description": "Server routes aggregate Supabase AI telemetry, alert-service helpers compute risk, and the PatientMonitoringDashboard surfaces deterioration scores, recent trends, and alert counts with auto-refresh.",
+      "files": [
+        "app/api/ai/monitoring/route.ts",
+        "lib/ai/alert-service.ts",
+        "lib/ai/comparison-service.ts",
+        "components/ai-monitoring/PatientMonitoringDashboard.tsx"
+      ]
+    },
+    {
+      "name": "Sticky Notes Collaboration",
+      "description": "Sticky note APIs plus TanStack Query hooks provide CRUD + optimistic updates, with Supabase realtime subscriptions keeping StickyNotesPanel components synchronized across users.",
+      "files": [
+        "app/api/sticky-notes/route.ts",
+        "app/api/sticky-notes/[id]/route.ts",
+        "lib/hooks/useStickyNotes.ts",
+        "lib/hooks/useRealtimeStickyNotes.ts",
+        "components/sticky-notes/StickyNotesPanel.tsx"
+      ]
+    },
+    {
+      "name": "Task & Assignment Management",
+      "description": "REST endpoints for tasks feed React Query hooks and task board UI elements, covering filters, statistics, create/update/delete flows, and assignment metadata per workspace.",
+      "files": [
+        "app/api/tasks/route.ts",
+        "app/api/tasks/[id]/route.ts",
+        "app/api/tasks/statistics/route.ts",
+        "lib/hooks/useTasks.ts",
+        "components/tasks/TaskList.tsx",
+        "components/tasks/TaskFormModal.tsx"
+      ]
+    },
+    {
+      "name": "Clinical Handoff Generation",
+      "description": "Handoff APIs (including AI-powered generate route) query Supabase for patients and compile structured reports while UI hooks/components allow clinicians to draft, review, and deliver shift handoffs.",
+      "files": [
+        "app/api/handoffs/route.ts",
+        "app/api/handoffs/[id]/route.ts",
+        "app/api/handoffs/generate/route.ts",
+        "lib/hooks/useHandoffs.ts",
+        "components/handoffs/HandoffList.tsx",
+        "components/handoffs/HandoffCreateModal.tsx"
+      ]
+    },
+    {
+      "name": "Notifications & Alerts Center",
+      "description": "Notification REST endpoints plus the useNotifications hook manage Supabase-backed alerts with realtime updates, surfaced through the NotificationBell control and dashboard header badges.",
+      "files": [
+        "app/api/notifications/route.ts",
+        "app/api/notifications/[id]/route.ts",
+        "app/api/notifications/preferences/route.ts",
+        "lib/hooks/useNotifications.ts",
+        "components/ui/NotificationBell.tsx"
+      ]
+    },
+    {
+      "name": "Analytics Dashboards & Widgets",
+      "description": "Workspace analytics pages orchestrate multiple chart widgets fed by server routes and widget data providers to visualize patient volumes, AI usage, and clinical trends per workspace.",
+      "files": [
+        "app/dashboard/analytics/page.tsx",
+        "app/api/analytics/workspace/route.ts",
+        "app/api/analytics/widgets/route.ts",
+        "components/analytics/widgets/PatientCountWidget.tsx",
+        "components/analytics/widgets/AIUsageWidget.tsx",
+        "lib/widgets/widget-data-providers.ts"
+      ]
+    }
+  ]
+}

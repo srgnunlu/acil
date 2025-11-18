@@ -10,12 +10,46 @@ import { DashboardTOC, TOCSection } from '@/components/dashboard/DashboardTOC'
 import { AIInsightsHero } from '@/components/dashboard/AIInsightsHero'
 import { StatCardWithTrend } from '@/components/dashboard/StatCardWithTrend'
 import { CriticalAlertsPanel } from '@/components/dashboard/CriticalAlertsPanel'
-import { generateDemoInsights, generateDemoAlerts } from '@/lib/dashboard/demo-data'
+import { generateDemoInsights } from '@/lib/dashboard/demo-data'
 import { PatientQuickGrid } from '@/components/dashboard/PatientQuickGrid'
 import { WorkspaceCategoryPanel } from '@/components/dashboard/WorkspaceCategoryPanel'
 import { WorkspaceNotesPanel } from '@/components/dashboard/WorkspaceNotesPanel'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+
+type DashboardAlertCategory = 'vital_signs' | 'lab_result' | 'ai_anomaly' | 'reminder' | 'other'
+
+const ALERT_TYPE_CATEGORY_MAP: Record<string, DashboardAlertCategory> = {
+  critical_value: 'vital_signs',
+  vital_critical: 'vital_signs',
+  lab_critical: 'lab_result',
+  sepsis_risk: 'lab_result',
+  trend_warning: 'ai_anomaly',
+  red_flag: 'ai_anomaly',
+  deterioration: 'ai_anomaly',
+  early_warning: 'reminder',
+}
+
+const mapAlertTypeToCategory = (alertType?: string | null): DashboardAlertCategory => {
+  if (!alertType) return 'ai_anomaly'
+  return ALERT_TYPE_CATEGORY_MAP[alertType] || 'ai_anomaly'
+}
+
+type AlertQueryResult = {
+  id: string
+  patient_id: string | null
+  workspace_id: string
+  alert_type: string | null
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  title: string | null
+  description: string | null
+  status: 'active' | 'acknowledged' | 'resolved' | 'dismissed'
+  created_at: string
+  patient?: {
+    id: string
+    name: string | null
+  } | null
+}
 
 export default async function DashboardHome() {
   const supabase = await createClient()
@@ -161,8 +195,42 @@ export default async function DashboardHome() {
         : undefined,
   }))
 
-  // Critical Alerts oluştur (server-safe)
-  const criticalAlerts = generateDemoAlerts()
+  // Critical Alerts - fetch real-time data
+  const { data: alertsData } = await supabase
+    .from('ai_alerts')
+    .select(
+      `
+        id,
+        patient_id,
+        workspace_id,
+        alert_type,
+        severity,
+        title,
+        description,
+        status,
+        created_at,
+        patient:patients(id, name)
+      `
+    )
+    .in('workspace_id', targetWorkspaceIds)
+    .in('status', ['active', 'acknowledged'])
+    .order('created_at', { ascending: false })
+    .limit(20)
+    .returns<AlertQueryResult[]>()
+
+  const criticalAlerts =
+    alertsData?.map((alert) => ({
+      id: alert.id,
+      patientId: alert.patient_id ?? undefined,
+      patientName: alert.patient?.name ?? undefined,
+      severity: alert.severity,
+      category: mapAlertTypeToCategory(alert.alert_type),
+      title: alert.title || 'AI Uyarısı',
+      message: alert.description || 'Sistem bu uyarı için açıklama paylaşmadı.',
+      timestamp: alert.created_at,
+      acknowledged: alert.status !== 'active',
+      link: alert.patient_id ? `/dashboard/patients/${alert.patient_id}` : undefined,
+    })) ?? []
 
   // Patient grid için veri hazırla
   const patientsForGrid = (patients || []).slice(0, 12).map((p, index) => {
