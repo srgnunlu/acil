@@ -1,0 +1,342 @@
+/**
+ * Theme System CSS Variables and Utilities
+ *
+ * Global CSS for theme system integration
+ */
+
+/* Root variables - will be set by JavaScript */
+:root {
+  /* Colors - defaults (light theme) */
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-primary-light: #60a5fa;
+  --color-secondary: #8b5cf6;
+  --color-secondary-dark: #7c3aed;
+  --color-secondary-light: #a78bfa;
+  --color-accent: #10b981;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #06b6d4;
+  --color-background: #ffffff;
+  --color-background-secondary: #f9fafb;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f3f4f6;
+  --color-text: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  --color-shadow: rgba(0, 0, 0, 0.1);
+
+  /* Layout */
+  --border-radius: 0.5rem;
+  --spacing-scale: 1;
+
+  /* Typography */
+  --font-size-base: 16px;
+
+  /* Transitions */
+  --transition-fast: 150ms;
+  --transition-normal: 250ms;
+  --transition-slow: 350ms;
+}
+
+/* Dark mode class (applied by theme system) */
+.dark-mode {
+  --color-primary: #60a5fa;
+  --color-primary-dark: #3b82f6;
+  --color-primary-light: #93c5fd;
+  --color-secondary: #a78bfa;
+  --color-secondary-dark: #8b5cf6;
+  --color-secondary-light: #c4b5fd;
+  --color-accent: #34d399;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-info: #22d3ee;
+  --color-background: #0f172a;
+  --color-background-secondary: #1e293b;
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #64748b;
+  --color-border: #334155;
+  --color-border-light: #475569;
+  --color-shadow: rgba(0, 0, 0, 0.5);
+}
+
+/* High contrast mode */
+.high-contrast {
+  --color-border: currentColor;
+  --color-border-light: currentColor;
+}
+
+.high-contrast .light-mode {
+  --color-text: #000000;
+  --color-background: #ffffff;
+  --color-border: #000000;
+}
+
+.high-contrast .dark-mode {
+  --color-text: #ffffff;
+  --color-background: #000000;
+  --color-border: #ffffff;
+}
+
+/* Reduced motion */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Theme utility classes */
+.theme-bg-primary {
+  background-color: var(--color-primary);
+}
+
+.theme-bg-secondary {
+  background-color: var(--color-secondary);
+}
+
+.theme-bg-surface {
+  background-color: var(--color-surface);
+}
+
+.theme-bg-background {
+  background-color: var(--color-background);
+}
+
+.theme-text-primary {
+  color: var(--color-primary);
+}
+
+.theme-text {
+  color: var(--color-text);
+}
+
+.theme-text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.theme-text-muted {
+  color: var(--color-text-muted);
+}
+
+.theme-border {
+  border-color: var(--color-border);
+}
+
+.theme-shadow {
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
+.theme-shadow-lg {
+  box-shadow: 0 10px 15px -3px var(--color-shadow),
+    0 4px 6px -2px var(--color-shadow);
+}
+
+/* Color blind mode filters */
+.colorblind-protanopia {
+  filter: url('#protanopia-filter');
+}
+
+.colorblind-deuteranopia {
+  filter: url('#deuteranopia-filter');
+}
+
+.colorblind-tritanopia {
+  filter: url('#tritanopia-filter');
+}
+
+/* Focus visible styles */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Selection styles */
+::selection {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* Scrollbar theming */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: calc(var(--border-radius) / 2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-background-secondary);
+}
+
+/* Smooth theme transitions */
+body {
+  transition: background-color var(--transition-normal) ease,
+    color var(--transition-normal) ease;
+}
+
+/* Theme transition class */
+.theme-transitioning * {
+  transition: background-color var(--transition-normal) ease,
+    color var(--transition-normal) ease,
+    border-color var(--transition-normal) ease !important;
+}
+
+/* Print styles */
+@media print {
+  :root {
+    --color-background: white;
+    --color-text: black;
+    --color-border: black;
+  }
+
+  .dark-mode {
+    --color-background: white;
+    --color-text: black;
+    --color-border: black;
+  }
+}
+
+/* Prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Prefers color scheme */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-mode):not(.dark-mode) {
+    --color-primary: #60a5fa;
+    --color-background: #0f172a;
+    --color-text: #f1f5f9;
+    /* ... other dark theme variables */
+  }
+}
+
+/* High contrast preference */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: currentColor;
+  }
+}
+
+/* Font size preferences */
+body {
+  font-size: var(--font-size-base);
+}
+
+/* Spacing scale application */
+.theme-spacing {
+  padding: calc(1rem * var(--spacing-scale));
+  margin: calc(1rem * var(--spacing-scale));
+}
+
+.theme-spacing-sm {
+  padding: calc(0.5rem * var(--spacing-scale));
+  margin: calc(0.5rem * var(--spacing-scale));
+}
+
+.theme-spacing-lg {
+  padding: calc(1.5rem * var(--spacing-scale));
+  margin: calc(1.5rem * var(--spacing-scale));
+}
+
+/* Border radius utilities */
+.theme-rounded {
+  border-radius: var(--border-radius);
+}
+
+.theme-rounded-sm {
+  border-radius: calc(var(--border-radius) / 2);
+}
+
+.theme-rounded-lg {
+  border-radius: calc(var(--border-radius) * 1.5);
+}
+
+/* Animation utilities */
+@keyframes theme-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes theme-slide-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.theme-animate-fade-in {
+  animation: theme-fade-in var(--transition-normal) ease;
+}
+
+.theme-animate-slide-up {
+  animation: theme-slide-up var(--transition-normal) ease;
+}
+
+/* Accessibility helpers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip to content link */
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--color-primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  border-radius: 0 0 var(--border-radius) 0;
+  z-index: 100;
+}
+
+.skip-to-content:focus {
+  top: 0;
+}
