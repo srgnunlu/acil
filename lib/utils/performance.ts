@@ -18,8 +18,10 @@ export function measureRenderTime(componentName: string, callback: () => void): 
   }
 
   // Report to analytics in production
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', 'timing_complete', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window as any).gtag('event', 'timing_complete', {
       name: componentName,
       value: Math.round(duration),
       event_category: 'Component Render',
@@ -30,6 +32,7 @@ export function measureRenderTime(componentName: string, callback: () => void): 
 /**
  * Debounce function for performance
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -52,6 +55,7 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Throttle function for performance
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
   limit: number
@@ -119,14 +123,17 @@ export function preloadResource(url: string, type: 'script' | 'style' | 'image')
 /**
  * Get Web Vitals metrics
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function reportWebVitals(metric: any): void {
   if (process.env.NODE_ENV === 'development') {
     console.log('[Web Vital]', metric)
   }
 
   // Report to analytics
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', metric.name, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window as any).gtag('event', metric.name, {
       value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
       event_label: metric.id,
       non_interaction: true,
@@ -137,10 +144,7 @@ export function reportWebVitals(metric: any): void {
 /**
  * Measure API call duration
  */
-export async function measureApiCall<T>(
-  apiName: string,
-  apiCall: () => Promise<T>
-): Promise<T> {
+export async function measureApiCall<T>(apiName: string, apiCall: () => Promise<T>): Promise<T> {
   const start = performance.now()
 
   try {
@@ -166,6 +170,7 @@ export function isLowEndDevice(): boolean {
   if (typeof navigator === 'undefined') return false
 
   // Check device memory (if available)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const memory = (navigator as any).deviceMemory
   if (memory && memory < 4) return true
 
@@ -174,6 +179,7 @@ export function isLowEndDevice(): boolean {
   if (cores && cores < 4) return true
 
   // Check connection type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const connection = (navigator as any).connection
   if (connection) {
     const slowConnections = ['slow-2g', '2g', '3g']

@@ -1,7 +1,19 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, Minus, LucideIcon } from 'lucide-react'
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Users,
+  AlertTriangle,
+  Clock,
+  Brain,
+  Activity,
+  FileText,
+  BarChart3,
+  type LucideIcon,
+} from 'lucide-react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { MiniSparkline } from '@/components/charts/MiniSparkline'
@@ -12,6 +24,18 @@ interface Trend {
   period?: string
 }
 
+// Icon name mapping for server-safe icon passing
+const iconMap: Record<string, LucideIcon> = {
+  Users,
+  AlertTriangle,
+  Clock,
+  Brain,
+  Activity,
+  FileText,
+  BarChart3,
+  TrendingUp,
+}
+
 interface StatCardWithTrendProps {
   title: string
   value: number | string
@@ -19,7 +43,7 @@ interface StatCardWithTrendProps {
   trend?: Trend
   sparklineData?: number[]
   color?: 'green' | 'blue' | 'purple' | 'red' | 'indigo' | 'amber'
-  icon?: LucideIcon
+  icon?: LucideIcon | string // Accept both component and string
   onClick?: () => void
   href?: string // Add href prop for navigation
   isLoading?: boolean
@@ -73,7 +97,7 @@ export function StatCardWithTrend({
   trend,
   sparklineData,
   color = 'blue',
-  icon: Icon,
+  icon,
   onClick,
   href,
   isLoading = false,
@@ -82,6 +106,9 @@ export function StatCardWithTrend({
 }: StatCardWithTrendProps) {
   const colors = colorClasses[color]
   const isInteractive = !!(onClick || href)
+
+  // Resolve icon - handle both string and component
+  const Icon = typeof icon === 'string' ? iconMap[icon] : icon
 
   const getTrendIcon = () => {
     if (!trend) return null

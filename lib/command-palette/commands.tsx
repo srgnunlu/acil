@@ -17,7 +17,6 @@ import {
   HelpCircle,
   Search,
   FileText,
-  Calendar,
   Bell,
   Workflow,
   Activity,
@@ -201,12 +200,12 @@ export const DASHBOARD_COMMANDS: Command[] = [
   {
     id: 'dashboard-reset',
     label: 'Dashboard Sıfırla',
-    description: 'Dashboard\'u varsayılan haline döndür',
+    description: "Dashboard'u varsayılan haline döndür",
     category: 'dashboard',
     keywords: ['reset', 'default', 'sıfırla', 'varsayılan'],
     icon: <Database className="w-4 h-4" />,
     action: () => {
-      if (confirm('Dashboard\'u varsayılan haline döndürmek istediğinize emin misiniz?')) {
+      if (confirm("Dashboard'u varsayılan haline döndürmek istediğinize emin misiniz?")) {
         console.log('Reset dashboard')
       }
     },
@@ -220,7 +219,7 @@ export const WIDGET_COMMANDS: Command[] = [
   {
     id: 'widget-add',
     label: 'Widget Ekle',
-    description: 'Dashboard\'a yeni widget ekle',
+    description: "Dashboard'a yeni widget ekle",
     category: 'widgets',
     keywords: ['widget', 'add', 'ekle', 'yeni'],
     icon: <Grid3x3 className="w-4 h-4" />,
@@ -231,13 +230,13 @@ export const WIDGET_COMMANDS: Command[] = [
   },
   {
     id: 'widget-remove-all',
-    label: 'Tüm Widget\'ları Kaldır',
-    description: 'Dashboard\'daki tüm widget\'ları kaldır',
+    label: "Tüm Widget'ları Kaldır",
+    description: "Dashboard'daki tüm widget'ları kaldır",
     category: 'widgets',
     keywords: ['widget', 'remove', 'clear', 'kaldır', 'temizle'],
     icon: <Grid3x3 className="w-4 h-4" />,
     action: () => {
-      if (confirm('Tüm widget\'ları kaldırmak istediğinize emin misiniz?')) {
+      if (confirm("Tüm widget'ları kaldırmak istediğinize emin misiniz?")) {
         console.log('Remove all widgets')
       }
     },
@@ -251,7 +250,7 @@ export const THEME_COMMANDS: Command[] = [
   {
     id: 'theme-selector',
     label: 'Tema Değiştir',
-    description: 'Tema seçici\'yi aç',
+    description: "Tema seçici'yi aç",
     category: 'theme',
     keywords: ['theme', 'color', 'tema', 'renk'],
     icon: <Palette className="w-4 h-4" />,
@@ -377,7 +376,7 @@ export const HELP_COMMANDS: Command[] = [
     keywords: ['new', 'features', 'updates', 'yeni', 'güncellemeler'],
     icon: <Zap className="w-4 h-4" />,
     action: () => {
-      console.log('Open what\'s new modal')
+      console.log("Open what's new modal")
     },
   },
 ]
@@ -416,7 +415,7 @@ export const CATEGORY_LABELS: Record<CommandCategory, string> = {
   navigation: 'Navigasyon',
   actions: 'Eylemler',
   dashboard: 'Dashboard',
-  widgets: 'Widget\'lar',
+  widgets: "Widget'lar",
   theme: 'Tema',
   settings: 'Ayarlar',
   help: 'Yardım',

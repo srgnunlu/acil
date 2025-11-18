@@ -23,8 +23,11 @@ interface AIInsight {
   message: string
   action?: {
     label: string
-    onClick: () => void
+    onClick?: () => void
+    link?: string
   }
+  actionLink?: string // Server-safe alternative
+  actionLabel?: string // Server-safe alternative
   dismissible?: boolean
 }
 
@@ -167,16 +170,33 @@ export function AIInsightsHero({
                 </p>
 
                 {/* Action Button */}
-                {currentInsight.action && (
+                {(currentInsight.action ||
+                  (currentInsight.actionLink && currentInsight.actionLabel)) && (
                   <div className="mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={currentInsight.action.onClick}
-                      className="bg-white/20 border-white/40 text-white hover:bg-white/30 backdrop-blur-sm"
-                    >
-                      {currentInsight.action.label}
-                    </Button>
+                    {currentInsight.action?.onClick ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={currentInsight.action.onClick}
+                        className="bg-white/20 border-white/40 text-white hover:bg-white/30 backdrop-blur-sm"
+                      >
+                        {currentInsight.action.label}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const link = currentInsight.actionLink || currentInsight.action?.link
+                          if (link) {
+                            window.location.href = link
+                          }
+                        }}
+                        className="bg-white/20 border-white/40 text-white hover:bg-white/30 backdrop-blur-sm"
+                      >
+                        {currentInsight.actionLabel || currentInsight.action?.label}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

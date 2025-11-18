@@ -21,15 +21,12 @@ import {
   Lock,
   Building2,
   Mail,
-  Calendar,
   Eye,
   Edit,
   Shield,
-  Trash2,
-  ExternalLink,
 } from 'lucide-react'
 import { DashboardLayout } from '@/types/widget.types'
-import {
+import type {
   SharePermission,
   ShareVisibility,
   DashboardShare,
@@ -41,7 +38,6 @@ import {
   getPermissionDescription,
   getShareVisibilityLabel,
   getShareVisibilityDescription,
-  formatExpirationDate,
   exportDashboardJSON,
   duplicateDashboard,
   canPerformAction,
@@ -78,9 +74,7 @@ export function DashboardShare({
   const canShare = canPerformAction(currentUserPermission, 'share')
 
   if (!canShare) {
-    return (
-      <PermissionDeniedModal isOpen={isOpen} onClose={onClose} />
-    )
+    return <PermissionDeniedModal isOpen={isOpen} onClose={onClose} />
   }
 
   return (
@@ -114,9 +108,7 @@ export function DashboardShare({
                   <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                     Dashboard Paylaş
                   </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {dashboard.name}
-                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{dashboard.name}</p>
                 </div>
               </div>
               <button
@@ -180,7 +172,7 @@ export function DashboardShare({
  * Share Link Tab
  */
 function ShareLinkTab({
-  dashboard,
+  dashboard: _dashboard,
   onCopy,
   copied,
 }: {
@@ -208,11 +200,9 @@ function ShareLinkTab({
         <div className="flex items-center gap-3 mb-3">
           <Link2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           <div>
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-              Paylaşım Linki
-            </h3>
+            <h3 className="font-semibold text-blue-900 dark:text-blue-100">Paylaşım Linki</h3>
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              Bu linki paylaşarak dashboard'unuza erişim sağlayın
+              Bu linki paylaşarak dashboard&apos;unuza erişim sağlayın
             </p>
           </div>
         </div>
@@ -238,15 +228,15 @@ function ShareLinkTab({
 
         <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
           <Lock className="w-4 h-4" />
-          <span>Erişim Kodu: <strong>{accessCode}</strong></span>
+          <span>
+            Erişim Kodu: <strong>{accessCode}</strong>
+          </span>
         </div>
       </div>
 
       {/* Visibility Settings */}
       <div>
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          Görünürlük
-        </h4>
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Görünürlük</h4>
         <div className="grid grid-cols-2 gap-2">
           {visibilityOptions.map((vis) => {
             const icons = {
@@ -287,9 +277,7 @@ function ShareLinkTab({
 
       {/* Permission Settings */}
       <div>
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          İzin Düzeyi
-        </h4>
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">İzin Düzeyi</h4>
         <div className="space-y-2">
           {permissionOptions.map((perm) => {
             const icons = {
@@ -334,9 +322,7 @@ function ShareLinkTab({
 
       {/* Expiration */}
       <div>
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          Geçerlilik Süresi
-        </h4>
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Geçerlilik Süresi</h4>
         <select
           value={expiresIn}
           onChange={(e) => setExpiresIn(parseInt(e.target.value))}
@@ -361,7 +347,7 @@ function ShareLinkTab({
 /**
  * Invite Tab
  */
-function InviteTab({ dashboard }: { dashboard: DashboardLayout }) {
+function InviteTab({ dashboard: _dashboard }: { dashboard: DashboardLayout }) {
   const [email, setEmail] = useState('')
   const [permission, setPermission] = useState<SharePermission>('view')
 
@@ -395,18 +381,12 @@ function InviteTab({ dashboard }: { dashboard: DashboardLayout }) {
         </select>
       </div>
 
-      <Button className="w-full">
-        Davet Gönder
-      </Button>
+      <Button className="w-full">Davet Gönder</Button>
 
       {/* Pending Invitations */}
       <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          Bekleyen Davetler
-        </h4>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Henüz bekleyen davet bulunmuyor
-        </p>
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Bekleyen Davetler</h4>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Henüz bekleyen davet bulunmuyor</p>
       </div>
     </div>
   )
@@ -447,9 +427,7 @@ function ExportTab({ dashboard }: { dashboard: DashboardLayout }) {
       <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <Download className="w-5 h-5 text-gray-600 dark:text-gray-400 mt-0.5" />
         <div className="flex-1">
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            JSON Olarak İndir
-          </h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">JSON Olarak İndir</h4>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
             Dashboard yapılandırmasını JSON dosyası olarak kaydet
           </p>
@@ -459,11 +437,7 @@ function ExportTab({ dashboard }: { dashboard: DashboardLayout }) {
               İndir
             </Button>
             <Button size="sm" variant="outline" onClick={handleCopyJSON}>
-              {copied ? (
-                <Check className="w-4 h-4 mr-2" />
-              ) : (
-                <Copy className="w-4 h-4 mr-2" />
-              )}
+              {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
               Kopyala
             </Button>
           </div>
@@ -474,10 +448,10 @@ function ExportTab({ dashboard }: { dashboard: DashboardLayout }) {
         <Copy className="w-5 h-5 text-gray-600 dark:text-gray-400 mt-0.5" />
         <div className="flex-1">
           <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            Dashboard'u Çoğalt
+            Dashboard&apos;u Çoğalt
           </h4>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Bu dashboard'un bir kopyasını oluştur
+            Bu dashboard&apos;un bir kopyasını oluştur
           </p>
           <Button size="sm" onClick={handleDuplicate}>
             <Copy className="w-4 h-4 mr-2" />
@@ -508,14 +482,12 @@ function ExportTab({ dashboard }: { dashboard: DashboardLayout }) {
 /**
  * Activity Tab
  */
-function ActivityTab({ dashboard }: { dashboard: DashboardLayout }) {
+function ActivityTab({ dashboard: _dashboard }: { dashboard: DashboardLayout }) {
   return (
     <div className="space-y-4">
       <div className="text-center py-8">
         <Users className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-        <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
-          Henüz aktivite yok
-        </p>
+        <p className="text-lg font-medium text-gray-900 dark:text-gray-100">Henüz aktivite yok</p>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           Paylaşım aktiviteleri burada görünecek
         </p>
@@ -554,11 +526,9 @@ function PermissionDeniedModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
                 Yetki Gerekli
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Bu dashboard'u paylaşmak için yeterli yetkiniz yok
+                Bu dashboard&apos;u paylaşmak için yeterli yetkiniz yok
               </p>
-              <Button onClick={onClose}>
-                Tamam
-              </Button>
+              <Button onClick={onClose}>Tamam</Button>
             </div>
           </motion.div>
         </>

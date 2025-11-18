@@ -30,7 +30,6 @@ export function WidgetRenderer({ instance, workspaceId, userId }: WidgetRenderer
           <PatientQuickGrid
             patients={[]} // Will be fetched by the widget
             maxDisplay={instance.settings?.maxDisplay || 6}
-            onPatientClick={(id) => (window.location.href = `/dashboard/patients/${id}`)}
           />
         </div>
       )

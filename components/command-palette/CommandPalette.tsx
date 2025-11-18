@@ -18,13 +18,8 @@ import { triggerHaptic } from '@/lib/utils/haptics'
  * Command Palette Component
  */
 export function CommandPalette() {
-  const {
-    state,
-    closePalette,
-    setSearchQuery,
-    executeCommand,
-    getRecentCommands,
-  } = useCommandPalette()
+  const { state, closePalette, setSearchQuery, executeCommand, getRecentCommands } =
+    useCommandPalette()
 
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -36,13 +31,16 @@ export function CommandPalette() {
   }, [state.isOpen])
 
   // Group commands by category
-  const groupedCommands = state.filteredCommands.reduce((acc, cmd) => {
-    if (!acc[cmd.category]) {
-      acc[cmd.category] = []
-    }
-    acc[cmd.category].push(cmd)
-    return {}
-  }, {} as Record<CommandCategory, Command[]>)
+  const groupedCommands = state.filteredCommands.reduce(
+    (acc, cmd) => {
+      if (!acc[cmd.category]) {
+        acc[cmd.category] = []
+      }
+      acc[cmd.category].push(cmd)
+      return acc
+    },
+    {} as Record<CommandCategory, Command[]>
+  )
 
   const recentCommands = getRecentCommands()
   const hasResults = state.filteredCommands.length > 0
@@ -95,7 +93,7 @@ export function CommandPalette() {
                     icon={<Clock className="w-4 h-4" />}
                     commands={recentCommands}
                     selectedIndex={state.selectedIndex}
-                    onCommandClick={(cmd, index) => {
+                    onCommandClick={(cmd) => {
                       triggerHaptic('light')
                       executeCommand(cmd)
                     }}
@@ -105,7 +103,7 @@ export function CommandPalette() {
 
                 {/* Filtered Commands */}
                 {hasResults ? (
-                  Object.entries(groupedCommands).map(([category, commands], groupIndex) => (
+                  Object.entries(groupedCommands).map(([category, commands]) => (
                     <CommandGroup
                       key={category}
                       label={getCategoryLabel(category as CommandCategory)}
@@ -115,9 +113,7 @@ export function CommandPalette() {
                         triggerHaptic('light')
                         executeCommand(cmd)
                       }}
-                      startIndex={
-                        state.filteredCommands.findIndex((c) => c.category === category)
-                      }
+                      startIndex={state.filteredCommands.findIndex((c) => c.category === category)}
                     />
                   ))
                 ) : (
@@ -129,7 +125,7 @@ export function CommandPalette() {
                       Sonuç bulunamadı
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      "{state.searchQuery}" için bir komut bulunamadı
+                      &quot;{state.searchQuery}&quot; için bir komut bulunamadı
                     </p>
                   </div>
                 )}

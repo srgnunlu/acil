@@ -3,23 +3,14 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { subDays } from 'date-fns'
-import {
-  Users,
-  Activity,
-  TrendingUp,
-  Brain,
-  AlertTriangle,
-  Clock,
-  FileText,
-  BarChart3,
-} from 'lucide-react'
+import { Brain, Activity, BarChart3 } from 'lucide-react'
+// Icons are now passed as strings to client components (for props)
+// But can be used directly in JSX in server components
 import { DashboardTOC, TOCSection } from '@/components/dashboard/DashboardTOC'
-import { AIInsightsHero, generateDemoInsights } from '@/components/dashboard/AIInsightsHero'
+import { AIInsightsHero } from '@/components/dashboard/AIInsightsHero'
 import { StatCardWithTrend } from '@/components/dashboard/StatCardWithTrend'
-import {
-  CriticalAlertsPanel,
-  generateDemoAlerts,
-} from '@/components/dashboard/CriticalAlertsPanel'
+import { CriticalAlertsPanel } from '@/components/dashboard/CriticalAlertsPanel'
+import { generateDemoInsights, generateDemoAlerts } from '@/lib/dashboard/demo-data'
 import { PatientQuickGrid } from '@/components/dashboard/PatientQuickGrid'
 import { WorkspaceCategoryPanel } from '@/components/dashboard/WorkspaceCategoryPanel'
 import { WorkspaceNotesPanel } from '@/components/dashboard/WorkspaceNotesPanel'
@@ -96,19 +87,22 @@ export default async function DashboardHome() {
     patients?.filter((p) => p.category_id && activeCategoryIds.includes(p.category_id)) || []
 
   // Kritik hastalar (örnek: risk score > 70 veya urgency = critical)
-  const criticalPatients = activePatients.filter(() => Math.random() > 0.7) // Demo için random
+  // Demo için: İlk %30'u kritik olarak işaretle
+  const criticalPatients = activePatients.slice(0, Math.ceil(activePatients.length * 0.3))
 
-  // Bugünkü hastalar (son 24 saat)
-  const yesterday = subDays(new Date(), 1).toISOString()
-  const todayPatients = patients?.filter((p) => new Date(p.created_at) > new Date(yesterday)) || []
+  // Bugünkü hastalar (son 24 saat) - unused for now
+  // const yesterday = subDays(new Date(), 1).toISOString()
+  // const todayPatients = patients?.filter((p) => new Date(p.created_at) > new Date(yesterday)) || []
 
   // Son 7 günlük hastalar (sparkline için)
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const date = subDays(new Date(), 6 - i)
-    return patients?.filter((p) => {
-      const created = new Date(p.created_at)
-      return created.toDateString() === date.toDateString()
-    }).length || 0
+    return (
+      patients?.filter((p) => {
+        const created = new Date(p.created_at)
+        return created.toDateString() === date.toDateString()
+      }).length || 0
+    )
   })
 
   // Patient ID'lerini al
@@ -127,10 +121,10 @@ export default async function DashboardHome() {
     .in('patient_id', patientIds)
 
   // AI kullanım trendi (son 7 gün - demo data)
-  const aiUsageTrend = Array.from({ length: 7 }, () => Math.floor(Math.random() * 20) + 10)
+  const aiUsageTrend = [12, 15, 18, 14, 16, 19, 17]
 
   // Test trendi (son 7 gün - demo data)
-  const testTrend = Array.from({ length: 7 }, () => Math.floor(Math.random() * 30) + 20)
+  const testTrend = [22, 25, 28, 24, 26, 29, 27]
 
   // Ortalama kalış süresi hesaplama (demo)
   const avgStayDuration = 2.4 // Örnek değer
@@ -147,31 +141,53 @@ export default async function DashboardHome() {
   const dischargedPatients =
     patients?.filter((p) => p.category_id && dischargedCategoryIds.includes(p.category_id)) || []
 
-  // AI Insights oluştur
-  const aiInsights = generateDemoInsights({
+  // AI Insights oluştur (server-safe)
+  const serverInsights = generateDemoInsights({
     criticalPatients: criticalPatients.length,
     avgStayIncrease: 15, // Demo değer
-    aiSuggestions: Math.floor(Math.random() * 5) + 1,
+    aiSuggestions: 3, // Demo değer
     teamPerformance: 120,
   })
 
-  // Critical Alerts oluştur
+  // Convert server insights to client format
+  const aiInsights = serverInsights.map((insight) => ({
+    ...insight,
+    action:
+      insight.actionLink && insight.actionLabel
+        ? {
+            label: insight.actionLabel,
+            link: insight.actionLink,
+          }
+        : undefined,
+  }))
+
+  // Critical Alerts oluştur (server-safe)
   const criticalAlerts = generateDemoAlerts()
 
   // Patient grid için veri hazırla
-  const patientsForGrid = (patients || []).slice(0, 12).map((p) => ({
-    id: p.id,
-    name: p.name,
-    age: p.age,
-    gender: p.gender as 'male' | 'female' | 'other',
-    status: ((p.category as { slug?: string })?.slug || 'active') as any,
-    riskScore: Math.floor(Math.random() * 100), // Demo risk score
-    admissionDate: p.created_at,
-    lastActivity: p.updated_at,
-    hasAIAnalysis: Math.random() > 0.5,
-    hasChatMessages: Math.random() > 0.5,
-    urgency: Math.random() > 0.8 ? ('critical' as const) : ('medium' as const),
-  }))
+  const patientsForGrid = (patients || []).slice(0, 12).map((p, index) => {
+    const categorySlug = (p.category as { slug?: string })?.slug || 'active'
+    const status = categorySlug as 'active' | 'discharged' | 'consultation' | 'critical'
+    // Demo değerler: index'e göre deterministik değerler
+    const riskScore = (index * 7 + 30) % 100
+    const hasAIAnalysis = index % 2 === 0
+    const hasChatMessages = index % 3 === 0
+    const urgency = index % 5 === 0 ? ('critical' as const) : ('medium' as const)
+
+    return {
+      id: p.id,
+      name: p.name,
+      age: p.age,
+      gender: p.gender as 'male' | 'female' | 'other',
+      status,
+      riskScore,
+      admissionDate: p.created_at,
+      lastActivity: p.updated_at,
+      hasAIAnalysis,
+      hasChatMessages,
+      urgency,
+    }
+  })
 
   // TOC Sections
   const tocSections = [
@@ -205,7 +221,7 @@ export default async function DashboardHome() {
               trend={{ direction: 'up', percentage: 8, period: '7 gün' }}
               sparklineData={last7Days}
               color="green"
-              icon={Users}
+              icon="Users"
               href="/dashboard/patients"
               realtime={true}
             />
@@ -216,7 +232,7 @@ export default async function DashboardHome() {
               subtitle="Acil müdahale gerekli"
               trend={{ direction: 'down', percentage: 12, period: '7 gün' }}
               color="red"
-              icon={AlertTriangle}
+              icon="AlertTriangle"
               href="/dashboard/patients?filter=critical"
               realtime={true}
             />
@@ -228,7 +244,7 @@ export default async function DashboardHome() {
               subtitle="Hasta başına"
               trend={{ direction: 'neutral', percentage: 0, period: '7 gün' }}
               color="blue"
-              icon={Clock}
+              icon="Clock"
             />
 
             <StatCardWithTrend
@@ -237,7 +253,7 @@ export default async function DashboardHome() {
               subtitle="Bu hafta"
               trend={{ direction: 'up', percentage: 15, period: '7 gün' }}
               color="indigo"
-              icon={TrendingUp}
+              icon="TrendingUp"
             />
 
             <StatCardWithTrend
@@ -247,7 +263,7 @@ export default async function DashboardHome() {
               trend={{ direction: 'up', percentage: 23, period: '7 gün' }}
               sparklineData={aiUsageTrend}
               color="purple"
-              icon={Brain}
+              icon="Brain"
               href="/dashboard/analytics"
               realtime={true}
             />
@@ -258,7 +274,7 @@ export default async function DashboardHome() {
               subtitle={`${activePatients.length > 0 ? ((testCount || 0) / activePatients.length).toFixed(1) : 0} test/hasta`}
               sparklineData={testTrend}
               color="amber"
-              icon={Activity}
+              icon="Activity"
             />
           </div>
         </TOCSection>
@@ -268,18 +284,13 @@ export default async function DashboardHome() {
           <CriticalAlertsPanel
             alerts={criticalAlerts}
             maxDisplay={5}
-            onAcknowledge={(id) => console.log('Acknowledged:', id)}
-            onDismiss={(id) => console.log('Dismissed:', id)}
-            onSnooze={(id, duration) => console.log('Snoozed:', id, duration)}
+            // Event handlers are optional - component manages its own state
           />
         </TOCSection>
 
         {/* Patient Management */}
         <TOCSection id="patients" title="Hasta Yönetimi">
-          <PatientQuickGrid
-            patients={patientsForGrid}
-            maxDisplay={6}
-          />
+          <PatientQuickGrid patients={patientsForGrid} maxDisplay={6} />
         </TOCSection>
 
         {/* Team Collaboration */}
@@ -315,9 +326,7 @@ export default async function DashboardHome() {
                   size="lg"
                   className="h-full flex-col items-center justify-center text-center group hover:border-blue-500 hover:bg-blue-50 w-full py-6"
                 >
-                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                    👤
-                  </div>
+                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">👤</div>
                   <p className="font-semibold text-gray-900 text-lg mb-1">Yeni Hasta Ekle</p>
                   <p className="text-sm text-gray-500">Hasta kaydı oluştur ve takibe başla</p>
                 </Button>
@@ -329,12 +338,8 @@ export default async function DashboardHome() {
                   size="lg"
                   className="h-full flex-col items-center justify-center text-center group hover:border-green-500 hover:bg-green-50 w-full py-6"
                 >
-                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                    📊
-                  </div>
-                  <p className="font-semibold text-gray-900 text-lg mb-1">
-                    Detaylı Analizler
-                  </p>
+                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">📊</div>
+                  <p className="font-semibold text-gray-900 text-lg mb-1">Detaylı Analizler</p>
                   <p className="text-sm text-gray-500">Grafikler ve performans metrikleri</p>
                 </Button>
               </Link>
@@ -345,9 +350,7 @@ export default async function DashboardHome() {
                   size="lg"
                   className="h-full flex-col items-center justify-center text-center group hover:border-purple-500 hover:bg-purple-50 w-full py-6"
                 >
-                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                    📚
-                  </div>
+                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">📚</div>
                   <p className="font-semibold text-gray-900 text-lg mb-1">Protokol Kütüphanesi</p>
                   <p className="text-sm text-gray-500">Klinik kılavuzlar ve algoritmalar</p>
                 </Button>
@@ -363,9 +366,7 @@ export default async function DashboardHome() {
               <Brain className="w-8 h-8 text-indigo-600" />
             </div>
             <div>
-              <h4 className="text-xl font-bold text-gray-900 mb-3">
-                🤖 AI Destekli Hasta Takibi
-              </h4>
+              <h4 className="text-xl font-bold text-gray-900 mb-3">🤖 AI Destekli Hasta Takibi</h4>
               <p className="text-gray-700 leading-relaxed mb-4">
                 ACIL sistemi, hasta verilerinizi analiz ederek ayırıcı tanı önerileri, test
                 tavsiyeleri ve tedavi algoritmaları sunar. Her hasta için detaylı AI analizleri ve
