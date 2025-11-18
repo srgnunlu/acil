@@ -21,6 +21,7 @@ export * from './handoff.types'
 export * from './theme.types'
 export * from './widget.types'
 export * from './dashboard-sharing.types'
+export * from './command-palette.types'
 
 export interface Patient {
   id: string
